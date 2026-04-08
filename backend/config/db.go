@@ -1,6 +1,7 @@
 package config
 
 import (
+	"backend/internal/domain"
 	"fmt"
 	"log"
 	"os"
@@ -32,5 +33,21 @@ func InitPostgres() *gorm.DB {
 	}
 
 	log.Println("Database connected!")
+
+	// Drop table lama jika ada (untuk development)
+	if db.Migrator().HasTable(&domain.Pasien{}) {
+		if err := db.Migrator().DropTable(&domain.Pasien{}); err != nil {
+			log.Println("Warning: gagal drop table lama:", err)
+		} else {
+			log.Println("Dropped old pasien table")
+		}
+	}
+
+	// Auto-migrate schema
+	if err := db.AutoMigrate(&domain.Pasien{}); err != nil {
+		panic("Gagal auto-migrate: " + err.Error())
+	}
+	log.Println("Database migration completed!")
+
 	return db
 }

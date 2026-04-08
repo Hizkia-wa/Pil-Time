@@ -1,0 +1,25 @@
+# Environment variables
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+bin/
+build/
+
+# Dependencies
+vendor/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

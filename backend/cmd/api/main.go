@@ -3,7 +3,6 @@ package main
 import (
 	"backend/config"
 	"backend/internal/adapters/inbound/http"
-	"backend/internal/adapters/outbound/firebase"
 	"backend/internal/adapters/outbound/persistence"
 	"backend/internal/usecase"
 
@@ -18,28 +17,18 @@ func main() {
 	pasienUsecase := usecase.NewPasienUsecase(repo)
 	handler := http.NewPasienHandler(pasienUsecase)
 
-	// 🔥 Firebase
-	firebaseService, err := firebase.NewFirebaseService()
-	if err != nil {
-		panic(err)
-	}
-
-	notifUsecase := usecase.NewNotifUsecase(firebaseService)
-
 	// router
 	r := gin.Default()
 
 	r.POST("/pasien/register", handler.Register)
+	r.POST("/pasien/login", handler.Login)
+	r.POST("/pasien/forgot-password", handler.ForgotPassword)
+	r.POST("/pasien/verify-reset-code", handler.VerifyResetCode)
+	r.POST("/pasien/reset-password", handler.ResetPassword)
 
-	// contoh endpoint test notif
-	r.GET("/test-notif", func(c *gin.Context) {
-		err := notifUsecase.SendReminder("TOKEN_DEVICE")
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"message": "notif sent"})
-	})
+	// TODO: Add Firebase notification later
+	// firebaseService, err := firebase.NewFirebaseService()
+	// notifUsecase := usecase.NewNotifUsecase(firebaseService)
 
 	r.Run(":8080")
 }
