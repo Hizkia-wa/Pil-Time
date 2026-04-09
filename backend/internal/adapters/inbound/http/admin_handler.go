@@ -32,7 +32,7 @@ func (h *AdminHandler) Login(c *gin.Context) {
 	// Call usecase login
 	resp, err := h.adminUsecase.Login(&req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "LOGIN_ERROR",
 			Message: err.Error(),
 		})

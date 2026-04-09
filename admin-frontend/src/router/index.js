@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import PasienView from '../views/PasienView.vue'
-import JadwalView from '../views/JadwalView.vue'
+import JadwalView from '../views/jadwal/JadwalView.vue'
 import ObatView from '../views/ObatView.vue'
 
 const routes = [

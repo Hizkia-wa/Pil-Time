@@ -13,4 +13,5 @@ type PasienRepository interface {
 	Create(pasien *domain.Pasien) error
 	UpdateResetCode(email string, code string, expiryTime time.Time) error
 	UpdatePassword(email string, hashedPassword string) error
+	Count() (int64, error)
 }

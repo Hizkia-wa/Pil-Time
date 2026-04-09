@@ -118,19 +118,19 @@
                 <div class="space-y-2 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
                   <div 
                     v-for="pasien in filteredPasien"
-                    :key="pasien.id"
+                    :key="pasien.pasien_id"
                     @click="selectPasien(pasien)"
-                    :class="['p-3 rounded-lg cursor-pointer transition', form.patientId === pasien.id ? 'bg-teal-50 border-l-4 border-teal-500' : 'hover:bg-gray-50']"
+                    :class="['p-3 rounded-lg cursor-pointer transition', form.patientId === pasien.pasien_id ? 'bg-teal-50 border-l-4 border-teal-500' : 'hover:bg-gray-50']"
                   >
                     <div class="flex items-center space-x-3">
-                      <div :class="['w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold', getColorClass(pasien.id)]">
+                      <div :class="['w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold', getColorClass(pasien.pasien_id)]">
                         {{ getInitials(pasien.nama) }}
                       </div>
                       <div>
-                        <p :class="['font-medium', form.patientId === pasien.id ? 'text-teal-600' : 'text-gray-900']">{{ pasien.nama }}</p>
-                        <p class="text-xs text-gray-500">{{ pasien.no_rekam_medis }}</p>
+                        <p :class="['font-medium', form.patientId === pasien.pasien_id ? 'text-teal-600' : 'text-gray-900']">{{ pasien.nama }}</p>
+                        <p class="text-xs text-gray-500">{{ pasien.nik }}</p>
                       </div>
-                      <svg v-if="form.patientId === pasien.id" class="w-5 h-5 text-teal-500 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                      <svg v-if="form.patientId === pasien.pasien_id" class="w-5 h-5 text-teal-500 ml-auto" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                       </svg>
                     </div>
@@ -494,6 +494,7 @@
 import { ref, computed, onMounted } from 'vue'
 import LayoutWrapper from '../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../stores/jadwal'
+import { usePasienStore } from '../stores/pasien'
 
 export default {
   name: 'JadwalView',
@@ -502,19 +503,11 @@ export default {
   },
   setup() {
     const jadwalStore = useJadwalStore()
+    const pasienStore = usePasienStore()
     const showAddModal = ref(false)
     const showSuccessModal = ref(false)
     const searchQuery = ref('')
     const searchPasien = ref('')
-    
-    // Sample patient data - replace with actual API call
-    const daftarPasien = ref([
-      { id: 1, nama: 'Megan Palmer', no_rekam_medis: 'P-001' },
-      { id: 2, nama: 'Budi Santoso', no_rekam_medis: 'P-003' },
-      { id: 3, nama: 'Siti Rahayu', no_rekam_medis: 'P-003' },
-      { id: 4, nama: 'Hendra Wijaya', no_rekam_medis: 'P-004' },
-      { id: 5, nama: 'Ahmad Fauzii', no_rekam_medis: 'P-005' }
-    ])
 
     const wakteMinum = ['Pagi', 'Siang', 'Malam', 'Saat tidur']
     const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan']
@@ -547,8 +540,8 @@ export default {
     })
 
     const filteredPasien = computed(() => {
-      if (!searchPasien.value) return daftarPasien.value
-      return daftarPasien.value.filter(p => 
+      if (!searchPasien.value) return pasienStore.pasienList
+      return pasienStore.pasienList.filter(p => 
         p.nama.toLowerCase().includes(searchPasien.value.toLowerCase())
       )
     })
@@ -609,11 +602,10 @@ export default {
 
     const handleSubmit = async () => {
       try {
-        const pasien = daftarPasien.value.find(p => p.id === form.value.patientId)
+        const pasien = pasienStore.pasienList.find(p => p.pasien_id === form.value.patientId)
         
         const jadwalData = {
           pasien_id: form.value.patientId,
-          pasien_nama: pasien.nama,
           nama_obat: form.value.nama_obat,
           jumlah_dosis: form.value.jumlah_dosis,
           satuan: form.value.satuan,
@@ -666,15 +658,16 @@ export default {
 
     onMounted(() => {
       jadwalStore.fetchJadwals()
+      pasienStore.fetchPasiens()
     })
 
     return {
       jadwalStore,
+      pasienStore,
       showAddModal,
       showSuccessModal,
       searchQuery,
       searchPasien,
-      daftarPasien,
       filteredPasien,
       filteredJadwalList,
       form,

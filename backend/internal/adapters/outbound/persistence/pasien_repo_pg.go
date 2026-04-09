@@ -2,16 +2,19 @@ package persistence
 
 import (
 	"backend/internal/domain"
+	"backend/internal/ports/outbound"
 	"time"
 
 	"gorm.io/gorm"
 )
 
+var _ outbound.PasienRepository = (*pasienRepo)(nil)
+
 type pasienRepo struct {
 	db *gorm.DB
 }
 
-func NewPasienRepo(db *gorm.DB) *pasienRepo {
+func NewPasienRepo(db *gorm.DB) outbound.PasienRepository {
 	return &pasienRepo{db}
 }
 
@@ -60,4 +63,10 @@ func (r *pasienRepo) UpdatePassword(email string, hashedPassword string) error {
 			"reset_code":        nil,
 			"reset_code_expiry": nil,
 		}).Error
+}
+
+func (r *pasienRepo) Count() (int64, error) {
+	var count int64
+	err := r.db.Model(&domain.Pasien{}).Count(&count).Error
+	return count, err
 }

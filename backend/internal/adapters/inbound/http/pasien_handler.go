@@ -139,3 +139,35 @@ func (h *PasienHandler) ResetPassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// GetAll menangani HTTP request untuk mendapatkan semua pasien
+func (h *PasienHandler) GetAll(c *gin.Context) {
+	pasiens, err := h.usecase.GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "FETCH_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Convert to response DTOs
+	var responses []dto.PasienResponseDTO
+	for _, p := range pasiens {
+		responses = append(responses, dto.PasienResponseDTO{
+			PasienID:     p.PasienID,
+			Nama:         p.Nama,
+			Email:        p.Email,
+			NIK:          p.NIK,
+			TanggalLahir: p.TanggalLahir.Format("2006-01-02"),
+			TempatLahir:  p.TempatLahir,
+			Alamat:       p.Alamat,
+			JenisKelamin: p.JenisKelamin,
+			NoTelepon:    p.NoTelepon,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": responses,
+	})
+}
