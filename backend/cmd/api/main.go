@@ -31,6 +31,11 @@ func main() {
 	dashboardUsecase := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
 	dashboardHandler := http.NewDashboardHandler(dashboardUsecase)
 
+	// tracking jadwal repo + usecase + handler
+	trackingJadwalRepo := persistence.NewTrackingJadwalRepo(db)
+	trackingJadwalUsecase := usecase.NewTrackingJadwalUsecase(trackingJadwalRepo, jadwalRepo, pasienRepo)
+	trackingJadwalHandler := http.NewTrackingJadwalHandler(trackingJadwalUsecase)
+
 	// router - gunakan gin.New() untuk kontrol penuh
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -81,6 +86,16 @@ func main() {
 	r.POST("/api/admin/jadwal", jadwalHandler.CreateJadwal)
 	r.PUT("/api/admin/jadwal/:id", jadwalHandler.UpdateJadwal)
 	r.DELETE("/api/admin/jadwal/:id", jadwalHandler.DeleteJadwal)
+
+	// Admin tracking jadwal routes (Riwayat Kepatuhan)
+	// PENTING: Route /statistics harus SEBELUM /:id agar tidak tertangkap sebagai parameter
+	r.GET("/api/admin/riwayat/statistics", trackingJadwalHandler.GetStatistics)
+	r.GET("/api/admin/riwayat", trackingJadwalHandler.GetAll)
+	r.GET("/api/admin/riwayat/:id", trackingJadwalHandler.GetByID)
+	r.GET("/api/admin/riwayat/pasien/:pasien_id", trackingJadwalHandler.GetByPasienID)
+	r.POST("/api/admin/riwayat", trackingJadwalHandler.Create)
+	r.PUT("/api/admin/riwayat/:id", trackingJadwalHandler.Update)
+	r.DELETE("/api/admin/riwayat/:id", trackingJadwalHandler.Delete)
 
 	// Pasien routes
 	r.POST("/api/pasien/register", pasienHandler.Register)

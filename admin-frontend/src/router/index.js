@@ -6,6 +6,7 @@ import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import PasienView from '../views/PasienView.vue'
 import JadwalView from '../views/jadwal/JadwalView.vue'
+import RiwayatView from '../views/RiwayatView.vue'
 import ObatView from '../views/ObatView.vue'
 
 const routes = [
@@ -31,6 +32,12 @@ const routes = [
     path: '/jadwal',
     name: 'jadwal',
     component: JadwalView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/riwayat',
+    name: 'riwayat',
+    component: RiwayatView,
     meta: { requiresAuth: true }
   },
   {

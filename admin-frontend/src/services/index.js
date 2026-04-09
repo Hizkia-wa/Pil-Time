@@ -60,3 +60,9 @@ export const dashboardService = {
     return apiClient.get('/admin/dashboard')
   }
 }
+
+export const riwayatService = {
+  getAllRiwayat() {
+    return apiClient.get('/admin/riwayat')
+  }
+}

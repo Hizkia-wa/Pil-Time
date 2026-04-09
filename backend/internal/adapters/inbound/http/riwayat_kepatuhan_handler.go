@@ -1,0 +1,188 @@
+package http
+
+import (
+	"backend/internal/dto"
+	"backend/internal/usecase"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+)
+
+// ==================== TrackingJadwal Handler ====================
+
+type TrackingJadwalHandler struct {
+	usecase *usecase.TrackingJadwalUsecase
+}
+
+func NewTrackingJadwalHandler(u *usecase.TrackingJadwalUsecase) *TrackingJadwalHandler {
+	return &TrackingJadwalHandler{u}
+}
+
+func (h *TrackingJadwalHandler) GetAll(c *gin.Context) {
+	trackings, err := h.usecase.GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "FETCH_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": trackings,
+	})
+}
+
+func (h *TrackingJadwalHandler) GetByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_ID",
+			Message: "ID harus berupa angka",
+		})
+		return
+	}
+
+	tracking, err := h.usecase.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "NOT_FOUND",
+			Message: "Tracking jadwal tidak ditemukan",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": tracking,
+	})
+}
+
+func (h *TrackingJadwalHandler) GetByPasienID(c *gin.Context) {
+	pasienID, err := strconv.Atoi(c.Param("pasien_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_ID",
+			Message: "Pasien ID harus berupa angka",
+		})
+		return
+	}
+
+	trackings, err := h.usecase.GetByPasienID(pasienID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "FETCH_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": trackings,
+	})
+}
+
+func (h *TrackingJadwalHandler) Create(c *gin.Context) {
+	var req dto.CreateTrackingJadwalDTO
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	result, err := h.usecase.Create(&req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "CREATE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"data": result,
+	})
+}
+
+func (h *TrackingJadwalHandler) Update(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_ID",
+			Message: "ID harus berupa angka",
+		})
+		return
+	}
+
+	var req dto.UpdateTrackingJadwalDTO
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	result, err := h.usecase.Update(id, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "UPDATE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": result,
+	})
+}
+
+func (h *TrackingJadwalHandler) Delete(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_ID",
+			Message: "ID harus berupa angka",
+		})
+		return
+	}
+
+	err = h.usecase.Delete(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "DELETE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Tracking jadwal berhasil dihapus",
+	})
+}
+
+func (h *TrackingJadwalHandler) GetStatistics(c *gin.Context) {
+	pasienID := 0
+	if pasienIDStr := c.Query("pasien_id"); pasienIDStr != "" {
+		if id, err := strconv.Atoi(pasienIDStr); err == nil {
+			pasienID = id
+		}
+	}
+
+	stats, err := h.usecase.GetStatistics(pasienID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "STATISTICS_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": stats,
+	})
+}
