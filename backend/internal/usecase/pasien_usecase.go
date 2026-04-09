@@ -50,15 +50,14 @@ func (u *PasienUsecase) Register(req *dto.RegisterPasienRequest) (*dto.RegisterP
 
 	// Buat pasien baru
 	pasien := &domain.Pasien{
+		Nama:         req.NamaLengkap,
 		Email:        req.Email,
 		Password:     hashedPassword,
-		NamaLengkap:  req.NamaLengkap,
 		NIK:          req.NIK,
 		TanggalLahir: tanggalLahir,
-		Telepon:      req.Telepon,
+		NoTelepon:    req.Telepon,
 		JenisKelamin: req.JenisKelamin,
 		Alamat:       req.Alamat,
-		Status:       "active",
 	}
 
 	// Simpan ke database
@@ -70,7 +69,7 @@ func (u *PasienUsecase) Register(req *dto.RegisterPasienRequest) (*dto.RegisterP
 	return &dto.RegisterPasienResponse{
 		PasienID:    pasien.PasienID,
 		Email:       pasien.Email,
-		NamaLengkap: pasien.NamaLengkap,
+		NamaLengkap: pasien.Nama,
 		NIK:         pasien.NIK,
 		Message:     "Registrasi berhasil",
 	}, nil
@@ -97,12 +96,14 @@ func (u *PasienUsecase) Login(req *dto.LoginPasienRequest) (*dto.LoginPasienResp
 	return &dto.LoginPasienResponse{
 		PasienID:    pasien.PasienID,
 		Email:       pasien.Email,
-		NamaLengkap: pasien.NamaLengkap,
+		NamaLengkap: pasien.Nama,
 		Message:     "Login berhasil",
 	}, nil
 }
 
 // ForgotPassword mengirim kode reset password ke email
+// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
+// karena domain.Pasien tidak memiliki field ResetCode dan ResetCodeExpiry
 func (u *PasienUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error) {
 	// Cek apakah email terdaftar
 	pasien, err := u.repo.GetByEmail(req.Email)
@@ -110,93 +111,21 @@ func (u *PasienUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.For
 		return nil, errors.New("email tidak terdaftar")
 	}
 
-	// Generate random 6-digit code
-	resetCode := utils.GenerateResetCodeSimple()
-
-	// Set expiry time: 15 minutes from now
-	expiryTime := time.Now().Add(15 * time.Minute)
-
-	// Save code to database
-	if err := u.repo.UpdateResetCode(req.Email, resetCode, expiryTime); err != nil {
-		return nil, errors.New("gagal membuat kode reset")
-	}
-
-	// Send email with reset code
-	if err := u.emailService.SendResetCode(req.Email, resetCode); err != nil {
-		// Log error but don't fail the request
-		// In production, you might want to retry or notify admin
-		// For now, we'll just return success since code is already saved
-		// Client can still use the code from database
-	}
-
-	return &dto.ForgotPasswordResponse{
-		Message: "Kode reset telah dikirim ke email Anda",
-	}, nil
+	// TODO: Implementasi dengan tabel reset_token terpisah
+	// Untuk sekarang, return error
+	return nil, errors.New("fitur reset password sedang dalam pengembangan")
 }
 
 // VerifyResetCode memverifikasi kode reset password
+// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
 func (u *PasienUsecase) VerifyResetCode(req *dto.VerifyResetCodeRequest) (*dto.VerifyResetCodeResponse, error) {
-	// Cari pasien berdasarkan email
-	pasien, err := u.repo.GetByEmail(req.Email)
-	if err != nil || pasien == nil || pasien.Email == "" {
-		return nil, errors.New("email tidak terdaftar")
-	}
-
-	// Cek apakah reset code ada
-	if pasien.ResetCode == "" {
-		return nil, errors.New("tidak ada kode reset yang aktif")
-	}
-
-	// Cek apakah kode sudah expired
-	if pasien.ResetCodeExpiry != nil && time.Now().After(*pasien.ResetCodeExpiry) {
-		return nil, errors.New("kode reset sudah expired")
-	}
-
-	// Verifikasi kode
-	if pasien.ResetCode != req.Code {
-		return nil, errors.New("kode reset salah")
-	}
-
-	return &dto.VerifyResetCodeResponse{
-		Message: "Kode verifikasi benar",
-	}, nil
+	// TODO: Implementasi dengan tabel reset_token terpisah
+	return nil, errors.New("fitur reset password sedang dalam pengembangan")
 }
 
 // ResetPassword mengubah password pasien
+// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
 func (u *PasienUsecase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error) {
-	// Cari pasien berdasarkan email
-	pasien, err := u.repo.GetByEmail(req.Email)
-	if err != nil || pasien == nil || pasien.Email == "" {
-		return nil, errors.New("email tidak terdaftar")
-	}
-
-	// Cek apakah reset code ada
-	if pasien.ResetCode == "" {
-		return nil, errors.New("tidak ada kode reset yang aktif")
-	}
-
-	// Cek apakah kode sudah expired
-	if pasien.ResetCodeExpiry != nil && time.Now().After(*pasien.ResetCodeExpiry) {
-		return nil, errors.New("kode reset sudah expired")
-	}
-
-	// Verifikasi kode
-	if pasien.ResetCode != req.Code {
-		return nil, errors.New("kode reset salah")
-	}
-
-	// Hash new password
-	hashedPassword, err := utils.HashPassword(req.NewPassword)
-	if err != nil {
-		return nil, errors.New("gagal mengenkripsi password")
-	}
-
-	// Update password dan clear reset code
-	if err := u.repo.UpdatePassword(req.Email, hashedPassword); err != nil {
-		return nil, errors.New("gagal mengubah password")
-	}
-
-	return &dto.ResetPasswordResponse{
-		Message: "Password berhasil diubah",
-	}, nil
+	// TODO: Implementasi dengan tabel reset_token terpisah
+	return nil, errors.New("fitur reset password sedang dalam pengembangan")
 }

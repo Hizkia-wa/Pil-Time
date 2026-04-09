@@ -33,8 +33,8 @@ func AuthMiddleware(c *gin.Context) {
 	}
 
 	c.Set("user_id", claims.ID)
+	c.Set("email", claims.Email)
 	c.Set("role", claims.Role)
-	c.Set("nama", claims.Nama)
 	c.Next()
 }
 
@@ -47,8 +47,8 @@ func NakesOnlyMiddleware(c *gin.Context) {
 		return
 	}
 
-	if role != "nakes" {
-		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "Hanya nakes yang bisa akses"})
+	if role != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "Hanya admin yang bisa akses"})
 		c.Abort()
 		return
 	}
