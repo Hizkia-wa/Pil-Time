@@ -45,9 +45,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
       return null;
     }
@@ -61,7 +61,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         future: dashboardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF15BE77)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF15BE77)),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data == null) {
@@ -72,8 +74,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Text('Gagal memuat dashboard'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => setState(() => dashboardFuture = _fetchDashboard()),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF15BE77)),
+                    onPressed: () =>
+                        setState(() => dashboardFuture = _fetchDashboard()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF15BE77),
+                    ),
                     child: const Text('Coba Lagi'),
                   ),
                 ],
@@ -123,10 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       'Selamat Pagi,',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                     const SizedBox(width: 4),
                     const Text('👋', style: TextStyle(fontSize: 14)),
@@ -331,8 +333,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Row(
                   children: [
-                    _toggleBtn('Minggu', _isWeekView, () => setState(() => _isWeekView = true)),
-                    _toggleBtn('Bulan', !_isWeekView, () => setState(() => _isWeekView = false)),
+                    _toggleBtn(
+                      'Minggu',
+                      _isWeekView,
+                      () => setState(() => _isWeekView = true),
+                    ),
+                    _toggleBtn(
+                      'Bulan',
+                      !_isWeekView,
+                      () => setState(() => _isWeekView = false),
+                    ),
                   ],
                 ),
               ),
@@ -354,7 +364,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: active ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(7),
           boxShadow: active
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 4,
+                  ),
+                ]
               : [],
         ),
         child: Text(
@@ -381,19 +396,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: dayLabels
-              .map((d) => SizedBox(
-                    width: 36,
-                    child: Center(
-                      child: Text(
-                        d,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w600,
-                        ),
+              .map(
+                (d) => SizedBox(
+                  width: 36,
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(height: 8),
@@ -401,7 +418,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(7, (i) {
             final day = mondayOfWeek.add(Duration(days: i));
-            final isToday = day.day == now.day &&
+            final isToday =
+                day.day == now.day &&
                 day.month == now.month &&
                 day.year == now.year;
             // dot: simulasi ada jadwal
@@ -415,7 +433,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: isToday ? const Color(0xFF15BE77) : Colors.transparent,
+                      color: isToday
+                          ? const Color(0xFF15BE77)
+                          : Colors.transparent,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -423,8 +443,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         '${day.day}',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                          color: isToday ? Colors.white : const Color(0xFF1A1A1A),
+                          fontWeight: isToday
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isToday
+                              ? Colors.white
+                              : const Color(0xFF1A1A1A),
                         ),
                       ),
                     ),
@@ -435,7 +459,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: 5,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: isToday ? const Color(0xFF15BE77) : Colors.grey[400],
+                        color: isToday
+                            ? const Color(0xFF15BE77)
+                            : Colors.grey[400],
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -470,8 +496,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => setState(() {
-                _selectedDate =
-                    DateTime(_selectedDate.year, _selectedDate.month - 1);
+                _selectedDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month - 1,
+                );
               }),
             ),
             const SizedBox(width: 8),
@@ -480,8 +508,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => setState(() {
-                _selectedDate =
-                    DateTime(_selectedDate.year, _selectedDate.month + 1);
+                _selectedDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month + 1,
+                );
               }),
             ),
           ],
@@ -490,16 +520,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: dayLabels
-              .map((d) => SizedBox(
-                    width: 36,
-                    child: Center(
-                      child: Text(d,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w600)),
+              .map(
+                (d) => SizedBox(
+                  width: 36,
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(height: 6),
@@ -534,8 +569,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       '$day',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight:
-                            isToday ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isToday
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isToday ? Colors.white : const Color(0xFF1A1A1A),
                       ),
                     ),
@@ -592,7 +628,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: List.generate(jadwals.length, (i) {
           final jadwal = jadwals[i];
           final isActive = i == 1; // highlight baris ke-2 seperti desain
-          final isDone = i == 0;   // baris pertama sudah selesai (centang)
+          final isDone = i == 0; // baris pertama sudah selesai (centang)
 
           return _buildJadwalRow(
             jadwal: jadwal,
@@ -642,10 +678,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 8),
                     Text(
                       '${jadwal.jumlahDosis} ${jadwal.satuan} 1x Sehari',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -673,8 +706,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: isDone
                     ? const Color(0xFF15BE77)
                     : isActive
-                        ? const Color(0xFF15BE77)
-                        : Colors.grey[300]!,
+                    ? const Color(0xFF15BE77)
+                    : Colors.grey[300]!,
                 width: 1.5,
               ),
               borderRadius: BorderRadius.circular(6),
@@ -760,8 +793,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ── HELPERS ───────────────────────────────────────────────────────────────
   String _getMonthYear(DateTime date) {
     const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -782,10 +825,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.pop(ctx);
               await AuthService.clearSession();
               if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
-                  (route) => false,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red)),

@@ -11,16 +11,16 @@ import (
 )
 
 type PasienUsecase struct {
-	repo              outbound.PasienRepository
-	jadwalRepo        outbound.JadwalRepository
-	emailService      *email.EmailService
+	repo         outbound.PasienRepository
+	jadwalRepo   outbound.JadwalRepository
+	emailService *email.EmailService
 }
 
 func NewPasienUsecase(r outbound.PasienRepository, j outbound.JadwalRepository) *PasienUsecase {
 	return &PasienUsecase{
-		repo:              r,
-		jadwalRepo:        j,
-		emailService:      email.NewEmailService(),
+		repo:         r,
+		jadwalRepo:   j,
+		emailService: email.NewEmailService(),
 	}
 }
 

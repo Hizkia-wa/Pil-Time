@@ -108,14 +108,14 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // Save session
         await _savePasienSession(
           pasienId: data['pasien_id'] ?? 0,
           pasienName: data['nama_lengkap'] ?? data['nama'] ?? '',
           pasienEmail: data['email'] ?? '',
         );
-        
+
         return {'success': true, 'data': data};
       } else {
         final errorBody = jsonDecode(response.body);

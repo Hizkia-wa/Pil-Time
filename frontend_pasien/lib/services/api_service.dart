@@ -32,9 +32,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getJadwal({
-    required int pasienId,
-  }) async {
+  static Future<Map<String, dynamic>> getJadwal({required int pasienId}) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/pasien/jadwal?pasien_id=$pasienId'),
