@@ -293,6 +293,13 @@ export default {
       return d.toISOString().split('T')[0]
     },
   },
+  watch: {
+    tanggalSelesai(newVal) {
+      if (this.form.tipe_durasi === 'hari' && newVal) {
+        this.update('tanggal_selesai', newVal)
+      }
+    },
+  },
   methods: {
     update(field, value) {
       this.$emit('update:form', { ...this.form, [field]: value })

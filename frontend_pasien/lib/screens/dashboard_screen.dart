@@ -53,6 +53,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _onRefresh() async {
+    // Trigger dashboard refresh
+    setState(() {
+      dashboardFuture = _fetchDashboard();
+    });
+    // Wait for the future to complete
+    await dashboardFuture;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,21 +76,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           if (!snapshot.hasData || snapshot.data == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Gagal memuat dashboard'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () =>
-                        setState(() => dashboardFuture = _fetchDashboard()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF15BE77),
+            return RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: const Color(0xFF15BE77),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: MediaQuery.of(context).size.height,
+                  decoration: BoxDecoration(color: Colors.white),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Gagal memuat dashboard'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => setState(
+                            () => dashboardFuture = _fetchDashboard(),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF15BE77),
+                          ),
+                          child: const Text('Coba Lagi'),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Tarik ke bawah untuk refresh',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
                     ),
-                    child: const Text('Coba Lagi'),
                   ),
-                ],
+                ),
               ),
             );
           }
@@ -91,16 +117,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(dashboard),
-                        _buildMenuUtama(),
-                        _buildCalendarSection(),
-                        _buildJadwalList(dashboard.todayJadwals),
-                        const SizedBox(height: 20),
-                      ],
+                  child: RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    color: const Color(0xFF15BE77),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(dashboard),
+                          _buildMenuUtama(),
+                          _buildCalendarSection(),
+                          _buildJadwalList(dashboard.todayJadwals),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -619,7 +650,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Simulasi jadwal aktif (yang sedang waktunya) — highlight row ke-1 (index 1)
     // Dalam produksi, bandingkan waktuMinum dengan jam sekarang
-    final now = TimeOfDay.now();
 
     return Container(
       color: Colors.white,
@@ -824,7 +854,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await AuthService.clearSession();
-              if (mounted) {
+              if (mounted && context.mounted) {
                 Navigator.of(
                   context,
                 ).pushNamedAndRemoveUntil('/login', (route) => false);

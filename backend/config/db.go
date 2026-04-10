@@ -35,7 +35,7 @@ func InitPostgres() *gorm.DB {
 	log.Println("Database connected!")
 
 	// Auto-migrate schema (hanya membuat tabel jika belum ada)
-	if err := db.AutoMigrate(&domain.Pasien{}, &domain.Nakes{}); err != nil {
+	if err := db.AutoMigrate(&domain.Pasien{}, &domain.Nakes{}, &domain.Jadwal{}); err != nil {
 		panic("Gagal auto-migrate: " + err.Error())
 	}
 	log.Println("Database migration completed!")

@@ -3,6 +3,7 @@ package http
 import (
 	"backend/internal/dto"
 	"backend/internal/usecase"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -89,6 +90,10 @@ func (h *JadwalHandler) CreateJadwal(c *gin.Context) {
 
 	// Bind JSON request
 	if err := c.ShouldBindJSON(&req); err != nil {
+		// Log the actual error for debugging
+		fmt.Println("VALIDATION ERROR:", err.Error())
+		fmt.Println("Request body:", c.Request.Body)
+
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "VALIDATION_ERROR",
 			Message: err.Error(),

@@ -179,11 +179,28 @@ func (u *PasienUsecase) GetPasienDashboard(pasienID int) (*dto.PasienDashboardRe
 		jadwalDTOs = append(jadwalDTOs, jadwalDTO)
 
 		// Check if jadwal is for today and still active
-		if jadwal.Status == "Active" || jadwal.Status == "active" {
-			jadwalMulai := jadwal.TanggalMulai.Format("2006-01-02")
-			jadwalSelesai := jadwal.TanggalSelesai.Format("2006-01-02")
-			if (jadwalMulai <= today) && (today <= jadwalSelesai) {
-				todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
+		if jadwal.Status == "aktif" || jadwal.Status == "active" {
+			jadwalMulai := jadwal.TanggalMulai
+			jadwalSelesai := jadwal.TanggalSelesai
+
+			// Handle jadwal dengan tipe_durasi="rutin" (tanpa tanggal_selesai)
+			if jadwal.TipeDurasi == "rutin" {
+				// Jadwal rutin berlaku setiap hari jika sudah mulai
+				if jadwalMulai <= today {
+					todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
+				}
+			} else if jadwal.TipeDurasi == "hari" {
+				// Jadwal terbatas berlaku hingga tanggal_selesai (jika ada)
+				// Jika tanggal_selesai kosong, anggap jadwal berlaku indefinite
+				if jadwalMulai <= today {
+					if jadwalSelesai == "" {
+						// Tanpa batas akhir - anggap berlaku selamanya
+						todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
+					} else if today <= jadwalSelesai {
+						// Ada batas akhir - cek apakah masih dalam rentang
+						todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
+					}
+				}
 			}
 		}
 	}

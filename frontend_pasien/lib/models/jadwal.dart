@@ -7,7 +7,7 @@ class Jadwal {
   final String satuan;
   final String kategoriObat;
   final String takaranObat;
-  final int frekuensiPerHari;
+  final String frekuensiPerHari;
   final String waktuMinum;
   final String aturanKonsumsi;
   final String catatan;
@@ -55,7 +55,7 @@ class Jadwal {
       satuan: json['satuan'] ?? '',
       kategoriObat: json['kategori_obat'] ?? '',
       takaranObat: json['takaran_obat'] ?? '',
-      frekuensiPerHari: json['frekuensi_per_hari'] ?? 0,
+      frekuensiPerHari: json['frekuensi_per_hari'] ?? '',
       waktuMinum: json['waktu_minum'] ?? '',
       aturanKonsumsi: json['aturan_konsumsi'] ?? '',
       catatan: json['catatan'] ?? '',

@@ -3,42 +3,42 @@ package dto
 import "time"
 
 type CreateJadwalDTO struct {
-	PasienID           int       `json:"pasien_id" binding:"required"`
-	NamaObat           string    `json:"nama_obat" binding:"required"`
-	JumlahDosis        int       `json:"jumlah_dosis" binding:"required"`
-	Satuan             string    `json:"satuan" binding:"required"`
-	KategoriObat       string    `json:"kategori_obat" binding:"required"`
-	TakaranObat        string    `json:"takaran_obat" binding:"required"`
-	FrekuensiPerHari   int       `json:"frekuensi_per_hari" binding:"required"`
-	WaktuMinum         string    `json:"waktu_minum" binding:"required"`
-	AturanKonsumsi     string    `json:"aturan_konsumsi" binding:"required"`
-	Catatan            string    `json:"catatan"`
-	TipeDurasi         string    `json:"tipe_durasi" binding:"required"`
-	JumlahHari         int       `json:"jumlah_hari"`
-	TanggalMulai       time.Time `json:"tanggal_mulai"`
-	TanggalSelesai     time.Time `json:"tanggal_selesai"`
-	WaktuReminderPagi  string    `json:"waktu_reminder_pagi"`
-	WaktuReminderMalam string    `json:"waktu_reminder_malam"`
-	Status             string    `json:"status"`
+	PasienID           int    `json:"pasien_id" binding:"required"`
+	NamaObat           string `json:"nama_obat" binding:"required"`
+	JumlahDosis        int    `json:"jumlah_dosis" binding:"required"`
+	Satuan             string `json:"satuan" binding:"required"`
+	KategoriObat       string `json:"kategori_obat"`
+	TakaranObat        string `json:"takaran_obat"`
+	FrekuensiPerHari   string `json:"frekuensi_per_hari" binding:"required"`
+	WaktuMinum         string `json:"waktu_minum"`
+	AturanKonsumsi     string `json:"aturan_konsumsi" binding:"required"`
+	Catatan            string `json:"catatan"`
+	TipeDurasi         string `json:"tipe_durasi" binding:"required"`
+	JumlahHari         int    `json:"jumlah_hari"`
+	TanggalMulai       string `json:"tanggal_mulai"`
+	TanggalSelesai     string `json:"tanggal_selesai"`
+	WaktuReminderPagi  string `json:"waktu_reminder_pagi"`
+	WaktuReminderMalam string `json:"waktu_reminder_malam"`
+	Status             string `json:"status"`
 }
 
 type UpdateJadwalDTO struct {
-	NamaObat           string    `json:"nama_obat"`
-	JumlahDosis        int       `json:"jumlah_dosis"`
-	Satuan             string    `json:"satuan"`
-	KategoriObat       string    `json:"kategori_obat"`
-	TakaranObat        string    `json:"takaran_obat"`
-	FrekuensiPerHari   int       `json:"frekuensi_per_hari"`
-	WaktuMinum         string    `json:"waktu_minum"`
-	AturanKonsumsi     string    `json:"aturan_konsumsi"`
-	Catatan            string    `json:"catatan"`
-	TipeDurasi         string    `json:"tipe_durasi"`
-	JumlahHari         int       `json:"jumlah_hari"`
-	TanggalMulai       time.Time `json:"tanggal_mulai"`
-	TanggalSelesai     time.Time `json:"tanggal_selesai"`
-	WaktuReminderPagi  string    `json:"waktu_reminder_pagi"`
-	WaktuReminderMalam string    `json:"waktu_reminder_malam"`
-	Status             string    `json:"status"`
+	NamaObat           string `json:"nama_obat"`
+	JumlahDosis        int    `json:"jumlah_dosis"`
+	Satuan             string `json:"satuan"`
+	KategoriObat       string `json:"kategori_obat"`
+	TakaranObat        string `json:"takaran_obat"`
+	FrekuensiPerHari   string `json:"frekuensi_per_hari"`
+	WaktuMinum         string `json:"waktu_minum"`
+	AturanKonsumsi     string `json:"aturan_konsumsi"`
+	Catatan            string `json:"catatan"`
+	TipeDurasi         string `json:"tipe_durasi"`
+	JumlahHari         int    `json:"jumlah_hari"`
+	TanggalMulai       string `json:"tanggal_mulai"`
+	TanggalSelesai     string `json:"tanggal_selesai"`
+	WaktuReminderPagi  string `json:"waktu_reminder_pagi"`
+	WaktuReminderMalam string `json:"waktu_reminder_malam"`
+	Status             string `json:"status"`
 }
 
 type JadwalResponseDTO struct {
@@ -50,14 +50,14 @@ type JadwalResponseDTO struct {
 	Satuan             string    `json:"satuan"`
 	KategoriObat       string    `json:"kategori_obat"`
 	TakaranObat        string    `json:"takaran_obat"`
-	FrekuensiPerHari   int       `json:"frekuensi_per_hari"`
+	FrekuensiPerHari   string    `json:"frekuensi_per_hari"`
 	WaktuMinum         string    `json:"waktu_minum"`
 	AturanKonsumsi     string    `json:"aturan_konsumsi"`
 	Catatan            string    `json:"catatan"`
 	TipeDurasi         string    `json:"tipe_durasi"`
 	JumlahHari         int       `json:"jumlah_hari"`
-	TanggalMulai       time.Time `json:"tanggal_mulai"`
-	TanggalSelesai     time.Time `json:"tanggal_selesai"`
+	TanggalMulai       string    `json:"tanggal_mulai"`
+	TanggalSelesai     string    `json:"tanggal_selesai"`
 	WaktuReminderPagi  string    `json:"waktu_reminder_pagi"`
 	WaktuReminderMalam string    `json:"waktu_reminder_malam"`
 	Status             string    `json:"status"`

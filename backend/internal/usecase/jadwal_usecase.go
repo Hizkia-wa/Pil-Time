@@ -135,7 +135,7 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 	if req.TakaranObat != "" {
 		jadwal.TakaranObat = req.TakaranObat
 	}
-	if req.FrekuensiPerHari > 0 {
+	if req.FrekuensiPerHari != "" {
 		jadwal.FrekuensiPerHari = req.FrekuensiPerHari
 	}
 	if req.WaktuMinum != "" {
@@ -153,10 +153,10 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 	if req.JumlahHari > 0 {
 		jadwal.JumlahHari = req.JumlahHari
 	}
-	if !req.TanggalMulai.IsZero() {
+	if req.TanggalMulai != "" {
 		jadwal.TanggalMulai = req.TanggalMulai
 	}
-	if !req.TanggalSelesai.IsZero() {
+	if req.TanggalSelesai != "" {
 		jadwal.TanggalSelesai = req.TanggalSelesai
 	}
 	if req.WaktuReminderPagi != "" {
