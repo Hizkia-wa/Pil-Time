@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -613,6 +614,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           color: Color(0xFF15BE77),
                           fontWeight: FontWeight.w600,
                         ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.of(
+                              context,
+                            ).pushReplacementNamed('/login');
+                          },
                       ),
                     ],
                   ),

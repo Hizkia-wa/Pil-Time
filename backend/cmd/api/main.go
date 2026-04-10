@@ -5,6 +5,7 @@ import (
 	"backend/internal/adapters/inbound/http"
 	"backend/internal/adapters/outbound/persistence"
 	"backend/internal/usecase"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,13 +18,13 @@ func main() {
 	adminUsecase := usecase.NewAdminUsecase(nakesRepo)
 	adminHandler := http.NewAdminHandler(adminUsecase)
 
+	// jadwal repo - declare first since it's used in pasien usecase
+	jadwalRepo := persistence.NewJadwalRepo(db)
+
 	// pasien repo + usecase + handler
 	pasienRepo := persistence.NewPasienRepo(db)
-	pasienUsecase := usecase.NewPasienUsecase(pasienRepo)
+	pasienUsecase := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
 	pasienHandler := http.NewPasienHandler(pasienUsecase)
-
-	// jadwal repo + usecase + handler
-	jadwalRepo := persistence.NewJadwalRepo(db)
 	jadwalUsecase := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo)
 	jadwalHandler := http.NewJadwalHandler(jadwalUsecase)
 
@@ -103,6 +104,30 @@ func main() {
 	r.POST("/api/pasien/forgot-password", pasienHandler.ForgotPassword)
 	r.POST("/api/pasien/verify-reset-code", pasienHandler.VerifyResetCode)
 	r.POST("/api/pasien/reset-password", pasienHandler.ResetPassword)
+
+	// Create a pasien auth group - these routes require authentication
+	pasienAuthGroup := r.Group("/api/pasien")
+	pasienAuthGroup.Use(func(c *gin.Context) {
+		// Extract pasien_id from header (should come from auth middleware)
+		// For now, we accept it as a query parameter or header
+		pasienIDStr := c.GetHeader("X-Pasien-ID")
+		if pasienIDStr == "" {
+			pasienIDStr = c.Query("pasien_id")
+		}
+
+		if pasienIDStr != "" {
+			var pasienID int
+			_, err := fmt.Sscanf(pasienIDStr, "%d", &pasienID)
+			if err == nil {
+				c.Set("pasien_id", pasienID)
+			}
+		}
+		c.Next()
+	})
+
+	pasienAuthGroup.GET("/dashboard", pasienHandler.GetDashboard)
+	pasienAuthGroup.GET("/jadwal", pasienHandler.GetJadwal)
+	pasienAuthGroup.GET("/profile", pasienHandler.GetProfile)
 
 	// TODO: Add Firebase notification later
 	// firebaseService, err := firebase.NewFirebaseService()

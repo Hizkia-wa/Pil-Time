@@ -11,14 +11,16 @@ import (
 )
 
 type PasienUsecase struct {
-	repo         outbound.PasienRepository
-	emailService *email.EmailService
+	repo              outbound.PasienRepository
+	jadwalRepo        outbound.JadwalRepository
+	emailService      *email.EmailService
 }
 
-func NewPasienUsecase(r outbound.PasienRepository) *PasienUsecase {
+func NewPasienUsecase(r outbound.PasienRepository, j outbound.JadwalRepository) *PasienUsecase {
 	return &PasienUsecase{
-		repo:         r,
-		emailService: email.NewEmailService(),
+		repo:              r,
+		jadwalRepo:        j,
+		emailService:      email.NewEmailService(),
 	}
 }
 
@@ -128,4 +130,144 @@ func (u *PasienUsecase) VerifyResetCode(req *dto.VerifyResetCodeRequest) (*dto.V
 func (u *PasienUsecase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error) {
 	// TODO: Implementasi dengan tabel reset_token terpisah
 	return nil, errors.New("fitur reset password sedang dalam pengembangan")
+}
+
+// GetPasienDashboard mengambil data dashboard untuk pasien dengan jadwal hari ini
+func (u *PasienUsecase) GetPasienDashboard(pasienID int) (*dto.PasienDashboardResponse, error) {
+	// Get pasien data
+	pasien, err := u.repo.GetByID(uint(pasienID))
+	if err != nil || pasien == nil {
+		return nil, errors.New("pasien tidak ditemukan")
+	}
+
+	// Get all jadwal for pasien
+	allJadwals, err := u.jadwalRepo.GetByPasienID(int(pasienID))
+	if err != nil {
+		return nil, errors.New("gagal mengambil jadwal pasien")
+	}
+
+	// Convert domain jadwal to DTO
+	jadwalDTOs := []dto.JadwalResponseDTO{}
+	todayJadwalDTOs := []dto.JadwalResponseDTO{}
+	today := time.Now().Format("2006-01-02")
+
+	for _, jadwal := range allJadwals {
+		jadwalDTO := dto.JadwalResponseDTO{
+			ID:                 jadwal.JadwalID,
+			PasienID:           jadwal.PasienID,
+			PasienNama:         pasien.Nama,
+			NamaObat:           jadwal.NamaObat,
+			JumlahDosis:        jadwal.JumlahDosis,
+			Satuan:             jadwal.Satuan,
+			KategoriObat:       jadwal.KategoriObat,
+			TakaranObat:        jadwal.TakaranObat,
+			FrekuensiPerHari:   jadwal.FrekuensiPerHari,
+			WaktuMinum:         jadwal.WaktuMinum,
+			AturanKonsumsi:     jadwal.AturanKonsumsi,
+			Catatan:            jadwal.Catatan,
+			TipeDurasi:         jadwal.TipeDurasi,
+			JumlahHari:         jadwal.JumlahHari,
+			TanggalMulai:       jadwal.TanggalMulai,
+			TanggalSelesai:     jadwal.TanggalSelesai,
+			WaktuReminderPagi:  jadwal.WaktuReminderPagi,
+			WaktuReminderMalam: jadwal.WaktuReminderMalam,
+			Status:             jadwal.Status,
+			CreatedAt:          jadwal.CreatedAt,
+			UpdatedAt:          jadwal.UpdatedAt,
+		}
+
+		jadwalDTOs = append(jadwalDTOs, jadwalDTO)
+
+		// Check if jadwal is for today and still active
+		if jadwal.Status == "Active" || jadwal.Status == "active" {
+			jadwalMulai := jadwal.TanggalMulai.Format("2006-01-02")
+			jadwalSelesai := jadwal.TanggalSelesai.Format("2006-01-02")
+			if (jadwalMulai <= today) && (today <= jadwalSelesai) {
+				todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
+			}
+		}
+	}
+
+	// Return dashboard response
+	return &dto.PasienDashboardResponse{
+		PasienID:     pasien.PasienID,
+		Nama:         pasien.Nama,
+		Email:        pasien.Email,
+		NoTelepon:    pasien.NoTelepon,
+		JenisKelamin: pasien.JenisKelamin,
+		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
+		Alamat:       pasien.Alamat,
+		TodayJadwals: todayJadwalDTOs,
+		AllJadwals:   jadwalDTOs,
+	}, nil
+}
+
+// GetPasienJadwal mengambil semua jadwal untuk pasien tertentu
+func (u *PasienUsecase) GetPasienJadwal(pasienID int) (*dto.PasienJadwalResponse, error) {
+	// Get pasien data
+	pasien, err := u.repo.GetByID(uint(pasienID))
+	if err != nil || pasien == nil {
+		return nil, errors.New("pasien tidak ditemukan")
+	}
+
+	// Get all jadwal for pasien
+	allJadwals, err := u.jadwalRepo.GetByPasienID(pasienID)
+	if err != nil {
+		return nil, errors.New("gagal mengambil jadwal pasien")
+	}
+
+	// Convert domain jadwal to DTO
+	jadwalDTOs := []dto.JadwalResponseDTO{}
+	for _, jadwal := range allJadwals {
+		jadwalDTO := dto.JadwalResponseDTO{
+			ID:                 jadwal.JadwalID,
+			PasienID:           jadwal.PasienID,
+			PasienNama:         pasien.Nama,
+			NamaObat:           jadwal.NamaObat,
+			JumlahDosis:        jadwal.JumlahDosis,
+			Satuan:             jadwal.Satuan,
+			KategoriObat:       jadwal.KategoriObat,
+			TakaranObat:        jadwal.TakaranObat,
+			FrekuensiPerHari:   jadwal.FrekuensiPerHari,
+			WaktuMinum:         jadwal.WaktuMinum,
+			AturanKonsumsi:     jadwal.AturanKonsumsi,
+			Catatan:            jadwal.Catatan,
+			TipeDurasi:         jadwal.TipeDurasi,
+			JumlahHari:         jadwal.JumlahHari,
+			TanggalMulai:       jadwal.TanggalMulai,
+			TanggalSelesai:     jadwal.TanggalSelesai,
+			WaktuReminderPagi:  jadwal.WaktuReminderPagi,
+			WaktuReminderMalam: jadwal.WaktuReminderMalam,
+			Status:             jadwal.Status,
+			CreatedAt:          jadwal.CreatedAt,
+			UpdatedAt:          jadwal.UpdatedAt,
+		}
+		jadwalDTOs = append(jadwalDTOs, jadwalDTO)
+	}
+
+	return &dto.PasienJadwalResponse{
+		PasienID: pasien.PasienID,
+		Nama:     pasien.Nama,
+		Jadwals:  jadwalDTOs,
+	}, nil
+}
+
+// GetByID mengambil data pasien berdasarkan ID
+func (u *PasienUsecase) GetByID(pasienID int) (*dto.PasienResponseDTO, error) {
+	pasien, err := u.repo.GetByID(uint(pasienID))
+	if err != nil || pasien == nil {
+		return nil, errors.New("pasien tidak ditemukan")
+	}
+
+	return &dto.PasienResponseDTO{
+		PasienID:     pasien.PasienID,
+		Nama:         pasien.Nama,
+		Email:        pasien.Email,
+		NIK:          pasien.NIK,
+		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
+		TempatLahir:  pasien.TempatLahir,
+		Alamat:       pasien.Alamat,
+		JenisKelamin: pasien.JenisKelamin,
+		NoTelepon:    pasien.NoTelepon,
+	}, nil
 }

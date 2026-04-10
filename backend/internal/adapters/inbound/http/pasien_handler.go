@@ -171,3 +171,78 @@ func (h *PasienHandler) GetAll(c *gin.Context) {
 		"data": responses,
 	})
 }
+
+// GetDashboard menangani HTTP request untuk mendapatkan data dashboard pasien
+func (h *PasienHandler) GetDashboard(c *gin.Context) {
+	// Get pasien ID dari parameter
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id is required",
+		})
+		return
+	}
+
+	// Call usecase
+	dashboard, err := h.usecase.GetPasienDashboard(pasienID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "DASHBOARD_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dashboard)
+}
+
+// GetJadwal menangani HTTP request untuk mendapatkan jadwal pasien
+func (h *PasienHandler) GetJadwal(c *gin.Context) {
+	// Get pasien ID dari parameter
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id is required",
+		})
+		return
+	}
+
+	// Call usecase
+	jadwal, err := h.usecase.GetPasienJadwal(pasienID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "JADWAL_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, jadwal)
+}
+
+// GetProfile menangani HTTP request untuk mendapatkan profil pasien
+func (h *PasienHandler) GetProfile(c *gin.Context) {
+	// Get pasien ID dari parameter
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id is required",
+		})
+		return
+	}
+
+	// Call usecase
+	profile, err := h.usecase.GetByID(pasienID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "PROFILE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}

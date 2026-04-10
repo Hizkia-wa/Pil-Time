@@ -16,22 +16,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingData> _pages = [
     OnboardingData(
-      title: 'Nauli Reminder',
-      subtitle: 'Perawat Pribadi Dalam\nGengangaman Tangan Anda',
+      imagePath: 'assets/images/onboarding1.png',
       detail:
-          'SahabatSehat Hadir Membantu Anda\nMengatur Jadwal Obat Dengan Pengingat\nYang Tepat Dan Mudah Digunakan.',
+          'Solusi Digital Untuk Membantu\nPemantauan Jadwal Pasien Secara\nTerintegrasi Dan Akurat.',
+      buttonLabel: 'Selanjutnya',
     ),
     OnboardingData(
-      title: 'Nauli Reminder',
-      subtitle: 'Perawat Pribadi Dalam\nGengangaman Tangan Anda',
+      imagePath: 'assets/images/onboarding2.png',
       detail:
-          'SahabatSehat Hadir Membantu Anda\nMengatur Jadwal Obat Dengan Pengingat\nYang Tepat Dan Mudah Digunakan.',
+          'Memastikan Setiap Tindakan Atau\nPemberian Obat Tercatat Dengan\nPengingat Yang Tepat Sasaran.',
+      buttonLabel: 'Selanjutnya',
     ),
     OnboardingData(
-      title: 'Nauli Reminder',
-      subtitle: 'Perawat Pribadi Dalam\nGengangaman Tangan Anda',
+      imagePath: 'assets/images/onboarding3.png',
       detail:
-          'Mulai Hidup Lebih Teratur Dan Sehat\nBersama SahabatSehat Hari Ini.',
+          'Tingkatkan Efisiensi Kerja Dan Kualitas\nLayanan Kesehatan Dengan\nManajemen Jadwal Yang Lebih Baik',
+      buttonLabel: 'Mulai Pantau',
     ),
   ];
 
@@ -49,10 +49,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5F3),
+      backgroundColor: const Color(0xFFDFF2EC),
       body: SafeArea(
         child: Column(
           children: [
+            // App Title at top
+            const Padding(
+              padding: EdgeInsets.only(top: 32.0, bottom: 8.0),
+              child: Text(
+                'P i l  T i m e',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                  letterSpacing: 4.0,
+                ),
+              ),
+            ),
+
+            // PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -61,6 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemBuilder: (context, index) => _buildPage(_pages[index]),
               ),
             ),
+
             _buildDots(),
             _buildButton(),
           ],
@@ -71,80 +87,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildPage(OnboardingData data) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
         children: [
-          const SizedBox(height: 60),
+          const SizedBox(height: 20),
 
-          // Circular gradient logo
-          Container(
-            width: 180,
-            height: 180,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF6EE2A0), Color(0xFF15BE77)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x3015BE77),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const ClipOval(
-              child: Icon(
-                Icons.health_and_safety_rounded,
-                size: 80,
-                color: Colors.white,
-              ),
+          // Illustration image
+          Expanded(
+            child: Image.asset(
+              data.imagePath,
+              fit: BoxFit.contain,
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
 
-          // App name
-          Text(
-            data.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
-              letterSpacing: 0.2,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Subtitle
-          Text(
-            data.subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF555555),
-              height: 1.5,
-            ),
-          ),
-
-          const Spacer(),
-
-          // Detail description at bottom
+          // Detail description
           Text(
             data.detail,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Color(0xFF444444),
-              height: 1.65,
+              height: 1.7,
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -165,7 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             decoration: BoxDecoration(
               color: isActive
                   ? const Color(0xFF15BE77)
-                  : const Color(0xFFBDBDBD),
+                  : const Color(0xFF1A1A1A),
               borderRadius: BorderRadius.circular(4),
             ),
           );
@@ -175,6 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildButton() {
+    final currentData = _pages[_currentPage];
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 0, 32, 40),
       child: SizedBox(
@@ -200,9 +170,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          child: const Text(
-            'Selanjutnya',
-            style: TextStyle(
+          child: Text(
+            currentData.buttonLabel,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
@@ -215,13 +185,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class OnboardingData {
-  final String title;
-  final String subtitle;
+  final String imagePath;
   final String detail;
+  final String buttonLabel;
 
   const OnboardingData({
-    required this.title,
-    required this.subtitle,
+    required this.imagePath,
     required this.detail,
+    required this.buttonLabel,
   });
 }
