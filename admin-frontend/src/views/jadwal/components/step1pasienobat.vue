@@ -40,9 +40,9 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       <!-- Left: Pilih Pasien -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center">
             <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
@@ -111,7 +111,7 @@
       </div>
 
       <!-- Right: Informasi Obat -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
             <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
@@ -125,9 +125,9 @@
           </div>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3 md:space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
               Nama Obat <span class="text-red-500">*</span>
             </label>
             <input :value="form.nama_obat" @input="update('nama_obat', $event.target.value)"
@@ -135,9 +135,9 @@
               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"/>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-2 md:gap-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                 Jumlah Dosis <span class="text-red-500">*</span>
               </label>
               <input :value="form.jumlah_dosis" @input="update('jumlah_dosis', +$event.target.value)"
@@ -160,14 +160,14 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Kategori Obat</label>
+              <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Kategori Obat</label>
             <input :value="form.kategori_obat" @input="update('kategori_obat', $event.target.value)"
               type="text" placeholder="Contoh: Antihipertensi"
-              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"/>
+              class="w-full px-3 py-2 text-xs md:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"/>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Takaran Obat</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Takaran Obat</label>
             <input :value="form.takaran_obat" @input="update('takaran_obat', $event.target.value)"
               type="text" placeholder="Contoh: 5mg"
               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"/>
@@ -177,13 +177,13 @@
     </div>
 
     <!-- Footer -->
-    <div class="flex justify-end gap-3 mt-6">
+    <div class="flex flex-col-reverse md:flex-row md:justify-end gap-3 mt-4 md:mt-6">
       <button @click="$emit('cancel')"
-        class="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+        class="w-full md:w-auto px-4 md:px-6 py-2.5 border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
         Batal
       </button>
       <button @click="$emit('next')"
-        class="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition flex items-center gap-2">
+        class="w-full md:w-auto px-4 md:px-6 py-2.5 bg-teal-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-teal-700 transition flex items-center justify-center gap-2">
         Lanjut: Aturan Minum
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>

@@ -1,7 +1,42 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex">
+  <div class="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <!-- Mobile Header -->
+    <header class="md:hidden bg-slate-900 px-4 py-4 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+          </svg>
+        </div>
+        <h1 class="text-base font-bold text-white">SahabatSehat</h1>
+      </div>
+      <button
+        @click="isSidebarOpen = !isSidebarOpen"
+        class="text-white hover:bg-slate-800 p-2 rounded-lg transition"
+      >
+        <svg v-if="!isSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Mobile Overlay -->
+    <div
+      v-if="isSidebarOpen"
+      @click="isSidebarOpen = false"
+      class="md:hidden fixed inset-0 bg-black/50 z-30 top-14"
+    ></div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 flex flex-col min-h-screen sticky top-0 h-screen overflow-y-auto flex-shrink-0">
+    <aside :class="[
+      'w-64 bg-slate-900 flex flex-col min-h-screen md:sticky md:top-0 md:h-screen overflow-y-auto flex-shrink-0',
+      'fixed md:relative left-0 top-14 md:top-0 h-[calc(100vh-3.5rem)] md:h-screen z-40',
+      'transition-transform duration-200 -translate-x-full md:translate-x-0',
+      isSidebarOpen && 'translate-x-0'
+    ]">
       
       <!-- Logo Header -->
       <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-700/50">
@@ -25,6 +60,7 @@
           <div class="space-y-1">
             <router-link
               to="/dashboard"
+              @click="isSidebarOpen = false"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               :class="$route.path === '/dashboard'
                 ? 'bg-teal-500/20 text-teal-400'
@@ -38,6 +74,7 @@
 
             <router-link
               to="/pasien"
+              @click="isSidebarOpen = false"
               class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               :class="$route.path === '/pasien'
                 ? 'bg-teal-500/20 text-teal-400'
@@ -61,6 +98,7 @@
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 mb-2">Manajemen</p>
           <div class="space-y-1">
             <router-link
+              @click="isSidebarOpen = false"
               to="/jadwal"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               :class="$route.path === '/jadwal'
@@ -74,6 +112,7 @@
             </router-link>
 
             <router-link
+              @click="isSidebarOpen = false"
               to="/riwayat"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               :class="$route.path === '/riwayat'
@@ -93,6 +132,7 @@
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 mb-2">Lainnya</p>
           <div class="space-y-1">
             <router-link
+              @click="isSidebarOpen = false"
               to="/obat"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               :class="$route.path === '/obat'
@@ -137,7 +177,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto md:p-8 p-4">
       <slot />
     </main>
   </div>
@@ -155,6 +195,7 @@ export default {
     const authStore = useAuthStore()
     const router = useRouter()
     const stats = ref({ totalPasien: 0 })
+    const isSidebarOpen = ref(false)
 
     const userInitials = computed(() => {
       const name = authStore.user?.nama_nakes || 'A'
@@ -179,7 +220,7 @@ export default {
 
     onMounted(() => loadStats())
 
-    return { authStore, logout, stats, userInitials }
+    return { authStore, logout, stats, userInitials, isSidebarOpen }
   }
 }
 </script>

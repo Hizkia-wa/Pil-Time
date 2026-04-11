@@ -37,9 +37,9 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       <!-- Left: Frekuensi & Waktu Minum -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
         <div class="flex items-center gap-3 mb-5">
           <div class="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center">
             <svg class="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -52,9 +52,9 @@
           </div>
         </div>
 
-        <div class="space-y-5">
+        <div class="space-y-3 md:space-y-5">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
               Frekuensi per Hari <span class="text-red-500">*</span>
             </label>
             <input :value="form.frekuensi_per_hari" @input="update('frekuensi_per_hari', $event.target.value)"
@@ -63,16 +63,16 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
               Waktu Minum <span class="text-red-500">*</span>
             </label>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2 md:gap-3">
               <button
                 v-for="waktu in wakteMinum" :key="waktu.value"
                 type="button"
                 @click="$emit('toggle-waktu', waktu.value)"
                 :class="[
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition',
+                  'flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium border transition','flex-1',
                   selectedWaktuMinum.includes(waktu.value)
                     ? 'bg-teal-600 text-white border-teal-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
@@ -88,16 +88,16 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
               Aturan Konsumsi <span class="text-red-500">*</span>
             </label>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2 md:gap-3">
               <button
                 v-for="aturan in aturanKonsumsi" :key="aturan"
                 type="button"
                 @click="update('aturan_konsumsi', aturan)"
                 :class="[
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition',
+                  'flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium border transition','flex-1',
                   form.aturan_konsumsi === aturan
                     ? 'bg-teal-600 text-white border-teal-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
@@ -113,7 +113,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Catatan untuk Pasien</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Catatan untuk Pasien</label>
             <textarea :value="form.catatan" @input="update('catatan', $event.target.value)"
               rows="4"
               placeholder="Minum dengan segelas air penuh. Hindari konsumsi bersama jus jeruk."
@@ -124,7 +124,7 @@
       </div>
 
       <!-- Right: Durasi & Jadwal -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
         <div class="flex items-center gap-3 mb-5">
           <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
             <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -143,12 +143,12 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Tipe Durasi <span class="text-red-500">*</span></label>
             <div class="flex rounded-lg border border-gray-200 overflow-hidden">
               <button type="button" @click="update('tipe_durasi', 'hari')"
-                :class="['flex-1 py-2.5 text-sm font-medium transition flex items-center justify-center gap-2',
+                :class="['flex-1 py-2.5 text-xs md:text-sm font-medium transition flex items-center justify-center gap-2','flex','flex-col','md:flex-row',
                   form.tipe_durasi === 'hari' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50']">
                 📅 Jumlah Hari
               </button>
               <button type="button" @click="update('tipe_durasi', 'rutin')"
-                :class="['flex-1 py-2.5 text-sm font-medium transition flex items-center justify-center gap-2',
+                :class="['flex-1 py-2.5 text-xs md:text-sm font-medium transition flex items-center justify-center gap-2','flex','flex-col','md:flex-row',
                   form.tipe_durasi === 'rutin' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50']">
                 🔄 Rutin
               </button>
@@ -170,7 +170,7 @@
               <div class="flex gap-2 flex-wrap">
                 <button v-for="preset in [3, 7, 14, 30]" :key="preset" type="button"
                   @click="update('jumlah_hari', preset)"
-                  :class="['px-3 py-1 rounded-full text-xs font-medium border transition',
+                  :class="['px-2 md:px-3 py-1 rounded-full text-xs font-medium border transition','flex-1',
                     form.jumlah_hari === preset
                       ? 'bg-teal-600 text-white border-teal-600'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300']">
@@ -179,15 +179,15 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2 md:gap-3">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
+                <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
                 <input :value="form.tanggal_mulai" @input="update('tanggal_mulai', $event.target.value)"
                   type="date"
                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"/>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Selesai</label>
+                <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Tanggal Selesai</label>
                 <input :value="tanggalSelesai" type="date" disabled
                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400 outline-none"/>
               </div>
@@ -202,7 +202,7 @@
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
+              <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
               <input :value="form.tanggal_mulai" @input="update('tanggal_mulai', $event.target.value)"
                 type="date"
                 class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"/>
@@ -213,7 +213,7 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <div>
-                <p class="text-sm font-medium text-gray-700">Pengingat Otomatis</p>
+                <p class="text-xs md:text-sm font-medium text-gray-700">Pengingat Otomatis</p>
                 <p class="text-xs text-gray-500">Kirim notifikasi ke pasien</p>
               </div>
               <button type="button" @click="update('kirim_notifikasi', !form.kirim_notifikasi)"
@@ -228,8 +228,8 @@
 
           <!-- Waktu Pengingat -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Waktu Pengingat Spesifik</label>
-            <div class="grid grid-cols-2 gap-3">
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">Waktu Pengingat Spesifik</label>
+            <div class="grid grid-cols-2 gap-2 md:gap-3">
               <div>
                 <label class="block text-xs text-gray-500 mb-1">☀️ Pagi</label>
                 <input :value="form.waktu_reminder_pagi" @input="update('waktu_reminder_pagi', $event.target.value)"
@@ -254,16 +254,16 @@
     </div>
 
     <!-- Footer -->
-    <div class="flex justify-end gap-3 mt-6">
+    <div class="flex flex-col-reverse md:flex-row md:justify-end gap-3 mt-4 md:mt-6">
       <button @click="$emit('back')"
-        class="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center gap-2">
+        class="w-full md:w-auto px-4 md:px-6 py-2.5 border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
         Kembali
       </button>
       <button @click="$emit('next')"
-        class="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition flex items-center gap-2">
+        class="w-full md:w-auto px-4 md:px-6 py-2.5 bg-teal-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-teal-700 transition flex items-center justify-center gap-2">
         {{ form.tipe_durasi === 'rutin' ? 'Lihat Konfirmasi' : 'Konfirmasi' }}
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
