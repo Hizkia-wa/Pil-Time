@@ -5,6 +5,7 @@ import "time"
 type Jadwal struct {
 	JadwalID           int       `gorm:"primaryKey;column:jadwal_id"`
 	PasienID           int       `gorm:"column:pasien_id;not null;index"`
+	PasienNama         string    `gorm:"column:pasien_nama" json:"pasien_nama"`
 	NamaObat           string    `gorm:"column:nama_obat;not null"`
 	JumlahDosis        int       `gorm:"column:jumlah_dosis;not null"`
 	Satuan             string    `gorm:"column:satuan;not null"`

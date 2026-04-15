@@ -68,11 +68,11 @@
             </label>
             <div class="flex flex-wrap gap-2 md:gap-3">
               <button
-                v-for="waktu in wakteMinum" :key="waktu.value"
+                v-for="waktu in waktuMinum" :key="waktu.value"
                 type="button"
                 @click="$emit('toggle-waktu', waktu.value)"
                 :class="[
-                  'flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium border transition','flex-1',
+                  'flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium border transition flex-1',
                   selectedWaktuMinum.includes(waktu.value)
                     ? 'bg-teal-600 text-white border-teal-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
@@ -281,7 +281,7 @@ export default {
     selectedPasienName: { type: String, default: '' },
     selectedPasienCode: { type: String, default: '' },
     selectedWaktuMinum: { type: Array, default: () => [] },
-    wakteMinum: { type: Array, default: () => [] },
+    waktuMinum: { type: Array, default: () => [] },
     aturanKonsumsi: { type: Array, default: () => [] },
   },
   emits: ['update:form', 'toggle-waktu', 'back', 'next'],

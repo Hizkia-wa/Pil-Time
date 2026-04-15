@@ -109,8 +109,10 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 	if req.NamaObat != "" {
 		jadwal.NamaObat = req.NamaObat
 	}
-	if req.JumlahDosis > 0 {
-		jadwal.JumlahDosis = req.JumlahDosis
+	if req.JumlahDosis != nil {
+		if dosis, ok := req.JumlahDosis.(float64); ok && dosis > 0 {
+			jadwal.JumlahDosis = int(dosis)
+		}
 	}
 	if req.Satuan != "" {
 		jadwal.Satuan = req.Satuan
@@ -133,6 +135,20 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 	if req.Catatan != "" {
 		jadwal.Catatan = req.Catatan
 	}
+	if req.TipeDurasi != "" {
+		jadwal.TipeDurasi = req.TipeDurasi
+	}
+	if req.JumlahHari != nil {
+		if hari, ok := req.JumlahHari.(float64); ok && hari > 0 {
+			jadwal.JumlahHari = int(hari)
+		}
+	}
+	if req.TanggalMulai != "" {
+		jadwal.TanggalMulai = req.TanggalMulai
+	}
+	if req.TanggalSelesai != "" {
+		jadwal.TanggalSelesai = req.TanggalSelesai
+	}
 	if req.Status != "" {
 		jadwal.Status = req.Status
 	}
@@ -141,7 +157,13 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 		return nil, err
 	}
 
-	return persistence.JadwalToResponseDTO(jadwal), nil
+	// Re-fetch to ensure we have the latest data including PasienNama
+	updatedJadwal, err := u.jadwalRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return persistence.JadwalToResponseDTO(updatedJadwal), nil
 }
 
 func (u *JadwalUsecase) DeleteJadwal(id int) error {

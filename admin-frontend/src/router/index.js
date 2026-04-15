@@ -6,6 +6,8 @@ import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import PasienView from '../views/PasienView.vue'
 import JadwalView from '../views/jadwal/JadwalView.vue'
+import JadwalDetail from '../views/jadwal/JadwalDetail.vue'
+import JadwalEdit from '../views/jadwal/JadwalEdit.vue'
 import RiwayatView from '../views/RiwayatView.vue'
 import ObatView from '../views/ObatView.vue'
 
@@ -32,6 +34,18 @@ const routes = [
     path: '/jadwal',
     name: 'jadwal',
     component: JadwalView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/jadwal/:id',
+    name: 'jadwal-detail',
+    component: JadwalDetail,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/jadwal/:id/edit',
+    name: 'jadwal-edit',
+    component: JadwalEdit,
     meta: { requiresAuth: true }
   },
   {

@@ -94,6 +94,8 @@
         :search-query="jadwalStore.searchQuery"
         @update:searchQuery="jadwalStore.searchQuery = $event"
         @open-add="jadwalStore.openAddSchedule"
+        @view="handleViewDetail"
+        @edit="handleEditJadwal"
         @delete="jadwalStore.deleteJadwal"
       />
 
@@ -103,6 +105,7 @@
 
 <script>
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import JadwalTable from './components/JadwalTable.vue'
 import Step1PasienObat from './components/step1pasienobat.vue'
@@ -121,8 +124,17 @@ export default {
     Step3Konfirmasi,
   },
   setup() {
+    const router = useRouter()
     const jadwalStore = useJadwalStore()
     const pasienStore = usePasienStore()
+
+    const handleViewDetail = (jadwal) => {
+      router.push({ name: 'jadwal-detail', params: { id: jadwal.id } })
+    }
+
+    const handleEditJadwal = (jadwal) => {
+      router.push({ name: 'jadwal-edit', params: { id: jadwal.id } })
+    }
 
     onMounted(() => {
       jadwalStore.fetchJadwals()
@@ -132,6 +144,8 @@ export default {
     return {
       jadwalStore,
       pasienStore,
+      handleViewDetail,
+      handleEditJadwal,
     }
   },
 }

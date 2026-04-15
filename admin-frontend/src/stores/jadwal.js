@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import apiClient from '../services/api'
+import apiClient, { jadwalApiClient } from '../services/api'
 import { usePasienStore } from './pasien'
 
 export const useJadwalStore = defineStore('jadwal', () => {
@@ -102,7 +102,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
   const fetchJadwals = async () => {
     loading.value = true
     try {
-      const response = await apiClient.get('/admin/jadwal')
+      const response = await jadwalApiClient.get('/jadwal')
       jadwalList.value = response.data.data || []
       error.value = null
     } catch (err) {
@@ -114,7 +114,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const createJadwal = async (data) => {
     try {
-      const response = await apiClient.post('/admin/jadwal', data)
+      const response = await jadwalApiClient.post('/jadwal', data)
       jadwalList.value.push(response.data.data)
       return response.data.data
     } catch (err) {
@@ -125,7 +125,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const updateJadwal = async (id, data) => {
     try {
-      const response = await apiClient.put(`/admin/jadwal/${id}`, data)
+      const response = await jadwalApiClient.put(`/jadwal/${id}`, data)
       const index = jadwalList.value.findIndex(j => j.id === id)
       if (index !== -1) {
         jadwalList.value[index] = response.data.data
@@ -139,7 +139,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const deleteJadwalApi = async (id) => {
     try {
-      await apiClient.delete(`/admin/jadwal/${id}`)
+      await jadwalApiClient.delete(`/jadwal/${id}`)
       jadwalList.value = jadwalList.value.filter(j => j.id !== id)
     } catch (err) {
       error.value = err.message
@@ -156,6 +156,11 @@ export const useJadwalStore = defineStore('jadwal', () => {
     const idx = selectedWaktuMinum.value.indexOf(val)
     if (idx > -1) selectedWaktuMinum.value.splice(idx, 1)
     else selectedWaktuMinum.value.push(val)
+    
+    // Sort waktu in canonical order: Pagi, Siang, Malam
+    const order = { 'Pagi': 0, 'Siang': 1, 'Malam': 2, 'Saat gejala': 3 }
+    selectedWaktuMinum.value.sort((a, b) => order[a] - order[b])
+    
     form.value.waktu_minum = selectedWaktuMinum.value.join(', ')
   }
 
