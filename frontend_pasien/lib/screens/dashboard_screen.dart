@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
+import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -242,7 +243,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: 'Info Obat',
                 subLabel: 'Detail & Panduan',
                 subLabelColor: const Color(0xFFFF9800),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InfoObatScreen(),
+                    ),
+                  );
+                },
               ),
               _buildMenuCard(
                 icon: Icons.bar_chart,
