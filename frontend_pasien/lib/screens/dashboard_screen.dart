@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
+import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -250,7 +251,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: 'Riwayat',
                 subLabel: 'Kepatuhan Minum',
                 subLabelColor: const Color(0xFF2196F3),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RiwayatKonsumsiObatScreen(),
+                    ),
+                  );
+                },
               ),
               _buildMenuCard(
                 icon: Icons.build_outlined,
