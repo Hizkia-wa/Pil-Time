@@ -269,7 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               _buildMenuCard(
-                icon: Icons.build_outlined,
+                icon: Icons.fitness_center,
                 iconBg: const Color(0xFFF3E5F5),
                 iconColor: const Color(0xFF9C27B0),
                 label: 'Rutinitas Sehat',
