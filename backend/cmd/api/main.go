@@ -25,9 +25,8 @@ func main() {
 	pasienRepo := persistence.NewPasienRepo(db)
 	pasienUsecase := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
 	pasienHandler := http.NewPasienHandler(pasienUsecase)
-
-	// API Gateway untuk jadwal microservice
-	gateway := http.NewGateway("http://localhost:8081")
+	jadwalUsecase := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo)
+	jadwalHandler := http.NewJadwalHandler(jadwalUsecase)
 
 	// dashboard repo + usecase + handler
 	dashboardUsecase := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
@@ -81,13 +80,13 @@ func main() {
 	// Admin pasien routes
 	r.GET("/api/admin/pasien", pasienHandler.GetAll)
 
-	// Admin jadwal routes - MICROSERVICE GATEWAY
-	r.GET("/api/admin/jadwal", gateway.ForwardJadwal)
-	r.GET("/api/admin/jadwal/:id", gateway.ForwardJadwal)
-	r.GET("/api/admin/jadwal/pasien/:pasien_id", gateway.ForwardJadwal)
-	r.POST("/api/admin/jadwal", gateway.ForwardJadwal)
-	r.PUT("/api/admin/jadwal/:id", gateway.ForwardJadwal)
-	r.DELETE("/api/admin/jadwal/:id", gateway.ForwardJadwal)
+	// Admin jadwal routes
+	r.GET("/api/admin/jadwal", jadwalHandler.GetAllJadwal)
+	r.GET("/api/admin/jadwal/:id", jadwalHandler.GetJadwalByID)
+	r.GET("/api/admin/jadwal/pasien/:pasien_id", jadwalHandler.GetJadwalByPasien)
+	r.POST("/api/admin/jadwal", jadwalHandler.CreateJadwal)
+	r.PUT("/api/admin/jadwal/:id", jadwalHandler.UpdateJadwal)
+	r.DELETE("/api/admin/jadwal/:id", jadwalHandler.DeleteJadwal)
 
 	// Admin tracking jadwal routes (Riwayat Kepatuhan)
 	// PENTING: Route /statistics harus SEBELUM /:id agar tidak tertangkap sebagai parameter
