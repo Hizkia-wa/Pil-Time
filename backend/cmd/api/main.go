@@ -32,6 +32,11 @@ func main() {
 	dashboardUsecase := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
 	dashboardHandler := http.NewDashboardHandler(dashboardUsecase)
 
+	// obat repo + usecase + handler
+	obatRepo := persistence.NewObatRepo(db)
+	obatUsecase := usecase.NewObatUsecase(obatRepo)
+	obatHandler := http.NewObatHandler(obatUsecase)
+
 	// tracking jadwal repo + usecase + handler
 	trackingJadwalRepo := persistence.NewTrackingJadwalRepo(db)
 	trackingJadwalUsecase := usecase.NewTrackingJadwalUsecase(trackingJadwalRepo, jadwalRepo, pasienRepo)
@@ -79,6 +84,13 @@ func main() {
 
 	// Admin pasien routes
 	r.GET("/api/admin/pasien", pasienHandler.GetAll)
+
+	// Admin obat routes (Info Obat)
+	r.GET("/api/admin/info-obat", obatHandler.GetAll)
+	r.GET("/api/admin/info-obat/:id", obatHandler.GetByID)
+	r.POST("/api/admin/info-obat", obatHandler.Create)
+	r.PUT("/api/admin/info-obat/:id", obatHandler.Update)
+	r.DELETE("/api/admin/info-obat/:id", obatHandler.Delete)
 
 	// Admin jadwal routes
 	r.GET("/api/admin/jadwal", jadwalHandler.GetAllJadwal)

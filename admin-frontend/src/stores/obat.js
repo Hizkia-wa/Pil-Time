@@ -15,6 +15,7 @@ export const useObatStore = defineStore('obat', () => {
       error.value = null
     } catch (err) {
       error.value = err.message
+      console.error('Error fetching obats:', err)
     } finally {
       loading.value = false
     }
@@ -23,8 +24,9 @@ export const useObatStore = defineStore('obat', () => {
   const createObat = async (data) => {
     try {
       const response = await apiClient.post('/admin/info-obat', data)
-      obatList.value.push(response.data.data)
-      return response.data.data
+      const newObat = response.data.data || data
+      obatList.value.push(newObat)
+      return newObat
     } catch (err) {
       error.value = err.message
       throw err
@@ -34,11 +36,12 @@ export const useObatStore = defineStore('obat', () => {
   const updateObat = async (id, data) => {
     try {
       const response = await apiClient.put(`/admin/info-obat/${id}`, data)
-      const index = obatList.value.findIndex(o => o.id === id)
+      const updatedObat = response.data.data || data
+      const index = obatList.value.findIndex(o => o.obat_id === id)
       if (index !== -1) {
-        obatList.value[index] = response.data.data
+        obatList.value[index] = updatedObat
       }
-      return response.data.data
+      return updatedObat
     } catch (err) {
       error.value = err.message
       throw err
@@ -48,7 +51,7 @@ export const useObatStore = defineStore('obat', () => {
   const deleteObat = async (id) => {
     try {
       await apiClient.delete(`/admin/info-obat/${id}`)
-      obatList.value = obatList.value.filter(o => o.id !== id)
+      obatList.value = obatList.value.filter(o => o.obat_id !== id)
     } catch (err) {
       error.value = err.message
       throw err
