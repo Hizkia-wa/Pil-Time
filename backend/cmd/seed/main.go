@@ -18,11 +18,11 @@ func main() {
 
 	// Data admin default
 	adminUser := &domain.Nakes{
-		Nama:      "Admin Sahabat Sehat",
-		Email:     "admin@sahabatsehat.com",
-		Password:  hashedPassword,
-		JenisIlmu: "Umum",
-		Status:    "active",
+		Nama:         "Admin Sahabat Sehat",
+		Email:        "admin@sahabatsehat.com",
+		Password:     hashedPassword,
+		NIK:          "0000000000000000",
+		JenisKelamin: "L",
 	}
 
 	// Check if admin already exists

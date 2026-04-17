@@ -1,10 +1,11 @@
--- Create obat (medication info) table
+-- Create obat (medication master data) table
 CREATE TABLE IF NOT EXISTS obat (
     obat_id SERIAL PRIMARY KEY,
-    nama_obat VARCHAR(255) NOT NULL UNIQUE,
-    fungsi TEXT NOT NULL,
-    aturan_penggunaan TEXT NOT NULL,
-    perhatian TEXT NOT NULL,
+    nama_obat VARCHAR(255) NOT NULL,
+    fungsi TEXT,
+    aturan_pemakaian TEXT,
+    pantangan TEXT,
+    gambar VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

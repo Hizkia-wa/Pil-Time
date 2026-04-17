@@ -65,12 +65,13 @@ func ObatToResponseDTO(obat *domain.Obat) *dto.ObatResponseDTO {
 		return nil
 	}
 	return &dto.ObatResponseDTO{
-		ObatID:           obat.ObatID,
-		NamaObat:         obat.NamaObat,
-		Fungsi:           obat.Fungsi,
-		AturanPenggunaan: obat.AturanPenggunaan,
-		Perhatian:        obat.Perhatian,
-		CreatedAt:        obat.CreatedAt,
-		UpdatedAt:        obat.UpdatedAt,
+		ObatID:          obat.ObatID,
+		NamaObat:        obat.NamaObat,
+		Fungsi:          obat.Fungsi,
+		AturanPemakaian: obat.AturanPemakaian,
+		Pantangan:       obat.Pantangan,
+		Gambar:          obat.Gambar,
+		CreatedAt:       obat.CreatedAt,
+		UpdatedAt:       obat.UpdatedAt,
 	}
 }

@@ -57,10 +57,11 @@ func (u *ObatUsecase) Create(req *dto.CreateObatDTO) (*dto.ObatResponseDTO, erro
 
 	// Create domain object
 	obat := &domain.Obat{
-		NamaObat:         req.NamaObat,
-		Fungsi:           req.Fungsi,
-		AturanPenggunaan: req.AturanPenggunaan,
-		Perhatian:        req.Perhatian,
+		NamaObat:        req.NamaObat,
+		Fungsi:          req.Fungsi,
+		AturanPemakaian: req.AturanPemakaian,
+		Pantangan:       req.Pantangan,
+		Gambar:          req.Gambar,
 	}
 
 	// Save to database
@@ -87,11 +88,14 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 	if req.Fungsi != "" {
 		existing.Fungsi = req.Fungsi
 	}
-	if req.AturanPenggunaan != "" {
-		existing.AturanPenggunaan = req.AturanPenggunaan
+	if req.AturanPemakaian != "" {
+		existing.AturanPemakaian = req.AturanPemakaian
 	}
-	if req.Perhatian != "" {
-		existing.Perhatian = req.Perhatian
+	if req.Pantangan != "" {
+		existing.Pantangan = req.Pantangan
+	}
+	if req.Gambar != "" {
+		existing.Gambar = req.Gambar
 	}
 
 	// Save updates
