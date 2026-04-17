@@ -42,6 +42,9 @@ func main() {
 	trackingJadwalUsecase := usecase.NewTrackingJadwalUsecase(trackingJadwalRepo, jadwalRepo, pasienRepo)
 	trackingJadwalHandler := http.NewTrackingJadwalHandler(trackingJadwalUsecase)
 
+	// file handler
+	fileHandler := http.NewFileHandler()
+
 	// router - gunakan gin.New() untuk kontrol penuh
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -91,6 +94,13 @@ func main() {
 	r.POST("/api/admin/info-obat", obatHandler.Create)
 	r.PUT("/api/admin/info-obat/:id", obatHandler.Update)
 	r.DELETE("/api/admin/info-obat/:id", obatHandler.Delete)
+
+	// File upload routes
+	r.POST("/api/upload/image", fileHandler.UploadImage)
+	r.POST("/api/upload/image-base64", fileHandler.UploadBase64Image)
+
+	// Static file serving untuk uploads
+	r.Static("/uploads", "./uploads")
 
 	// Admin jadwal routes
 	r.GET("/api/admin/jadwal", jadwalHandler.GetAllJadwal)

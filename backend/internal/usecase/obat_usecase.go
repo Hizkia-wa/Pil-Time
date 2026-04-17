@@ -5,6 +5,7 @@ import (
 	"backend/internal/domain"
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
+	"encoding/json"
 	"errors"
 )
 
@@ -48,6 +49,21 @@ func (u *ObatUsecase) Create(req *dto.CreateObatDTO) (*dto.ObatResponseDTO, erro
 	if req.NamaObat == "" {
 		return nil, errors.New("nama obat tidak boleh kosong")
 	}
+	if req.KategoriIndikasi == "" {
+		return nil, errors.New("kategori indikasi tidak boleh kosong")
+	}
+	if req.Fungsi == "" {
+		return nil, errors.New("fungsi obat tidak boleh kosong")
+	}
+	if req.AturanPenggunaan == "" {
+		return nil, errors.New("aturan penggunaan tidak boleh kosong")
+	}
+	if req.Perhatian == "" {
+		return nil, errors.New("perhatian tidak boleh kosong")
+	}
+	if len(req.WaktuKonsumsi) == 0 {
+		return nil, errors.New("waktu konsumsi harus dipilih minimal 1")
+	}
 
 	// Cek jika obat dengan nama yang sama sudah ada
 	existing, _ := u.repo.GetByName(req.NamaObat)
@@ -55,13 +71,22 @@ func (u *ObatUsecase) Create(req *dto.CreateObatDTO) (*dto.ObatResponseDTO, erro
 		return nil, errors.New("obat dengan nama tersebut sudah ada")
 	}
 
-	// Create domain object
+	// Convert WaktuKonsumsi slice to JSON string
+	waktuJSON, _ := json.Marshal(req.WaktuKonsumsi)
+
+	// Create domain object with all fields
 	obat := &domain.Obat{
-		NamaObat:        req.NamaObat,
-		Fungsi:          req.Fungsi,
-		AturanPemakaian: req.AturanPemakaian,
-		Pantangan:       req.Pantangan,
-		Gambar:          req.Gambar,
+		NamaObat:         req.NamaObat,
+		KategoriIndikasi: req.KategoriIndikasi,
+		FrekuensiMin:     req.FrekuensiMin,
+		FrekuensiMax:     req.FrekuensiMax,
+		DurasiMin:        req.DurasiMin,
+		DurasiMax:        req.DurasiMax,
+		WaktuKonsumsi:    string(waktuJSON),
+		Fungsi:           req.Fungsi,
+		AturanPenggunaan: req.AturanPenggunaan,
+		Perhatian:        req.Perhatian,
+		Gambar:           req.Gambar,
 	}
 
 	// Save to database
@@ -85,14 +110,33 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 	if req.NamaObat != "" {
 		existing.NamaObat = req.NamaObat
 	}
+	if req.KategoriIndikasi != "" {
+		existing.KategoriIndikasi = req.KategoriIndikasi
+	}
+	if req.FrekuensiMin > 0 {
+		existing.FrekuensiMin = req.FrekuensiMin
+	}
+	if req.FrekuensiMax > 0 {
+		existing.FrekuensiMax = req.FrekuensiMax
+	}
+	if req.DurasiMin > 0 {
+		existing.DurasiMin = req.DurasiMin
+	}
+	if req.DurasiMax > 0 {
+		existing.DurasiMax = req.DurasiMax
+	}
+	if len(req.WaktuKonsumsi) > 0 {
+		waktuJSON, _ := json.Marshal(req.WaktuKonsumsi)
+		existing.WaktuKonsumsi = string(waktuJSON)
+	}
 	if req.Fungsi != "" {
 		existing.Fungsi = req.Fungsi
 	}
-	if req.AturanPemakaian != "" {
-		existing.AturanPemakaian = req.AturanPemakaian
+	if req.AturanPenggunaan != "" {
+		existing.AturanPenggunaan = req.AturanPenggunaan
 	}
-	if req.Pantangan != "" {
-		existing.Pantangan = req.Pantangan
+	if req.Perhatian != "" {
+		existing.Perhatian = req.Perhatian
 	}
 	if req.Gambar != "" {
 		existing.Gambar = req.Gambar

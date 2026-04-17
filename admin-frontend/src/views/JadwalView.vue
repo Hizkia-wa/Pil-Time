@@ -418,6 +418,116 @@
         </button>
       </div>
 
+      <!-- DETAIL MODAL -->
+      <div v-if="showDetailModal && selectedJadwalDetail" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl my-8">
+          <!-- Modal Header -->
+          <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-bold text-slate-800">Detail Jadwal Obat</h2>
+            <button
+              @click="closeDetailModal"
+              class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="px-6 py-5 space-y-6">
+            <!-- Pasien Info -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Informasi Pasien</h3>
+              <div class="bg-slate-50 p-3 rounded-lg">
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Nama:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.pasien_nama }}</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Obat Info -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Informasi Obat</h3>
+              <div class="space-y-2">
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Nama Obat:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.nama_obat }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Kategori:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.kategori_obat }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Takaran:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.takaran_obat }}</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Jadwal Info -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Jadwal Pemberian</h3>
+              <div class="space-y-2">
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Frekuensi:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.frekuensi_per_hari }}x sehari</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Waktu Minum:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.waktu_minum }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Aturan Konsumsi:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.aturan_konsumsi }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Durasi:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.tipe_durasi === 'hari' ? selectedJadwalDetail.jumlah_hari + ' hari' : 'Rutin' }}</span>
+                </p>
+                <p v-if="selectedJadwalDetail.tipe_durasi === 'hari'" class="text-sm text-slate-600">
+                  <span class="text-slate-500">Tanggal Mulai:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.tanggal_mulai }}</span>
+                </p>
+                <p v-if="selectedJadwalDetail.tipe_durasi === 'hari'" class="text-sm text-slate-600">
+                  <span class="text-slate-500">Tanggal Selesai:</span>
+                  <span class="font-medium text-slate-800 ml-2">{{ selectedJadwalDetail.tanggal_selesai }}</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Catatan -->
+            <div v-if="selectedJadwalDetail.catatan">
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Catatan</h3>
+              <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">{{ selectedJadwalDetail.catatan }}</p>
+            </div>
+
+            <!-- Status -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Status</h3>
+              <span :class="['px-3 py-1 rounded text-xs font-semibold inline-block', selectedJadwalDetail.status === 'aktif' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800']">
+                {{ selectedJadwalDetail.status === 'aktif' ? '● Aktif' : '● Rutin' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="border-t border-gray-200 px-6 py-4 flex gap-2 justify-end bg-slate-50">
+            <button
+              @click="closeDetailModal"
+              class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 text-sm font-medium transition"
+            >
+              Tutup
+            </button>
+            <button
+              @click="editJadwal(selectedJadwalDetail); closeDetailModal()"
+              class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium transition"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Search Bar -->
       <div class="mb-6">
         <div class="relative">
@@ -464,19 +574,45 @@
                   {{ jadwal.status === 'aktif' ? '● Aktif' : '● Rutin' }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs space-x-2 flex">
-                <button 
-                  @click="editJadwal(jadwal)"
-                  class="px-2 py-1 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition text-xs"
-                >
-                  ✎ Edit
-                </button>
-                <button 
-                  @click="deleteJadwal(jadwal.id)"
-                  class="px-2 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100 transition text-xs"
-                >
-                  🗑 Hapus
-                </button>
+              <td class="px-4 py-3 text-xs">
+                <div class="relative inline-block">
+                  <button 
+                    @click="toggleDropdown(jadwal.id)"
+                    class="px-2 py-1 text-slate-600 hover:text-slate-900 transition text-xl"
+                  >
+                    ⋮
+                  </button>
+
+                  <!-- Dropdown Menu -->
+                  <div
+                    v-if="openDropdownId === jadwal.id"
+                    class="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-10"
+                  >
+                    <button
+                      @click="openDetailModal(jadwal); closeDropdown()"
+                      class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition flex items-center gap-2 border-b border-slate-100"
+                    >
+                      <span>👁</span>
+                      <span>Detail</span>
+                    </button>
+
+                    <button
+                      @click="editJadwal(jadwal); closeDropdown()"
+                      class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition flex items-center gap-2 border-b border-slate-100"
+                    >
+                      <span>✎</span>
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      @click="deleteJadwal(jadwal.id); closeDropdown()"
+                      class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 transition flex items-center gap-2"
+                    >
+                      <span>🗑</span>
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -522,6 +658,13 @@
 
           <div class="flex gap-2 pt-3 border-t border-gray-200">
             <button 
+              @click="openDetailModal(jadwal)"
+              class="flex-1 px-2 py-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition text-xs font-medium"
+              title="Lihat Detail"
+            >
+              👁 Detail
+            </button>
+            <button 
               @click="editJadwal(jadwal)"
               class="flex-1 px-2 py-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition text-xs font-medium"
             >
@@ -561,6 +704,9 @@ export default {
     const pasienStore = usePasienStore()
     const showAddModal = ref(false)
     const showSuccessModal = ref(false)
+    const showDetailModal = ref(false)
+    const selectedJadwalDetail = ref(null)
+    const openDropdownId = ref(null)
     const searchQuery = ref('')
     const searchPasien = ref('')
 
@@ -701,6 +847,24 @@ export default {
       alert('Edit functionality coming soon')
     }
 
+    const openDetailModal = (jadwal) => {
+      selectedJadwalDetail.value = jadwal
+      showDetailModal.value = true
+    }
+
+    const closeDetailModal = () => {
+      showDetailModal.value = false
+      selectedJadwalDetail.value = null
+    }
+
+    const toggleDropdown = (id) => {
+      openDropdownId.value = openDropdownId.value === id ? null : id
+    }
+
+    const closeDropdown = () => {
+      openDropdownId.value = null
+    }
+
     const deleteJadwal = async (id) => {
       if (confirm('Yakin ingin menghapus jadwal ini?')) {
         try {
@@ -738,6 +902,13 @@ export default {
       closeSuccessModal,
       handleSubmit,
       editJadwal,
+      openDetailModal,
+      closeDetailModal,
+      showDetailModal,
+      selectedJadwalDetail,
+      openDropdownId,
+      toggleDropdown,
+      closeDropdown,
       deleteJadwal
     }
   }

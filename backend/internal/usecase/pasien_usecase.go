@@ -188,13 +188,14 @@ func (u *PasienUsecase) GetPasienDashboard(pasienID int) (*dto.PasienDashboardRe
 			jadwalMulai := jadwal.TanggalMulai
 			jadwalSelesai := jadwal.TanggalSelesai
 
-			// Handle jadwal dengan tipe_durasi="rutin" (tanpa tanggal_selesai)
-			if jadwal.TipeDurasi == "rutin" {
+			// Handle jadwal berdasarkan tipe_durasi
+			switch jadwal.TipeDurasi {
+			case "rutin":
 				// Jadwal rutin berlaku setiap hari jika sudah mulai
 				if jadwalMulai <= today {
 					todayJadwalDTOs = append(todayJadwalDTOs, jadwalDTO)
 				}
-			} else if jadwal.TipeDurasi == "hari" {
+			case "hari":
 				// Jadwal terbatas berlaku hingga tanggal_selesai (jika ada)
 				// Jika tanggal_selesai kosong, anggap jadwal berlaku indefinite
 				if jadwalMulai <= today {
