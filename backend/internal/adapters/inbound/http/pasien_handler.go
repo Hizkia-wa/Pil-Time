@@ -154,6 +154,10 @@ func (h *PasienHandler) GetAll(c *gin.Context) {
 	// Convert to response DTOs
 	var responses []dto.PasienResponseDTO
 	for _, p := range pasiens {
+		// Get count of active medicines for this patient
+		jadwalList, _ := h.usecase.GetJadwalByPasien(p.PasienID)
+		jumlahObat := len(jadwalList)
+
 		responses = append(responses, dto.PasienResponseDTO{
 			PasienID:     p.PasienID,
 			Nama:         p.Nama,
@@ -164,6 +168,7 @@ func (h *PasienHandler) GetAll(c *gin.Context) {
 			Alamat:       p.Alamat,
 			JenisKelamin: p.JenisKelamin,
 			NoTelepon:    p.NoTelepon,
+			JumlahObat:   jumlahObat,
 		})
 	}
 

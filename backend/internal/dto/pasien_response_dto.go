@@ -10,4 +10,5 @@ type PasienResponseDTO struct {
 	Alamat       string `json:"alamat,omitempty"`
 	JenisKelamin string `json:"jenis_kelamin,omitempty"`
 	NoTelepon    string `json:"no_telepon,omitempty"`
+	JumlahObat   int    `json:"jumlah_obat"` // Count of active medicines
 }

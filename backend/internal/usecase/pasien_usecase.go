@@ -81,6 +81,11 @@ func (u *PasienUsecase) GetAll() ([]domain.Pasien, error) {
 	return u.repo.GetAll()
 }
 
+// GetJadwalByPasien mengambil daftar jadwal untuk pasien tertentu
+func (u *PasienUsecase) GetJadwalByPasien(pasienID int) ([]domain.Jadwal, error) {
+	return u.jadwalRepo.GetByPasienID(pasienID)
+}
+
 // Login melakukan login pasien
 func (u *PasienUsecase) Login(req *dto.LoginPasienRequest) (*dto.LoginPasienResponse, error) {
 	// Cari pasien berdasarkan email
