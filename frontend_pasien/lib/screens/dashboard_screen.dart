@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
+import "package:frontend_pasien/screens/rutinitas_mandiri/rutinitas_sehat_screen.dart";
 import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -275,7 +276,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: 'Rutinitas Sehat',
                 subLabel: 'Jadwal Aktivitas',
                 subLabelColor: const Color(0xFF9C27B0),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      // Tambahkan parameter streakHari di sini
+                      builder: (context) => const RutinitasSehatScreen(), 
+                    ),
+                  );
+                },
               ),
             ],
           ),
