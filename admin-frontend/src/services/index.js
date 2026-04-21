@@ -39,19 +39,19 @@ export const jadwalService = {
 
 export const obatService = {
   getAllObat() {
-    return apiClient.get('/info-obat')
+    return apiClient.get('/admin/info-obat')
   },
 
   createObat(data) {
-    return apiClient.post('/info-obat', data)
+    return apiClient.post('/admin/info-obat', data)
   },
 
   updateObat(id, data) {
-    return apiClient.put(`/info-obat/${id}`, data)
+    return apiClient.put(`/admin/info-obat/${id}`, data)
   },
 
   deleteObat(id) {
-    return apiClient.delete(`/info-obat/${id}`)
+    return apiClient.delete(`/admin/info-obat/${id}`)
   }
 }
 

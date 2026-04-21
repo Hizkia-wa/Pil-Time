@@ -50,8 +50,8 @@
             </button>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
+          <div class="overflow-hidden">
+            <table class="w-full">
               <thead class="bg-slate-50 border-b border-slate-200">
                 <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500">
                   <th class="px-4 py-3 font-semibold">Nama Obat</th>
@@ -78,16 +78,49 @@
                   <td class="px-4 py-3 align-top text-sm text-slate-600">{{ getFrekuensi(obat) }}</td>
                   <td class="px-4 py-3 align-top text-sm text-slate-500">{{ getDurasi(obat) }}</td>
 
-                  <!-- Only edit button, no delete -->
+                  <!-- Action Dropdown Menu -->
                   <td class="px-4 py-3 align-top">
-                    <div class="flex items-center justify-center">
+                    <div class="relative">
                       <button
-                        @click="openEditPage(obat)"
-                        class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition flex items-center justify-center"
-                        title="Edit"
+                        @click="toggleDropdown(obat.obat_id)"
+                        class="px-2 py-1 text-slate-600 hover:text-slate-900 transition text-xl"
+                        :id="`dropdown-btn-${obat.obat_id}`"
                       >
-                        <span class="text-[13px]">✎</span>
+                        ⋮
                       </button>
+
+                      <!-- Dropdown Menu - Using Teleport to escape overflow -->
+                      <Teleport to="body">
+                        <div
+                          v-if="openDropdownId === obat.obat_id"
+                          class="fixed bg-white border border-slate-200 rounded-lg shadow-xl z-50 w-40"
+                          :style="getDropdownPosition(obat.obat_id)"
+                        >
+                          <button
+                            @click="openDetailModal(obat); closeDropdown()"
+                            class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition flex items-center gap-2 border-b border-slate-100"
+                          >
+                            <span>👁</span>
+                            <span>Detail</span>
+                          </button>
+
+                          <button
+                            @click="openEditPage(obat); closeDropdown()"
+                            class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition flex items-center gap-2 border-b border-slate-100"
+                          >
+                            <span>✎</span>
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            @click="deleteObat(obat.obat_id); closeDropdown()"
+                            class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 transition flex items-center gap-2"
+                          >
+                            <span>🗑</span>
+                            <span>Hapus</span>
+                          </button>
+                        </div>
+                      </Teleport>
                     </div>
                   </td>
                 </tr>
@@ -139,8 +172,110 @@
         </div>
       </section>
 
+      <!-- DETAIL MODAL -->
+      <div v-if="showDetailModal && selectedObatDetail" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <!-- Modal Header -->
+          <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-800">Detail Obat</h2>
+            <button
+              @click="closeDetailModal"
+              class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="px-6 py-5 space-y-6">
+            <!-- Image -->
+            <div v-if="selectedObatDetail.gambar" class="flex justify-center">
+              <img
+                :src="selectedObatDetail.gambar"
+                alt="Gambar obat"
+                class="w-48 h-48 object-cover rounded-lg border border-slate-200"
+              />
+            </div>
+
+            <!-- Identitas Obat -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Identitas Obat</h3>
+              <div class="space-y-2">
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Nama Obat:</span>
+                  <span class="font-medium text-slate-800">{{ selectedObatDetail.nama_obat }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Kategori / Indikasi:</span>
+                  <span
+                    :class="getKategoriClass(selectedObatDetail)"
+                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ml-1"
+                  >
+                    {{ getKategori(selectedObatDetail) }}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Aturan Penggunaan -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Aturan Penggunaan</h3>
+              <div class="space-y-2">
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Frekuensi:</span>
+                  <span class="font-medium text-slate-800">{{ getFrekuensi(selectedObatDetail) }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Durasi:</span>
+                  <span class="font-medium text-slate-800">{{ getDurasi(selectedObatDetail) }}</span>
+                </p>
+                <p class="text-sm text-slate-600">
+                  <span class="text-slate-500">Waktu Konsumsi:</span>
+                  <span class="font-medium text-slate-800">{{ selectedObatDetail.waktu_konsumsi?.join(', ') || 'Tidak ditentukan' }}</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Informasi Klinis -->
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">Informasi Klinis</h3>
+              <div class="space-y-3">
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Fungsi Obat:</p>
+                  <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">{{ selectedObatDetail.fungsi || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Aturan Penggunaan:</p>
+                  <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">{{ selectedObatDetail.aturan_penggunaan || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-500 mb-1">Perhatian / Pantangan:</p>
+                  <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">{{ selectedObatDetail.perhatian || '-' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="border-t border-slate-200 px-6 py-4 flex gap-2 justify-end bg-slate-50">
+            <button
+              @click="closeDetailModal"
+              class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 text-sm font-medium transition"
+            >
+              Tutup
+            </button>
+            <button
+              @click="openEditPage(selectedObatDetail); closeDetailModal()"
+              class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium transition"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- FORM MODE -->
-      <section v-else>
+      <section v-else-if="pageMode === 'form'">
         <!-- Header with back button + title + step indicator -->
         <div class="flex items-center justify-between gap-3 mb-5">
           <div class="flex items-center gap-3">
@@ -332,6 +467,12 @@
             </label>
           </article>
 
+          <!-- Gambar Obat (Image Upload) -->
+          <ImageUpload 
+            :initial-image="form.gambar"
+            @update:image="form.gambar = $event"
+          />
+
           <div class="flex justify-end pb-6">
             <button
               @click="goToConfirmation"
@@ -349,9 +490,8 @@
         <!-- STEP 2: Confirmation -->
         <div v-else-if="formStep === 2 && !showSuccess" class="bg-white border border-slate-200 rounded-xl p-6 max-w-2xl mx-auto w-full shadow-sm">
           <div class="text-center mb-6">
-            <div class="mx-auto w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl">✓</div>
-            <h2 class="text-2xl font-bold text-slate-800 mt-4">Konfirmasi Info Obat</h2>
-            <p class="text-sm text-slate-500">Periksa kembali data sebelum disimpan.</p>
+            <h2 class="text-2xl font-bold text-slate-800">Konfirmasi Info Obat</h2>
+            <p class="text-sm text-slate-500 mt-1">Periksa kembali data sebelum disimpan.</p>
           </div>
 
           <div class="border border-slate-200 rounded-lg overflow-hidden text-sm">
@@ -394,57 +534,31 @@
             </button>
           </div>
         </div>
+      </section>
 
-        <!-- SUCCESS -->
-        <div v-else class="bg-white border border-slate-200 rounded-xl p-6 max-w-2xl mx-auto w-full text-center shadow-sm">
-          <div class="mx-auto w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl">✓</div>
-          <h2 class="text-2xl font-bold text-slate-800 mt-4">Info obat berhasil ditambahkan</h2>
+      <!-- SUCCESS MODAL POPUP -->
+      <div v-if="showSuccess" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md text-center p-6">
+          <div class="mx-auto w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl mb-4">✓</div>
+          <h2 class="text-2xl font-bold text-slate-800">Info obat berhasil ditambahkan</h2>
           <p class="text-sm text-slate-500 mt-2">Data informasi obat telah tersimpan dan dapat diakses oleh tenaga kesehatan terkait.</p>
 
-          <div class="border border-slate-200 rounded-lg overflow-hidden text-sm mt-6 text-left">
-            <div class="bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ringkasan Data Obat</div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Nama obat</p>
-              <p class="px-4 py-2 text-right font-medium text-slate-700">{{ form.nama_obat }}</p>
-            </div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Kategori / indikasi</p>
-              <p class="px-4 py-2 text-right font-medium text-slate-700">{{ form.kategori_indikasi }}</p>
-            </div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Frekuensi konsumsi</p>
-              <p class="px-4 py-2 text-right font-medium text-slate-700">{{ form.frekuensi_min }}–{{ form.frekuensi_max }} kali sehari</p>
-            </div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Durasi pemakaian</p>
-              <p class="px-4 py-2 text-right font-medium text-slate-700">{{ form.durasi_min }}–{{ form.durasi_max }} hari</p>
-            </div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Ketersediaan</p>
-              <p class="px-4 py-2 text-right font-medium text-slate-700">{{ form.waktu_konsumsi.join(', ') }}</p>
-            </div>
-            <div class="grid grid-cols-[1fr,1fr] border-t border-slate-200">
-              <p class="px-4 py-2 text-slate-500">Status</p>
-              <p class="px-4 py-2 text-right font-medium text-emerald-600">● Tersimpan</p>
-            </div>
-          </div>
-
-          <div class="flex justify-center gap-3 mt-4">
+          <div class="flex justify-center gap-3 mt-6">
             <button
               @click="finishToList"
-              class="h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+              class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition"
             >
-              ← Kembali ke Daftar Obat
+              Kembali
             </button>
             <button
               @click="resetAndAddMore"
-              class="h-10 px-4 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+              class="flex-1 h-10 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition"
             >
-              + Tambah Info Obat Lain
+              Tambah Lagi
             </button>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   </LayoutWrapper>
 </template>
@@ -452,6 +566,7 @@
 <script>
 import { computed, onMounted, ref } from 'vue'
 import LayoutWrapper from '../components/LayoutWrapper.vue'
+import ImageUpload from '../components/ImageUpload.vue'
 import { useObatStore } from '../stores/obat'
 
 const PER_PAGE = 8
@@ -459,7 +574,8 @@ const PER_PAGE = 8
 export default {
   name: 'ObatView',
   components: {
-    LayoutWrapper
+    LayoutWrapper,
+    ImageUpload
   },
   setup() {
     const obatStore = useObatStore()
@@ -471,6 +587,10 @@ export default {
 
     const isEditing = ref(false)
     const editingId = ref(null)
+
+    const showDetailModal = ref(false)
+    const selectedObatDetail = ref(null)
+    const openDropdownId = ref(null)
 
     const searchTerm = ref('')
     const currentPage = ref(1)
@@ -576,7 +696,8 @@ export default {
         waktu_konsumsi: Array.isArray(obat.waktu_konsumsi) ? [...obat.waktu_konsumsi] : [],
         fungsi: obat.fungsi || '',
         aturan_penggunaan: obat.aturan_penggunaan || '',
-        perhatian: obat.perhatian || ''
+        perhatian: obat.perhatian || '',
+        gambar: obat.gambar || null
       }
     }
 
@@ -617,7 +738,8 @@ export default {
           waktu_konsumsi: form.value.waktu_konsumsi,
           fungsi: form.value.fungsi.trim(),
           aturan_penggunaan: form.value.aturan_penggunaan.trim(),
-          perhatian: form.value.perhatian.trim()
+          perhatian: form.value.perhatian.trim(),
+          gambar: form.value.gambar
         }
 
         if (isEditing.value && editingId.value) {
@@ -635,11 +757,6 @@ export default {
     }
 
     const backFromForm = () => {
-      if (showSuccess.value) {
-        finishToList()
-        return
-      }
-
       if (formStep.value === 2) {
         formStep.value = 1
         return
@@ -647,6 +764,8 @@ export default {
 
       if (confirm('Batalkan pengisian info obat?')) {
         pageMode.value = 'list'
+        showSuccess.value = false
+        formStep.value = 1
       }
     }
 
@@ -674,6 +793,35 @@ export default {
         await obatStore.deleteObat(id)
       } catch (error) {
         alert('Gagal menghapus obat: ' + error.message)
+      }
+    }
+
+    const openDetailModal = (obat) => {
+      selectedObatDetail.value = obat
+      showDetailModal.value = true
+    }
+
+    const closeDetailModal = () => {
+      showDetailModal.value = false
+      selectedObatDetail.value = null
+    }
+
+    const toggleDropdown = (id) => {
+      openDropdownId.value = openDropdownId.value === id ? null : id
+    }
+
+    const closeDropdown = () => {
+      openDropdownId.value = null
+    }
+
+    const getDropdownPosition = (id) => {
+      const button = document.getElementById(`dropdown-btn-${id}`)
+      if (!button) return { top: 0, left: 0 }
+      
+      const rect = button.getBoundingClientRect()
+      return {
+        top: `${rect.bottom + window.scrollY + 8}px`,
+        left: `${rect.right - 160 + window.scrollX}px`
       }
     }
 
@@ -743,6 +891,14 @@ export default {
       finishToList,
       resetAndAddMore,
       deleteObat,
+      openDetailModal,
+      closeDetailModal,
+      showDetailModal,
+      selectedObatDetail,
+      openDropdownId,
+      toggleDropdown,
+      closeDropdown,
+      getDropdownPosition,
       getKategori,
       getKategoriClass,
       getFrekuensi,
@@ -763,7 +919,8 @@ function getInitialForm() {
     waktu_konsumsi: [],
     fungsi: '',
     aturan_penggunaan: '',
-    perhatian: ''
+    perhatian: '',
+    gambar: null
   }
 }
 

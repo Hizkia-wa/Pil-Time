@@ -20,21 +20,10 @@ export const usePasienStore = defineStore('pasien', () => {
     }
   }
 
-  const deletePasien = async (id) => {
-    try {
-      await apiClient.delete(`/admin/pasien/${id}`)
-      pasienList.value = pasienList.value.filter(p => p.id !== id)
-    } catch (err) {
-      error.value = err.message
-      throw err
-    }
-  }
-
   return {
     pasienList,
     loading,
     error,
-    fetchPasiens,
-    deletePasien
+    fetchPasiens
   }
 })

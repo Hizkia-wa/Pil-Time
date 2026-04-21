@@ -5,7 +5,6 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/auth_service.dart';
-import 'screens/riwayat/riwayat_konsumsi_obat.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
