@@ -5,6 +5,8 @@ import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
 import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
+import 'package:frontend_pasien/screens/rutinitas_mandiri/rutinitas_sehat_screen.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -268,21 +270,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   );
                 },
               ),
-              _buildMenuCard(
-                icon: Icons.fitness_center,
-                iconBg: const Color(0xFFF3E5F5),
-                iconColor: const Color(0xFF9C27B0),
-                label: 'Rutinitas Sehat',
-                subLabel: 'Jadwal Aktivitas',
-                subLabelColor: const Color(0xFF9C27B0),
-                onTap: () {},
-              ),
-            ],
-          ),
-        ],
+             _buildMenuCard(
+  icon: Icons.fitness_center,
+  iconBg: const Color(0xFFF3E5F5),
+  iconColor: const Color(0xFF9C27B0),
+  label: 'Rutinitas Sehat',
+  subLabel: 'Jadwal Aktivitas',
+  subLabelColor: const Color(0xFF9C27B0),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const RutinitasSehatScreen(),
       ),
     );
-  }
+  },
+),
 
   Widget _buildMenuCard({
     required IconData icon,
