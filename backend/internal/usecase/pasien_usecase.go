@@ -7,6 +7,8 @@ import (
 	"backend/pkg/email"
 	"backend/pkg/utils"
 	"errors"
+	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -109,8 +111,6 @@ func (u *PasienUsecase) Login(req *dto.LoginPasienRequest) (*dto.LoginPasienResp
 }
 
 // ForgotPassword mengirim kode reset password ke email
-// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
-// karena domain.Pasien tidak memiliki field ResetCode dan ResetCodeExpiry
 func (u *PasienUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error) {
 	// Cek apakah email terdaftar
 	pasien, err := u.repo.GetByEmail(req.Email)
@@ -118,23 +118,93 @@ func (u *PasienUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.For
 		return nil, errors.New("email tidak terdaftar")
 	}
 
-	// TODO: Implementasi dengan tabel reset_token terpisah
-	// Untuk sekarang, return error
-	return nil, errors.New("fitur reset password sedang dalam pengembangan")
+	// Generate 6-digit random code
+	code := generateRandomCode()
+
+	// Set expiry time (15 menit)
+	expiryTime := time.Now().Add(15 * time.Minute)
+
+	// Save reset code ke database
+	if err := u.repo.UpdateResetCode(req.Email, code, expiryTime); err != nil {
+		return nil, errors.New("gagal menyimpan kode reset")
+	}
+
+	// Kirim email dengan kode reset
+	if err := u.emailService.SendResetCode(req.Email, code); err != nil {
+		return nil, errors.New("gagal mengirim email reset password")
+	}
+
+	return &dto.ForgotPasswordResponse{
+		Message: "Kode reset password telah dikirim ke email Anda",
+	}, nil
 }
 
 // VerifyResetCode memverifikasi kode reset password
-// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
 func (u *PasienUsecase) VerifyResetCode(req *dto.VerifyResetCodeRequest) (*dto.VerifyResetCodeResponse, error) {
-	// TODO: Implementasi dengan tabel reset_token terpisah
-	return nil, errors.New("fitur reset password sedang dalam pengembangan")
+	// Cek apakah email terdaftar
+	pasien, err := u.repo.GetByEmail(req.Email)
+	if err != nil || pasien == nil || pasien.Email == "" {
+		return nil, errors.New("email tidak terdaftar")
+	}
+
+	// Cek apakah reset code ada
+	if pasien.ResetCode == nil || *pasien.ResetCode == "" {
+		return nil, errors.New("tidak ada permintaan reset password untuk email ini")
+	}
+
+	// Cek apakah kode sudah expired
+	if pasien.ResetCodeExpiry == nil || time.Now().After(*pasien.ResetCodeExpiry) {
+		return nil, errors.New("kode reset password sudah kadaluarsa")
+	}
+
+	// Cek apakah kode sesuai
+	if *pasien.ResetCode != req.Code {
+		return nil, errors.New("kode reset password tidak valid")
+	}
+
+	return &dto.VerifyResetCodeResponse{
+		Message: "Kode reset password valid",
+	}, nil
 }
 
 // ResetPassword mengubah password pasien
-// NOTE: Feature ini memerlukan tabel terpisah untuk menyimpan reset tokens
 func (u *PasienUsecase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error) {
-	// TODO: Implementasi dengan tabel reset_token terpisah
-	return nil, errors.New("fitur reset password sedang dalam pengembangan")
+	// Cek apakah email terdaftar
+	pasien, err := u.repo.GetByEmail(req.Email)
+	if err != nil || pasien == nil || pasien.Email == "" {
+		return nil, errors.New("email tidak terdaftar")
+	}
+
+	// Verifikasi kode terlebih dahulu
+	verifyReq := &dto.VerifyResetCodeRequest{
+		Email: req.Email,
+		Code:  req.Code,
+	}
+	if _, err := u.VerifyResetCode(verifyReq); err != nil {
+		return nil, err
+	}
+
+	// Hash password baru
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return nil, errors.New("gagal mengenkripsi password")
+	}
+
+	// Update password dan clear reset code
+	if err := u.repo.UpdatePassword(req.Email, hashedPassword); err != nil {
+		return nil, errors.New("gagal mengubah password")
+	}
+
+	return &dto.ResetPasswordResponse{
+		Message: "Password berhasil diubah",
+	}, nil
+}
+
+// generateRandomCode generate 6-digit random code
+func generateRandomCode() string {
+	rand.Seed(time.Now().UnixNano())
+	code := rand.Intn(900000) + 100000 // Generate number between 100000-999999
+	return fmt.Sprintf("%06d", code)
 }
 
 // GetPasienDashboard mengambil data dashboard untuk pasien dengan jadwal hari ini
