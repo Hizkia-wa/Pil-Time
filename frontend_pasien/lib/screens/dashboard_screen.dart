@@ -6,6 +6,8 @@ import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
 import "package:frontend_pasien/screens/rutinitas_mandiri/rutinitas_sehat_screen.dart";
 import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
+import 'package:frontend_pasien/screens/notifikasi/notifikasi_screen.dart';
+import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -147,7 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── HEADER ────────────────────────────────────────────────────────────────
+  // HEADER //
   Widget _buildHeader(Dashboard dashboard) {
     return Container(
       color: Colors.white,
@@ -182,7 +184,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           // Notification bell
           GestureDetector(
-            onTap: () {},
+            onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const NotificationScreen(),
+    ),
+  );
+},
             child: Container(
               width: 40,
               height: 40,
@@ -202,7 +211,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── MENU UTAMA ────────────────────────────────────────────────────────────
+  // MENU UTAMA //
   Widget _buildMenuUtama() {
     return Container(
       color: Colors.white,
@@ -235,7 +244,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: 'Reminder & Alarm',
                 subLabel: 'Kelola Pengingat',
                 subLabelColor: const Color(0xFFFF6B6B),
-                onTap: () {},
+                onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AlarmScreen(),
+    ),
+  );
+},
               ),
               _buildMenuCard(
                 icon: Icons.local_pharmacy_outlined,
