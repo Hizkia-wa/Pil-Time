@@ -23,9 +23,14 @@ export const useObatStore = defineStore('obat', () => {
 
   const createObat = async (data) => {
     try {
-      const response = await apiClient.post('/admin/info-obat', data)
-      const newObat = response.data.data || data
-      obatList.value.push(newObat)
+      // PERBAIKAN: Pastikan header multipart/form-data disertakan eksplisit untuk backend Go
+      const response = await apiClient.post('/admin/info-obat', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      const newObat = response.data.data
+      await fetchObats() 
       return newObat
     } catch (err) {
       error.value = err.message
@@ -35,13 +40,18 @@ export const useObatStore = defineStore('obat', () => {
 
   const updateObat = async (id, data) => {
     try {
-      const response = await apiClient.put(`/admin/info-obat/${id}`, data)
-      const updatedObat = response.data.data || data
-      const index = obatList.value.findIndex(o => o.obat_id === id)
-      if (index !== -1) {
-        obatList.value[index] = updatedObat
-      }
-      return updatedObat
+      /* CATATAN PENTING UNTUK GO GIN: 
+         Jika backend kamu menggunakan Gin dan method r.PUT, pastikan 
+         tidak ada parameter '_method' tambahan yang biasa digunakan di Laravel.
+      */
+      const response = await apiClient.put(`/admin/info-obat/${id}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      await fetchObats() 
+      return response.data.data
     } catch (err) {
       error.value = err.message
       throw err

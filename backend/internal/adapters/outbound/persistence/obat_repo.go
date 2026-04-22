@@ -4,8 +4,6 @@ import (
 	"backend/internal/domain"
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
-	"encoding/json"
-
 	"gorm.io/gorm"
 )
 
@@ -54,38 +52,28 @@ func (r *obatRepo) Delete(id int) error {
 	return r.db.Delete(&domain.Obat{}, id).Error
 }
 
+// --- TAMBAHKAN METHOD INI UNTUK MENGHILANGKAN ERROR ---
 func (r *obatRepo) Count() (int64, error) {
 	var count int64
 	err := r.db.Model(&domain.Obat{}).Count(&count).Error
 	return count, err
 }
+// ------------------------------------------------------
 
-// Helper function to convert domain to DTO
+// Mapper fiks sesuai tabel SQL (6 Kolom Utama)
 func ObatToResponseDTO(obat *domain.Obat) *dto.ObatResponseDTO {
 	if obat == nil {
 		return nil
 	}
 
-	// Parse WaktuKonsumsi from JSON string to slice
-	var waktuKonsumsi []string
-	if obat.WaktuKonsumsi != "" {
-		json.Unmarshal([]byte(obat.WaktuKonsumsi), &waktuKonsumsi)
-	}
-
 	return &dto.ObatResponseDTO{
-		ObatID:           obat.ObatID,
-		NamaObat:         obat.NamaObat,
-		KategoriIndikasi: obat.KategoriIndikasi,
-		FrekuensiMin:     obat.FrekuensiMin,
-		FrekuensiMax:     obat.FrekuensiMax,
-		DurasiMin:        obat.DurasiMin,
-		DurasiMax:        obat.DurasiMax,
-		WaktuKonsumsi:    waktuKonsumsi,
-		Fungsi:           obat.Fungsi,
-		AturanPenggunaan: obat.AturanPenggunaan,
-		Perhatian:        obat.Perhatian,
-		Gambar:           obat.Gambar,
-		CreatedAt:        obat.CreatedAt,
-		UpdatedAt:        obat.UpdatedAt,
+		ObatID:          obat.ObatID,
+		NamaObat:        obat.NamaObat,
+		Fungsi:          obat.Fungsi,
+		AturanPemakaian: obat.AturanPemakaian,
+		Pantangan:       obat.Pantangan,
+		Gambar:          obat.Gambar,
+		CreatedAt:       obat.CreatedAt,
+		UpdatedAt:       obat.UpdatedAt,
 	}
 }

@@ -47,19 +47,30 @@
 
       <!-- ===== STEP 1 ===== -->
       <Step1PasienObat
-        v-if="jadwalStore.currentStep === 1"
-        :form="jadwalStore.form"
-        :pasien-list="jadwalStore.filteredPasien"
-        :search-pasien="jadwalStore.searchPasien"
-        :selected-pasien-name="jadwalStore.getSelectedPasienName()"
-        :selected-pasien-code="jadwalStore.getSelectedPasienCode()"
-        :selected-pasien-diagnosa="jadwalStore.getSelectedPasienDiagnosa()"
-        @update:form="jadwalStore.form = $event"
-        @update:searchPasien="jadwalStore.searchPasien = $event"
-        @select-pasien="jadwalStore.selectPasien"
-        @next="jadwalStore.goToStep2"
-        @cancel="jadwalStore.cancelAdd"
-      />
+  v-if="jadwalStore.currentStep === 1"
+  :form="jadwalStore.form"
+  :pasien-list="jadwalStore.filteredPasien"
+  :obat-list="jadwalStore.filteredObat"
+  v-model:search-pasien="jadwalStore.searchPasien"
+  v-model:search-obat="jadwalStore.searchObat"
+  
+  :selected-pasien-name="jadwalStore.getSelectedPasienName()"
+  :selected-pasien-nik="jadwalStore.getSelectedPasienNIK()"
+  :selected-pasien-jk="jadwalStore.getSelectedPasienJK()"
+  :selected-pasien-telepon="jadwalStore.getSelectedPasienTelepon()"
+  :selected-pasien-alamat="jadwalStore.getSelectedPasienAlamat()"
+  
+  :selected-obat-aturan="jadwalStore.getSelectedObatAturan()"
+  :selected-obat-fungsi="jadwalStore.getSelectedObatFungsi()"
+  :selected-obat-pantangan="jadwalStore.getSelectedObatPantangan()"
+  :selected-obat-gambar="jadwalStore.getSelectedObatGambar()"
+
+  @update:form="jadwalStore.form = $event"
+  @select-pasien="jadwalStore.selectPasien"
+  @select-obat="jadwalStore.selectObat"
+  @next="jadwalStore.goToStep2"
+  @cancel="jadwalStore.cancelAdd"
+/>
 
       <!-- ===== STEP 2 ===== -->
       <Step2AturanMinum
@@ -113,6 +124,7 @@ import Step2AturanMinum from './components/step2aturanminum.vue'
 import Step3Konfirmasi from './components/step3konfirmasi.vue'
 import { useJadwalStore } from '../../stores/jadwal'
 import { usePasienStore } from '../../stores/pasien'
+import { useObatStore } from '../../stores/obat' //
 
 export default {
   name: 'JadwalView',
@@ -127,6 +139,7 @@ export default {
     const router = useRouter()
     const jadwalStore = useJadwalStore()
     const pasienStore = usePasienStore()
+    const obatStore = useObatStore()
 
     const handleViewDetail = (jadwal) => {
       router.push({ name: 'jadwal-detail', params: { id: jadwal.id } })
@@ -136,14 +149,17 @@ export default {
       router.push({ name: 'jadwal-edit', params: { id: jadwal.id } })
     }
 
+    // Di dalam setup() JadwalView.vue
     onMounted(() => {
       jadwalStore.fetchJadwals()
       pasienStore.fetchPasiens()
+      obatStore.fetchObats() // Sekarang ini tidak akan error lagi
     })
 
     return {
       jadwalStore,
       pasienStore,
+      obatStore,
       handleViewDetail,
       handleEditJadwal,
     }

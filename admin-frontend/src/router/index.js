@@ -57,7 +57,7 @@ const routes = [
   {
     path: '/obat',
     name: 'obat',
-    component: ObatView,
+    component: ObatView, // Komponen Induk
     meta: { requiresAuth: true }
   },
   {

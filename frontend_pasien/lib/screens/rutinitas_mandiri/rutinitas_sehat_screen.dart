@@ -276,7 +276,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                 borderRadius: BorderRadius.circular(12),
                 gradient: RadialGradient(
                   center: const Alignment(-0.8, -0.8), radius: 1.5,
-                  colors: [_streakTeal.withOpacity(0.15), _streakTeal.withOpacity(0.0)],
+                  colors: [_streakTeal.withValues(alpha: 0.15), _streakTeal.withValues(alpha: 0.0)],
                 ),
               ),
             ),
@@ -307,8 +307,8 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     final isDone = item.isDone;
     final isLate = item.isTerlewat;
     final Color badgeBg = isDone
-        ? const Color(0xFF13EC5B).withOpacity(0.5)
-        : isLate ? const Color(0xFFEC1E13).withOpacity(0.95) : Colors.orange.withOpacity(0.3);
+        ? const Color(0xFF13EC5B).withValues(alpha: 0.5)
+        : isLate ? const Color(0xFFEC1E13).withValues(alpha: 0.95) : Colors.orange.withValues(alpha: 0.3);
     final String badgeText = isDone ? 'Selesai' : isLate ? 'Terlewat' : 'Pending';
 
     return Container(

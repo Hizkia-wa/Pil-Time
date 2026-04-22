@@ -5,7 +5,7 @@ import (
 	"backend/internal/adapters/inbound/http"
 	"backend/internal/adapters/outbound/persistence"
 	"backend/internal/usecase"
-	"fmt"
+	"fmt" // Digunakan di baris 144
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,13 +50,12 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	// Manual CORS middleware - lebih reliable
+	// Manual CORS middleware
 	r.Use(func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		// Allow specific origins
 		allowedOrigins := map[string]bool{
 			"http://localhost:5173": true,
-			"http://localhost:5174": true, // Vite sering pakai port berbeda
+			"http://localhost:5174": true,
 			"http://127.0.0.1:5173": true,
 			"http://127.0.0.1:5174": true,
 			"http://localhost:3000": true,
@@ -72,7 +71,6 @@ func main() {
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Max-Age", "86400")
 
-		// Handle preflight
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
@@ -99,8 +97,8 @@ func main() {
 	r.POST("/api/upload/image", fileHandler.UploadImage)
 	r.POST("/api/upload/image-base64", fileHandler.UploadBase64Image)
 
-	// Static file serving untuk uploads
-	r.Static("/uploads", "./uploads")
+	// Static file serving - arahkan ke public/uploads sesuai handler
+	r.Static("/uploads", "./public/uploads")
 
 	// Admin jadwal routes
 	r.GET("/api/admin/jadwal", jadwalHandler.GetAllJadwal)
@@ -110,8 +108,7 @@ func main() {
 	r.PUT("/api/admin/jadwal/:id", jadwalHandler.UpdateJadwal)
 	r.DELETE("/api/admin/jadwal/:id", jadwalHandler.DeleteJadwal)
 
-	// Admin tracking jadwal routes (Riwayat Kepatuhan)
-	// PENTING: Route /statistics harus SEBELUM /:id agar tidak tertangkap sebagai parameter
+	// Admin tracking jadwal routes
 	r.GET("/api/admin/riwayat/statistics", trackingJadwalHandler.GetStatistics)
 	r.GET("/api/admin/riwayat", trackingJadwalHandler.GetAll)
 	r.GET("/api/admin/riwayat/:id", trackingJadwalHandler.GetByID)
@@ -127,11 +124,9 @@ func main() {
 	r.POST("/api/pasien/verify-reset-code", pasienHandler.VerifyResetCode)
 	r.POST("/api/pasien/reset-password", pasienHandler.ResetPassword)
 
-	// Create a pasien auth group - these routes require authentication
+	// Pasien auth group
 	pasienAuthGroup := r.Group("/api/pasien")
 	pasienAuthGroup.Use(func(c *gin.Context) {
-		// Extract pasien_id from header (should come from auth middleware)
-		// For now, we accept it as a query parameter or header
 		pasienIDStr := c.GetHeader("X-Pasien-ID")
 		if pasienIDStr == "" {
 			pasienIDStr = c.Query("pasien_id")
@@ -150,10 +145,6 @@ func main() {
 	pasienAuthGroup.GET("/dashboard", pasienHandler.GetDashboard)
 	pasienAuthGroup.GET("/jadwal", pasienHandler.GetJadwal)
 	pasienAuthGroup.GET("/profile", pasienHandler.GetProfile)
-
-	// TODO: Add Firebase notification later
-	// firebaseService, err := firebase.NewFirebaseService()
-	// notifUsecase := usecase.NewNotifUsecase(firebaseService)
 
 	r.Run(":8080")
 }

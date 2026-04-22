@@ -93,7 +93,7 @@ class ProfileRow extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 13,
           ),
         ),
@@ -110,7 +110,7 @@ class ProfileRow extends StatelessWidget {
 
         // garis tipis seperti di gambar
         Divider(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
           thickness: 0.8,
         ),
         const SizedBox(height: 10),
