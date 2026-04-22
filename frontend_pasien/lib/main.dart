@@ -5,6 +5,13 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/auth_service.dart';
+<<<<<<< Updated upstream
+=======
+import 'screens/riwayat/riwayat_konsumsi_obat.dart';
+import 'screens/info_obat/info_obat.dart';
+import 'screens/rutinitas_mandiri/jadwal_rutinitas_screen.dart';
+import 'screens/rutinitas_mandiri/rutinitas_sehat_screen.dart';
+>>>>>>> Stashed changes
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
