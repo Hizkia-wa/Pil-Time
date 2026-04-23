@@ -32,26 +32,80 @@ List<DayLog> _generateDummyData() {
 
   MedLog taken(String name, String jam) =>
       MedLog(name: name, instruction: jam, status: MedStatus.taken);
-  MedLog late(String name, String jam) =>
-      MedLog(name: name, instruction: jam, status: MedStatus.late, color: const Color(0xFFFFA726));
+  MedLog late(String name, String jam) => MedLog(
+    name: name,
+    instruction: jam,
+    status: MedStatus.late,
+    color: const Color(0xFFFFA726),
+  );
   MedLog missed(String name, String jam) =>
       MedLog(name: name, instruction: jam, status: MedStatus.missed);
 
   return [
-    DayLog(date: ago(0),  logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '09:45'), missed('Vitamin C', '08:00')]),
-    DayLog(date: ago(1),  logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10'), late('Paracetamol', '12:10')]),
-    DayLog(date: ago(2),  logs: [taken('Paracetamol', '08:10'), taken('Vitamin C', '08:10')]),
-    DayLog(date: ago(3),  logs: [missed('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
-    DayLog(date: ago(4),  logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '12:10')]),
-    DayLog(date: ago(5),  logs: [taken('Vitamin C', '08:10'), missed('Paracetamol', '20:00')]),
-    DayLog(date: ago(6),  logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '08:10')]),
-    DayLog(date: ago(10), logs: [taken('Paracetamol', '08:10'), missed('Vitamin C', '12:10')]),
-    DayLog(date: ago(15), logs: [missed('Amoxicillin', '08:10'), taken('Paracetamol', '08:10')]),
-    DayLog(date: ago(20), logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '20:00')]),
-    DayLog(date: ago(29), logs: [taken('Amoxicillin', '08:10'), missed('Paracetamol', '12:10')]),
-    DayLog(date: ago(45), logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
-    DayLog(date: ago(60), logs: [missed('Vitamin C', '08:10'), taken('Paracetamol', '20:00')]),
-    DayLog(date: ago(80), logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10')]),
+    DayLog(
+      date: ago(0),
+      logs: [
+        taken('Paracetamol', '08:10'),
+        late('Amoxicillin', '09:45'),
+        missed('Vitamin C', '08:00'),
+      ],
+    ),
+    DayLog(
+      date: ago(1),
+      logs: [
+        taken('Paracetamol', '08:10'),
+        missed('Amoxicillin', '08:10'),
+        late('Paracetamol', '12:10'),
+      ],
+    ),
+    DayLog(
+      date: ago(2),
+      logs: [taken('Paracetamol', '08:10'), taken('Vitamin C', '08:10')],
+    ),
+    DayLog(
+      date: ago(3),
+      logs: [missed('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')],
+    ),
+    DayLog(
+      date: ago(4),
+      logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '12:10')],
+    ),
+    DayLog(
+      date: ago(5),
+      logs: [taken('Vitamin C', '08:10'), missed('Paracetamol', '20:00')],
+    ),
+    DayLog(
+      date: ago(6),
+      logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '08:10')],
+    ),
+    DayLog(
+      date: ago(10),
+      logs: [taken('Paracetamol', '08:10'), missed('Vitamin C', '12:10')],
+    ),
+    DayLog(
+      date: ago(15),
+      logs: [missed('Amoxicillin', '08:10'), taken('Paracetamol', '08:10')],
+    ),
+    DayLog(
+      date: ago(20),
+      logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '20:00')],
+    ),
+    DayLog(
+      date: ago(29),
+      logs: [taken('Amoxicillin', '08:10'), missed('Paracetamol', '12:10')],
+    ),
+    DayLog(
+      date: ago(45),
+      logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')],
+    ),
+    DayLog(
+      date: ago(60),
+      logs: [missed('Vitamin C', '08:10'), taken('Paracetamol', '20:00')],
+    ),
+    DayLog(
+      date: ago(80),
+      logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10')],
+    ),
   ];
 }
 
@@ -63,7 +117,8 @@ class RiwayatKonsumsiObatScreen extends StatefulWidget {
   const RiwayatKonsumsiObatScreen({super.key});
 
   @override
-  State<RiwayatKonsumsiObatScreen> createState() => _RiwayatKonsumsiObatScreenState();
+  State<RiwayatKonsumsiObatScreen> createState() =>
+      _RiwayatKonsumsiObatScreenState();
 }
 
 class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
@@ -76,7 +131,8 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       .where((l) => l.status == MedStatus.taken || l.status == MedStatus.late)
       .length;
   int get _totalDoses => _allData.expand((d) => d.logs).length;
-  double get _compliancePercent => _totalDoses == 0 ? 0 : _takenDoses / _totalDoses;
+  double get _compliancePercent =>
+      _totalDoses == 0 ? 0 : _takenDoses / _totalDoses;
 
   // ── Daftar obat: berubah sesuai filter ──
   List<DayLog> get _filteredData {
@@ -130,10 +186,10 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -188,10 +244,7 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-          )
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
         ],
       ),
       child: Row(
@@ -204,7 +257,9 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: selected ? const Color(0xFF2BB673) : Colors.transparent,
+                  color: selected
+                      ? const Color(0xFF2BB673)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
@@ -235,7 +290,7 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
               style: TextStyle(color: Colors.black45, fontSize: 14),
             ),
           ),
-        )
+        ),
       ];
     }
 
@@ -244,38 +299,47 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
     for (final day in _filteredData) {
       final isToday = _isSameDay(day.date, now);
-      final isYesterday =
-          _isSameDay(day.date, now.subtract(const Duration(days: 1)));
-      final dayLabel =
-          isToday ? 'Hari Ini' : isYesterday ? 'Kemarin' : '';
+      final isYesterday = _isSameDay(
+        day.date,
+        now.subtract(const Duration(days: 1)),
+      );
+      final dayLabel = isToday
+          ? 'Hari Ini'
+          : isYesterday
+          ? 'Kemarin'
+          : '';
       final dayStr =
           '${_dayName(day.date.weekday)}, ${day.date.day} ${_monthName(day.date.month)}';
 
-      widgets.add(Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-        child: RichText(
-          text: TextSpan(children: [
-            if (dayLabel.isNotEmpty)
-              TextSpan(
-                text: '$dayLabel · ',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2BB673),
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                if (dayLabel.isNotEmpty)
+                  TextSpan(
+                    text: '$dayLabel · ',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2BB673),
+                    ),
+                  ),
+                TextSpan(
+                  text: dayStr.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black45,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-            TextSpan(
-              text: dayStr.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.black45,
-                letterSpacing: 0.5,
-              ),
+              ],
             ),
-          ]),
+          ),
         ),
-      ));
+      );
 
       for (final log in day.logs) {
         widgets.add(_buildMedCard(log));
@@ -294,22 +358,22 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
     switch (log.status) {
       case MedStatus.taken:
-        barColor  = const Color(0xFF2BB673);
-        iconBg    = const Color(0xFFE6F7EF);
+        barColor = const Color(0xFF2BB673);
+        iconBg = const Color(0xFFE6F7EF);
         iconColor = const Color(0xFF2BB673);
-        iconData  = Icons.check_box_rounded;
+        iconData = Icons.check_box_rounded;
         break;
       case MedStatus.late:
-        barColor  = const Color(0xFFFFA726);
-        iconBg    = const Color(0xFFFFF3E0);
+        barColor = const Color(0xFFFFA726);
+        iconBg = const Color(0xFFFFF3E0);
         iconColor = const Color(0xFFFFA726);
-        iconData  = Icons.watch_later_rounded;
+        iconData = Icons.watch_later_rounded;
         break;
       case MedStatus.missed:
-        barColor  = const Color(0xFFE53935);
-        iconBg    = const Color(0xFFFFEBEE);
+        barColor = const Color(0xFFE53935);
+        iconBg = const Color(0xFFFFEBEE);
         iconColor = const Color(0xFFE53935);
-        iconData  = Icons.warning_rounded;
+        iconData = Icons.warning_rounded;
         break;
     }
 
@@ -320,10 +384,10 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -334,8 +398,9 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
             height: 64,
             decoration: BoxDecoration(
               color: barColor,
-              borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(14)),
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(14),
+              ),
             ),
           ),
           // Icon obat
@@ -345,7 +410,7 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.12),
+                color: iconColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.medication_rounded, color: iconColor, size: 22),
@@ -370,8 +435,8 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                   log.status == MedStatus.missed
                       ? 'Terlewat'
                       : log.status == MedStatus.late
-                          ? 'Terlambat, ${log.instruction}'
-                          : 'Tepat waktu, ${log.instruction}',
+                      ? 'Terlambat, ${log.instruction}'
+                      : 'Tepat waktu, ${log.instruction}',
                   style: TextStyle(fontSize: 12, color: iconColor),
                 ),
               ],
@@ -398,11 +463,28 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _dayName(int weekday) =>
-      ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
-          [weekday - 1];
+  String _dayName(int weekday) => [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ][weekday - 1];
 
-  String _monthName(int month) =>
-      ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-          [month - 1];
+  String _monthName(int month) => [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ][month - 1];
 }

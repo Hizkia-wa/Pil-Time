@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SuccessScreen extends StatelessWidget {
+  const SuccessScreen({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,17 +14,24 @@ class SuccessScreen extends StatelessWidget {
             children: [
               Icon(Icons.check_circle, size: 80, color: Colors.green),
               SizedBox(height: 20),
-              Text("Berhasil!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                "Berhasil!",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
               SizedBox(height: 10),
               Text("Password berhasil diubah"),
               SizedBox(height: 20),
 
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
                 },
                 child: Text("Kembali ke Login"),
-              )
+              ),
             ],
           ),
         ),

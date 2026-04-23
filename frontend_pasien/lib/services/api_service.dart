@@ -97,7 +97,7 @@ class ApiService {
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/forgot-password'),
+        Uri.parse('$baseUrl/api/pasien/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -123,12 +123,9 @@ class ApiService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/verify-otp'),
+        Uri.parse('$baseUrl/api/pasien/verify-reset-code'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'otp': otp,
-        }),
+        body: jsonEncode({'email': email, 'code': otp}),
       );
 
       final data = jsonDecode(response.body);
@@ -136,10 +133,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return {'success': true, 'data': data};
       } else {
-        return {
-          'success': false,
-          'error': data['message'] ?? 'OTP salah',
-        };
+        return {'success': false, 'error': data['message'] ?? 'OTP salah'};
       }
     } catch (e) {
       return {'success': false, 'error': 'Koneksi gagal'};
@@ -149,14 +143,16 @@ class ApiService {
   static Future<Map<String, dynamic>> resetPassword(
     String email,
     String password,
+    String code,
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/reset-password'),
+        Uri.parse('$baseUrl/api/pasien/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
-          'password': password,
+          'code': code,
+          'new_password': password,
         }),
       );
 

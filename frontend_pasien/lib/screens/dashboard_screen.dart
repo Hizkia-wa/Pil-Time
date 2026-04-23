@@ -185,13 +185,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Notification bell
           GestureDetector(
             onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const NotificationScreen(),
-    ),
-  );
-},
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => NotificationScreen()),
+              );
+            },
             child: Container(
               width: 40,
               height: 40,
@@ -245,13 +243,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 subLabel: 'Kelola Pengingat',
                 subLabelColor: const Color(0xFFFF6B6B),
                 onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AlarmScreen(),
-    ),
-  );
-},
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AlarmScreen()),
+                  );
+                },
               ),
               _buildMenuCard(
                 icon: Icons.local_pharmacy_outlined,
@@ -297,7 +293,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     MaterialPageRoute(
                       // Tambahkan parameter streakHari di sini
-                      builder: (context) => const RutinitasSehatScreen(), 
+                      builder: (context) => const RutinitasSehatScreen(),
                     ),
                   );
                 },

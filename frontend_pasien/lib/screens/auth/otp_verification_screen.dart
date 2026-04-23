@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
+  const OtpVerificationScreen({super.key});
+
   @override
-  _OtpVerificationScreenState createState() => _OtpVerificationScreenState();
+  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
@@ -11,6 +13,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final otp2 = TextEditingController();
   final otp3 = TextEditingController();
   final otp4 = TextEditingController();
+  final otp5 = TextEditingController();
+  final otp6 = TextEditingController();
 
   bool isLoading = false;
 
@@ -19,14 +23,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     if (otp1.text.isEmpty ||
         otp2.text.isEmpty ||
         otp3.text.isEmpty ||
-        otp4.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("OTP belum lengkap")),
-      );
+        otp4.text.isEmpty ||
+        otp5.text.isEmpty ||
+        otp6.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("OTP belum lengkap")));
       return;
     }
 
-    String otp = otp1.text + otp2.text + otp3.text + otp4.text;
+    String otp =
+        otp1.text + otp2.text + otp3.text + otp4.text + otp5.text + otp6.text;
 
     setState(() => isLoading = true);
 
@@ -34,20 +41,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
     setState(() => isLoading = false);
 
+    if (!mounted) return;
+
     if (result['success'] == true) {
-      Navigator.pushNamed(context, '/reset', arguments: email);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] ?? "OTP salah"),
-        ),
+      Navigator.pushNamed(
+        context,
+        '/reset',
+        arguments: {'email': email, 'code': otp},
       );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['error'] ?? "OTP salah")));
     }
   }
 
   Widget otpBox(TextEditingController controller, {bool autoFocus = false}) {
     return SizedBox(
-      width: 60,
+      width: 50,
       child: TextField(
         controller: controller,
         autofocus: autoFocus,
@@ -61,9 +72,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         },
         decoration: InputDecoration(
           counterText: "",
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          isDense: true,
         ),
       ),
     );
@@ -100,6 +110,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   otpBox(otp2),
                   otpBox(otp3),
                   otpBox(otp4),
+                  otpBox(otp5),
+                  otpBox(otp6),
                 ],
               ),
 

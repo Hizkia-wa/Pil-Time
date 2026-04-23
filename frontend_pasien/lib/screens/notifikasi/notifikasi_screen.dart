@@ -28,15 +28,13 @@ class NotificationScreen extends StatelessWidget {
     ),
     NotificationItem(
       title: "Obat Darah Tinggi (Amlodipine)",
-      desc:
-          "Penting untuk menjaga tekanan darah tetap stabil setiap hari.",
+      desc: "Penting untuk menjaga tekanan darah tetap stabil setiap hari.",
       time: "06:00",
       type: NotificationType.terlewat,
     ),
     NotificationItem(
       title: "Jalan Pagi 15 Menit",
-      desc:
-          "Udara pagi sangat baik untuk kesehatan paru-paru Anda.",
+      desc: "Udara pagi sangat baik untuk kesehatan paru-paru Anda.",
       time: "07:00",
       type: NotificationType.rutinitas,
     ),
@@ -157,19 +155,19 @@ class NotificationScreen extends StatelessWidget {
                       Container(
                         padding: EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           item.type == NotificationType.rutinitas
                               ? Icons.directions_walk
                               : item.type == NotificationType.terlewat
-                                  ? Icons.error_outline
-                                  : Icons.notifications,
+                              ? Icons.error_outline
+                              : Icons.notifications,
                           color: color,
                           size: 18,
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -186,7 +184,7 @@ class NotificationScreen extends StatelessWidget {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -204,7 +202,8 @@ class NotificationScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -218,7 +217,8 @@ class NotificationScreen extends StatelessWidget {
                 backgroundColor: Colors.grey[200],
                 foregroundColor: Colors.black54,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -237,7 +237,8 @@ class NotificationScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -245,13 +246,14 @@ class NotificationScreen extends StatelessWidget {
           Expanded(
             child: ElevatedButton(
               onPressed: () {},
-              child: Text("Minum Sekarang"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[200],
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              child: Text("Minum Sekarang"),
             ),
           ),
         ],
@@ -267,8 +269,9 @@ class NotificationScreen extends StatelessWidget {
         label: Text("Selesai"),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );

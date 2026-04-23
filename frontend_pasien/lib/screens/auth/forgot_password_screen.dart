@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({Key? key}) : super(key: key);
+
   @override
-  _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
@@ -12,9 +14,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void sendOTP() async {
     if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Email wajib diisi")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Email wajib diisi")));
       return;
     }
 
@@ -24,17 +26,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => isLoading = false);
 
+    if (!mounted) return;
+
     if (result['success'] == true) {
-      Navigator.pushNamed(
-        context,
-        '/otp',
-        arguments: emailController.text,
-      );
+      Navigator.pushNamed(context, '/otp', arguments: emailController.text);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] ?? "Gagal mengirim OTP"),
-        ),
+        SnackBar(content: Text(result['error'] ?? "Gagal mengirim OTP")),
       );
     }
   }
@@ -47,7 +45,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Forgot Password", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              "Forgot Password",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 10),
             Text("Masukkan email untuk menerima kode OTP"),
             SizedBox(height: 20),
@@ -67,7 +68,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             SizedBox(height: 20),
 
             ElevatedButton(
-              onPressed: isLoading || emailController.text.isEmpty ? null : sendOTP,
+              onPressed: isLoading || emailController.text.isEmpty
+                  ? null
+                  : sendOTP,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 minimumSize: Size(double.infinity, 50),
@@ -78,7 +81,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               child: isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : Text("Kirim Kode"),
-            )
+            ),
           ],
         ),
       ),

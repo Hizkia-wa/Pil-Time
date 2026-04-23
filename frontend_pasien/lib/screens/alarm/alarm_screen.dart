@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AlarmScreen extends StatelessWidget {
+  const AlarmScreen({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,11 +19,8 @@ class AlarmScreen extends StatelessWidget {
                   SizedBox(width: 10),
                   Text(
                     "Reminder dan Alarm",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -37,8 +36,10 @@ class AlarmScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Alarm berikutnya",
-                      style: TextStyle(color: Colors.white70)),
+                  Text(
+                    "Alarm berikutnya",
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   SizedBox(height: 10),
                   Text(
                     "12:00",
@@ -48,8 +49,10 @@ class AlarmScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text("Ibuprofen . 1 tablet",
-                      style: TextStyle(color: Colors.white70)),
+                  Text(
+                    "Ibuprofen . 1 tablet",
+                    style: TextStyle(color: Colors.white70),
+                  ),
 
                   SizedBox(height: 15),
 
@@ -59,7 +62,7 @@ class AlarmScreen extends StatelessWidget {
                       SizedBox(width: 10),
                       _chip("Alarm Aktif"),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -71,9 +74,10 @@ class AlarmScreen extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  Text("Semua Alarm Hari ini",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    "Semua Alarm Hari ini",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
                   SizedBox(height: 10),
 
                   _alarmItem("08.00", "Probiotic", Colors.green),
@@ -96,12 +100,9 @@ class AlarmScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {},
-                child: Text(
-                  "Matikan Alarm",
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: Text("Matikan Alarm", style: TextStyle(fontSize: 16)),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -139,9 +140,10 @@ class AlarmScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(time,
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  time,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 Text(title, style: TextStyle(color: Colors.grey)),
               ],
             ),
@@ -150,11 +152,11 @@ class AlarmScreen extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.check, color: color, size: 18),
-          )
+          ),
         ],
       ),
     );
