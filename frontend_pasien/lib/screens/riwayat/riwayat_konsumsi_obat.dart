@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // ─── MODEL ───────────────────────────────────────────────────────────────────
 
-enum MedStatus { taken, missed }
+enum MedStatus { taken, late, missed }
 
 class MedLog {
   final String name;
@@ -31,21 +31,23 @@ List<DayLog> _generateDummyData() {
   DateTime ago(int days) => now.subtract(Duration(days: days));
 
   MedLog taken(String name, String jam) =>
-      MedLog(name: name, instruction: 'Diminum, $jam', status: MedStatus.taken);
+      MedLog(name: name, instruction: jam, status: MedStatus.taken);
+  MedLog late(String name, String jam) =>
+      MedLog(name: name, instruction: jam, status: MedStatus.late, color: const Color(0xFFFFA726));
   MedLog missed(String name, String jam) =>
-      MedLog(name: name, instruction: 'Diminum, $jam', status: MedStatus.missed);
+      MedLog(name: name, instruction: jam, status: MedStatus.missed);
 
   return [
-    DayLog(date: ago(0),  logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
-    DayLog(date: ago(1),  logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10'), taken('Paracetamol', '12:10')]),
+    DayLog(date: ago(0),  logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '09:45'), missed('Vitamin C', '08:00')]),
+    DayLog(date: ago(1),  logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10'), late('Paracetamol', '12:10')]),
     DayLog(date: ago(2),  logs: [taken('Paracetamol', '08:10'), taken('Vitamin C', '08:10')]),
     DayLog(date: ago(3),  logs: [missed('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
-    DayLog(date: ago(4),  logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '12:10')]),
+    DayLog(date: ago(4),  logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '12:10')]),
     DayLog(date: ago(5),  logs: [taken('Vitamin C', '08:10'), missed('Paracetamol', '20:00')]),
-    DayLog(date: ago(6),  logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
+    DayLog(date: ago(6),  logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '08:10')]),
     DayLog(date: ago(10), logs: [taken('Paracetamol', '08:10'), missed('Vitamin C', '12:10')]),
     DayLog(date: ago(15), logs: [missed('Amoxicillin', '08:10'), taken('Paracetamol', '08:10')]),
-    DayLog(date: ago(20), logs: [taken('Paracetamol', '08:10'), taken('Vitamin C', '20:00')]),
+    DayLog(date: ago(20), logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '20:00')]),
     DayLog(date: ago(29), logs: [taken('Amoxicillin', '08:10'), missed('Paracetamol', '12:10')]),
     DayLog(date: ago(45), logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')]),
     DayLog(date: ago(60), logs: [missed('Vitamin C', '08:10'), taken('Paracetamol', '20:00')]),
@@ -69,8 +71,10 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   final List<String> _filters = ['Semua', '7 Hari', '30 Hari', '3 Bulan'];
 
   // ── Compliance: selalu dari SEMUA data, tidak terpengaruh filter ──
-  int get _takenDoses =>
-      _allData.expand((d) => d.logs).where((l) => l.status == MedStatus.taken).length;
+  int get _takenDoses => _allData
+      .expand((d) => d.logs)
+      .where((l) => l.status == MedStatus.taken || l.status == MedStatus.late)
+      .length;
   int get _totalDoses => _allData.expand((d) => d.logs).length;
   double get _compliancePercent => _totalDoses == 0 ? 0 : _takenDoses / _totalDoses;
 
@@ -95,8 +99,14 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
           icon: const Icon(Icons.chevron_left, color: Colors.black87, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Riwayat',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 18)),
+        title: const Text(
+          'Riwayat',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
       ),
       body: ListView(
         padding: EdgeInsets.zero,
@@ -118,18 +128,43 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: Column(
         children: [
-          const Text('Rataan Tingkat Kepatuhan',
-              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500)),
+          const Text(
+            'Rataan Tingkat Kepatuhan',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('${(_compliancePercent * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w700, color: Color(0xFF2BB673), height: 1.1)),
+          Text(
+            '${(_compliancePercent * 100).toStringAsFixed(0)}%',
+            style: const TextStyle(
+              fontSize: 42,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2BB673),
+              height: 1.1,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('$_takenDoses / $_totalDoses Dosis',
-              style: const TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500)),
+          Text(
+            '$_takenDoses / $_totalDoses Dosis',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
@@ -152,7 +187,12 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+          )
+        ],
       ),
       child: Row(
         children: List.generate(_filters.length, (i) {
@@ -167,12 +207,15 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                   color: selected ? const Color(0xFF2BB673) : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Text(_filters[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : Colors.black54)),
+                child: Text(
+                  _filters[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : Colors.black54,
+                  ),
+                ),
               ),
             ),
           );
@@ -187,8 +230,10 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
         const Padding(
           padding: EdgeInsets.all(32),
           child: Center(
-            child: Text('Tidak ada riwayat untuk periode ini',
-                style: TextStyle(color: Colors.black45, fontSize: 14)),
+            child: Text(
+              'Tidak ada riwayat untuk periode ini',
+              style: TextStyle(color: Colors.black45, fontSize: 14),
+            ),
           ),
         )
       ];
@@ -199,9 +244,12 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
     for (final day in _filteredData) {
       final isToday = _isSameDay(day.date, now);
-      final isYesterday = _isSameDay(day.date, now.subtract(const Duration(days: 1)));
-      final dayLabel = isToday ? 'Hari Ini' : isYesterday ? 'Kemarin' : '';
-      final dayStr = '${_dayName(day.date.weekday)}, ${day.date.day} ${_monthName(day.date.month)}';
+      final isYesterday =
+          _isSameDay(day.date, now.subtract(const Duration(days: 1)));
+      final dayLabel =
+          isToday ? 'Hari Ini' : isYesterday ? 'Kemarin' : '';
+      final dayStr =
+          '${_dayName(day.date.weekday)}, ${day.date.day} ${_monthName(day.date.month)}';
 
       widgets.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
@@ -209,11 +257,22 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
           text: TextSpan(children: [
             if (dayLabel.isNotEmpty)
               TextSpan(
-                  text: '$dayLabel · ',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2BB673))),
+                text: '$dayLabel · ',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2BB673),
+                ),
+              ),
             TextSpan(
-                text: dayStr.toUpperCase(),
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45, letterSpacing: 0.5)),
+              text: dayStr.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.black45,
+                letterSpacing: 0.5,
+              ),
+            ),
           ]),
         ),
       ));
@@ -227,54 +286,108 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   }
 
   Widget _buildMedCard(MedLog log) {
-    final isMissed = log.status == MedStatus.missed;
+    // ── Warna & icon berdasarkan status ──
+    final Color barColor;
+    final Color iconBg;
+    final Color iconColor;
+    final IconData iconData;
+
+    switch (log.status) {
+      case MedStatus.taken:
+        barColor  = const Color(0xFF2BB673);
+        iconBg    = const Color(0xFFE6F7EF);
+        iconColor = const Color(0xFF2BB673);
+        iconData  = Icons.check_box_rounded;
+        break;
+      case MedStatus.late:
+        barColor  = const Color(0xFFFFA726);
+        iconBg    = const Color(0xFFFFF3E0);
+        iconColor = const Color(0xFFFFA726);
+        iconData  = Icons.watch_later_rounded;
+        break;
+      case MedStatus.missed:
+        barColor  = const Color(0xFFE53935);
+        iconBg    = const Color(0xFFFFEBEE);
+        iconColor = const Color(0xFFE53935);
+        iconData  = Icons.warning_rounded;
+        break;
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: Row(
         children: [
+          // Accent bar kiri
           Container(
-            width: 5, height: 64,
+            width: 5,
+            height: 64,
             decoration: BoxDecoration(
-              color: isMissed ? const Color(0xFFE53935) : log.color,
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
+              color: barColor,
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(14)),
             ),
           ),
+          // Icon obat
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: log.color.withValues(alpha: 0.12),
+                color: iconColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.medication_rounded, color: log.color, size: 22),
+              child: Icon(Icons.medication_rounded, color: iconColor, size: 22),
             ),
           ),
+          // Nama & instruksi
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(log.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                Text(
+                  log.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(log.instruction, style: const TextStyle(fontSize: 12, color: Colors.black45)),
+                Text(
+                  log.status == MedStatus.missed
+                      ? 'Terlewat'
+                      : log.status == MedStatus.late
+                          ? 'Terlambat, ${log.instruction}'
+                          : 'Tepat waktu, ${log.instruction}',
+                  style: TextStyle(fontSize: 12, color: iconColor),
+                ),
               ],
             ),
           ),
+          // Status icon
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: Container(
-              width: 28, height: 28,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: isMissed ? const Color(0xFFE53935) : const Color(0xFF2BB673),
+                color: iconBg,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(isMissed ? Icons.close : Icons.check, color: Colors.white, size: 18),
+              child: Icon(iconData, color: iconColor, size: 20),
             ),
           ),
         ],
@@ -286,8 +399,10 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   String _dayName(int weekday) =>
-      ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][weekday - 1];
+      ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+          [weekday - 1];
 
   String _monthName(int month) =>
-      ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][month - 1];
+      ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+          [month - 1];
 }

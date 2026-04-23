@@ -93,4 +93,85 @@ class ApiService {
       return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
     }
   }
+
+  static Future<Map<String, dynamic>> sendOtp(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? 'Gagal kirim OTP',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp(
+    String email,
+    String otp,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? 'OTP salah',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? 'Gagal reset password',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal'};
+    }
+  }
 }

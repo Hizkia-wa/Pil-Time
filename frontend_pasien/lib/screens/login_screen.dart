@@ -218,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.of(context).pushNamed('/forgot-password');
+                    Navigator.of(context).pushNamed('/forgot');
                   },
                   child: const Text(
                     'Lupa Password?',
