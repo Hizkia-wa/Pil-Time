@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // Untuk jsonEncode & decode
+import 'package:http/http.dart' as http; // Untuk koneksi ke Backend Go
 import '../../models/jadwal_rutinitas_model.dart';
 import 'tambah_rutinitas_screen.dart';
 import 'edit_rutinitas_screen.dart';
@@ -15,374 +16,342 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color _bgPage        = Color(0xFFF8FAF9);
-  static const Color _streakBg      = Color(0xFF10221C);
-  static const Color _streakTeal    = Color(0xFF13ECA4);
-  static const Color _green         = Color(0xFF13EC5B);
-  static const Color _tabActive     = Color(0xFF0F172A);
-  static const Color _tabInactive   = Color(0xFF64748B);
-  static const Color _cardBg        = Color(0xFFF6F8F7);
-  static const Color _cardBorder    = Color(0xFFF1F5F9);
-  static const Color _textPrimary   = Color(0xFF0F172A);
+  // --- KONFIGURASI API ---
+  // Gunakan 10.0.2.2 jika pakai Emulator Android, atau IP Laptop jika pakai HP asli
+  final String baseUrl = "http://10.0.2.2:8080/api"; 
+  int _currentStreak = 0; 
+
+  // Warna Tema Pil-Time
+  static const Color _streakBg = Color(0xFF0F291E);
+  static const Color _streakTeal = Color(0xFF13ECA4);
+  static const Color _greenAction = Color(0xFF00E676);
+  static const Color _textPrimary = Color(0xFF0F172A);
   static const Color _textSecondary = Color(0xFF64748B);
 
+  // Data List
   final List<JadwalRutinitasItem> _jadwalList = [
-    JadwalRutinitasItem(jadwalRutinitasId: 1, namaAktivitas: 'Lari Pagi',       jamMulai: '06:30', jamSelesai: '07:00', pengulangan: ['Sen','Sel','Rab','Kam','Jum'],              status: 'done'),
-    JadwalRutinitasItem(jadwalRutinitasId: 2, namaAktivitas: 'Minum Air Putih', jamMulai: '19:00', jamSelesai: '20:00', pengulangan: ['Sen','Sel','Rab','Kam','Jum','Sab','Min'], status: 'done'),
-    JadwalRutinitasItem(jadwalRutinitasId: 3, namaAktivitas: 'Makan Malam',     jamMulai: '08:00', jamSelesai: '09:00', pengulangan: ['Sen','Sel','Rab','Kam','Jum','Sab','Min'], status: 'done'),
-    JadwalRutinitasItem(jadwalRutinitasId: 4, namaAktivitas: 'Sedekah',         jamMulai: '21:00', jamSelesai: '22:00', pengulangan: ['Sen','Sel','Rab','Kam','Jum'],              status: 'terlewat'),
+    JadwalRutinitasItem(
+      jadwalRutinitasId: 1,
+      namaAktivitas: 'Sarapan Pagi',
+      jamMulai: '07:00',
+      jamSelesai: '08:00',
+      status: 'none',
+      pengulangan: ['Sen'],
+    ),
+    JadwalRutinitasItem(
+      jadwalRutinitasId: 2,
+      namaAktivitas: 'Minum Obat Siang',
+      jamMulai: '14:00',
+      jamSelesai: '16:00',
+      status: 'none',
+      pengulangan: ['Sen'],
+    ),
   ];
-
-  final int _streakHari = 12;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
-    _loadPasienId();
+    _refreshStreak(); // Ambil data streak saat layar dibuka
   }
 
-  Future<void> _loadPasienId() async { await SharedPreferences.getInstance(); }
-
-  Future<void> _refresh() async {
-    await _loadPasienId();
-    await Future.delayed(const Duration(milliseconds: 500));
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  String _hariIni() {
-    const hari  = ['','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
-    const bulan = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  // --- INTEGRASI BACKEND ---
+  
+  Future<void> _refreshStreak() async {
+    try {
+      // Ganti '1' dengan ID pasien yang dinamis nanti
+      final response = await http.get(Uri.parse('$baseUrl/pasien/streak/1'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _currentStreak = data['current_streak'] ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint("Gagal ambil streak: $e");
+    }
+  }
+
+  void _toggleStatus(JadwalRutinitasItem item) async {
+    final logic = _getStatusLogic(item);
+
+    if (!logic['canInteract']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Jadwal sudah terlewat.")),
+      );
+      return;
+    }
+
+    try {
+      final newStatus = (item.status == 'done') ? 'none' : 'done';
+      
+      // Update ke Backend
+      final response = await http.post(
+        Uri.parse('$baseUrl/tracking/update'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "rutinitas_id": item.jadwalRutinitasId,
+          "status": newStatus,
+          "tanggal": DateTime.now().toIso8601String().split('T')[0],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Jika sukses, hitung ulang streak
+        await _refreshStreak();
+        
+        setState(() {
+          final index = _jadwalList.indexOf(item);
+          _jadwalList[index] = JadwalRutinitasItem(
+            jadwalRutinitasId: item.jadwalRutinitasId,
+            namaAktivitas: item.namaAktivitas,
+            jamMulai: item.jamMulai,
+            jamSelesai: item.jamSelesai,
+            pengulangan: item.pengulangan,
+            status: newStatus,
+          );
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error koneksi: $e")),
+      );
+    }
+  }
+
+  // --- HELPER & LOGIC UI ---
+
+  int _timeToMinutes(String timeStr) {
+    try {
+      final parts = timeStr.replaceAll('.', ':').split(':');
+      return (int.parse(parts[0]) * 60) + int.parse(parts[1]);
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  Map<String, dynamic> _getStatusLogic(JadwalRutinitasItem item) {
+    if (item.status == 'done') {
+      return {
+        'icon': Icons.check_box,
+        'color': const Color(0xFF10B981),
+        'bg': const Color(0xFFE8FDF5),
+        'canInteract': true,
+      };
+    }
+
     final now = DateTime.now();
-    return '${hari[now.weekday]}, ${now.day} ${bulan[now.month]}';
-  }
+    final currentMin = (now.hour * 60) + now.minute;
+    final startMin = _timeToMinutes(item.jamMulai);
+    final endMin = _timeToMinutes(item.jamSelesai);
 
-  // ── Tambah ────────────────────────────────────────────────────────────────
-  Future<void> _navTambah() async {
-    final result = await Navigator.push<JadwalRutinitasItem>(
-      context,
-      MaterialPageRoute(builder: (_) => const TambahRutinitasScreen()),
-    );
-    if (result != null) setState(() => _jadwalList.add(result));
-  }
-
-  // ── Edit ──────────────────────────────────────────────────────────────────
-  Future<void> _navEdit(JadwalRutinitasItem item) async {
-    final result = await Navigator.push<JadwalRutinitasItem>(
-      context,
-      MaterialPageRoute(builder: (_) => EditRutinitasScreen(item: item)),
-    );
-    if (result != null) {
-      final idx = _jadwalList.indexWhere((e) => e.jadwalRutinitasId == result.jadwalRutinitasId);
-      if (idx != -1) setState(() => _jadwalList[idx] = result);
+    if (currentMin > endMin) {
+      return {
+        'icon': Icons.warning_amber_rounded,
+        'color': const Color(0xFFEF4444),
+        'bg': const Color(0xFFFEF2F2),
+        'canInteract': false,
+      };
     }
+
+    return {
+      'icon': Icons.check_box_outline_blank,
+      'color': const Color(0xFF10B981),
+      'bg': const Color(0xFFE8FDF5),
+      'canInteract': true,
+    };
   }
 
-  // ── Hapus (dialog) ────────────────────────────────────────────────────────
-  Future<void> _confirmHapus(JadwalRutinitasItem item) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(50)),
-                child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 28),
-              ),
-              const SizedBox(height: 16),
-              const Text('Hapus Rutinitas?',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _textPrimary, fontFamily: 'Roboto')),
-              const SizedBox(height: 8),
-              Text(
-                'Kamu yakin ingin menghapus\n"${item.namaAktivitas}"?\nTindakan ini tidak bisa dibatalkan.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: _textSecondary, fontFamily: 'Inter', height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Batal',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textSecondary, fontFamily: 'Inter')),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Ya, Hapus',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Inter')),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (confirm == true) {
-      setState(() => _jadwalList.removeWhere((e) => e.jadwalRutinitasId == item.jadwalRutinitasId));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('"${item.namaAktivitas}" berhasil dihapus.'),
-        backgroundColor: const Color(0xFF0F172A),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
-    }
-  }
+  // --- WIDGET BUILDERS ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgPage,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildObatTab(), _buildRutinitasTab()],
-              ),
-            ),
-          ],
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left, color: _textPrimary, size: 28),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text('Rutinitas Sehat', 
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            labelColor: _textPrimary,
+            indicatorColor: _streakTeal,
+            tabs: const [Tab(text: 'Obat'), Tab(text: 'Rutinitas')],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const Center(child: Text("Halaman Obat")),
+                _buildMainContent(),
+              ],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: _buildFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(50)),
-              child: const Icon(Icons.chevron_left_rounded, color: _textPrimary),
-            ),
-          ),
-          const Expanded(
-            child: Text('Rutinitas Sehat',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textPrimary, fontFamily: 'Roboto')),
-          ),
-          const SizedBox(width: 36),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      color: Colors.white,
-      child: TabBar(
-        controller: _tabController,
-        labelColor: _tabActive,
-        unselectedLabelColor: _tabInactive,
-        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Inter', letterSpacing: 0.35),
-        unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Inter', letterSpacing: 0.35),
-        indicatorColor: _streakTeal,
-        indicatorWeight: 2.5,
-        tabs: const [Tab(text: 'Obat'), Tab(text: 'Rutinitas')],
-      ),
-    );
-  }
-
-  Widget _buildObatTab() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('💊', style: TextStyle(fontSize: 48)),
-          SizedBox(height: 12),
-          Text('Belum ada jadwal obat',
-            style: TextStyle(fontSize: 14, color: _tabInactive, fontFamily: 'Inter', fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRutinitasTab() {
-    return RefreshIndicator(
-      color: _green,
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-        children: [
-          _buildStreakCard(),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Daftar Jadwal Hari Ini',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary, fontFamily: 'Roboto', letterSpacing: -0.45)),
-              Text(_hariIni(), style: const TextStyle(fontSize: 12, color: _textSecondary, fontFamily: 'Inter')),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (_jadwalList.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: Center(
-                child: Text('Belum ada rutinitas.\nTambahkan sekarang!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _textSecondary, fontFamily: 'Inter', height: 1.6)),
-              ),
-            )
-          else
-            ..._jadwalList.map(_buildJadwalCard),
-        ],
-      ),
+  Widget _buildMainContent() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildStreakCard(),
+        const SizedBox(height: 24),
+        const Text('Daftar Jadwal Hari Ini', 
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        ..._jadwalList.map(_buildItemCard),
+        const SizedBox(height: 100),
+      ],
     );
   }
 
   Widget _buildStreakCard() {
     return Container(
-      decoration: BoxDecoration(color: _streakBg, borderRadius: BorderRadius.circular(12)),
-      child: Stack(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: _streakBg, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: RadialGradient(
-                  center: const Alignment(-0.8, -0.8), radius: 1.5,
-                  colors: [_streakTeal.withValues(alpha: 0.15), _streakTeal.withValues(alpha: 0.0)],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          const Text('🏆 STREAK KAMU!', 
+              style: TextStyle(color: _streakTeal, fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(height: 8),
+          Text('$_currentStreak Hari', 
+              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemCard(JadwalRutinitasItem item) {
+    final ui = _getStatusLogic(item);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(children: [
-                  Text('🏆', style: TextStyle(fontSize: 18)),
-                  SizedBox(width: 8),
-                  Text('STREAK KAMU!',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _streakTeal, letterSpacing: 0.7, fontFamily: 'Inter')),
-                ]),
-                const SizedBox(height: 6),
-                Text('$_streakHari Hari',
-                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Roboto')),
+                Text(item.namaAktivitas, 
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text('${item.jamMulai} - ${item.jamSelesai}', 
+                    style: const TextStyle(color: _textSecondary, fontSize: 12)),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJadwalCard(JadwalRutinitasItem item) {
-    final isDone = item.isDone;
-    final isLate = item.isTerlewat;
-    final Color badgeBg = isDone
-        ? const Color(0xFF13EC5B).withValues(alpha: 0.5)
-        : isLate ? const Color(0xFFEC1E13).withValues(alpha: 0.95) : Colors.orange.withValues(alpha: 0.3);
-    final String badgeText = isDone ? 'Selesai' : isLate ? 'Terlewat' : 'Pending';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _cardBorder, width: 1),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(item.namaAktivitas,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _textPrimary, fontFamily: 'Roboto')),
-              const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.access_time_rounded, size: 12, color: _textSecondary),
-                const SizedBox(width: 4),
-                Text('${item.jamMulai} - ${item.jamSelesai}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textSecondary, fontFamily: 'Inter')),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                _actionButton(icon: Icons.edit_rounded,   color: const Color(0xFF0061FF), bg: const Color(0xFFDBEAFE), onTap: () => _navEdit(item)),
-                const SizedBox(width: 6),
-                _actionButton(icon: Icons.delete_rounded, color: const Color(0xFFFF0303), bg: const Color(0xFFFEE2E2), onTap: () => _confirmHapus(item)),
-              ]),
+              GestureDetector(
+                onTap: () => _toggleStatus(item),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: ui['bg'], borderRadius: BorderRadius.circular(8)),
+                  child: Icon(ui['icon'], color: ui['color'], size: 22),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(width: 1, height: 20, color: Colors.grey[300]),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _navEdit(item), 
+                icon: const Icon(Icons.edit_note, color: Colors.blue, size: 22)
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _confirmHapus(item), 
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20)
+              ),
             ],
           ),
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(9999)),
-            alignment: Alignment.center,
-            child: Text(badgeText,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF10221C), fontFamily: 'Inter')),
-          ),
         ],
       ),
     );
   }
 
-  Widget _actionButton({required IconData icon, required Color color, required Color bg, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(7)),
-        child: Icon(icon, size: 15, color: color),
+  // --- NAVIGATION & FAB ---
+
+  void _navTambah() async {
+    final result = await Navigator.push<JadwalRutinitasItem>(
+      context,
+      MaterialPageRoute(builder: (context) => const TambahRutinitasScreen()),
+    );
+    if (result != null && mounted) setState(() => _jadwalList.add(result));
+  }
+
+  void _navEdit(JadwalRutinitasItem item) async {
+    final result = await Navigator.push<JadwalRutinitasItem>(
+      context,
+      MaterialPageRoute(builder: (context) => EditRutinitasScreen(item: item)),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        final index = _jadwalList.indexWhere((e) => e.jadwalRutinitasId == result.jadwalRutinitasId);
+        if (index != -1) _jadwalList[index] = result;
+      });
+    }
+  }
+
+  void _confirmHapus(JadwalRutinitasItem item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Hapus Rutinitas"),
+        content: Text("Yakin ingin menghapus '${item.namaAktivitas}'?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
+          TextButton(
+            onPressed: () {
+              setState(() => _jadwalList.removeWhere((e) => e.jadwalRutinitasId == item.jadwalRutinitasId));
+              Navigator.pop(ctx);
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildFAB() {
     return SizedBox(
-      width: MediaQuery.of(context).size.width - 88,
-      height: 50,
+      width: MediaQuery.of(context).size.width * 0.8,
+      height: 52,
       child: ElevatedButton.icon(
         onPressed: _navTambah,
+        icon: const Icon(Icons.add, color: _textPrimary),
+        label: const Text("Tambah Rutinitas", 
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _green,
-          foregroundColor: _textPrimary,
-          elevation: 4,
-          shadowColor: Colors.black26,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: _greenAction, 
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         ),
-        icon: const Icon(Icons.add_rounded, size: 22, color: _textPrimary),
-        label: const Text('Tambah Rutinitas',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary, fontFamily: 'Inter')),
       ),
     );
   }
