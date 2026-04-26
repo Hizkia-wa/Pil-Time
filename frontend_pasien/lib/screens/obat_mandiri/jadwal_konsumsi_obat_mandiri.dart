@@ -18,11 +18,11 @@ class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
 
 class _JadwalKonsumsiObatMandiriStyledState
     extends State<JadwalKonsumsiObatMandiriStyled> {
-
   List<dynamic> jadwalList = [];
   bool isLoading = true;
 
-  final String baseUrl = "http://10.0.2.2:8080/jadwal";
+  // Sesuaikan IP jika pakai emulator (10.0.2.2) atau device asli
+  final String baseUrl = "http://10.0.2.2:8080/api/admin/jadwal";
 
   @override
   void initState() {
@@ -32,6 +32,7 @@ class _JadwalKonsumsiObatMandiriStyledState
 
   // ================= FETCH DATA =================
   Future<void> fetchJadwal() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
 
     try {
@@ -39,7 +40,6 @@ class _JadwalKonsumsiObatMandiriStyledState
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         setState(() {
           jadwalList = data['data'] ?? [];
           isLoading = false;
@@ -49,13 +49,20 @@ class _JadwalKonsumsiObatMandiriStyledState
       }
     } catch (e) {
       setState(() => isLoading = false);
+      debugPrint("Error fetch: $e");
     }
   }
 
   // ================= DELETE =================
   Future<void> deleteJadwal(int id) async {
-    await http.delete(Uri.parse("$baseUrl/$id"));
-    fetchJadwal();
+    try {
+      final response = await http.delete(Uri.parse("$baseUrl/$id"));
+      if (response.statusCode == 200) {
+        fetchJadwal();
+      }
+    } catch (e) {
+      debugPrint("Error delete: $e");
+    }
   }
 
   // ================= BUILD =================
@@ -68,7 +75,6 @@ class _JadwalKonsumsiObatMandiriStyledState
         children: [
           _buildStreakCard(),
           const SizedBox(height: 16),
-
           const Text(
             "Daftar Obat",
             style: TextStyle(
@@ -77,7 +83,6 @@ class _JadwalKonsumsiObatMandiriStyledState
             ),
           ),
           const SizedBox(height: 10),
-
           if (isLoading)
             const Center(child: CircularProgressIndicator())
           else if (jadwalList.isEmpty)
@@ -92,9 +97,7 @@ class _JadwalKonsumsiObatMandiriStyledState
             )
           else
             ...jadwalList.map(_buildObatCard),
-
           const SizedBox(height: 30),
-
           _buildTambahButton(),
         ],
       ),
@@ -159,33 +162,41 @@ class _JadwalKonsumsiObatMandiriStyledState
             style: const TextStyle(fontSize: 12),
           ),
           const SizedBox(height: 10),
-
           Row(
             children: [
-              _actionButton(
-                icon: Icons.edit_rounded,
-                color: Colors.blue,
-                bg: const Color(0xFFDBEAFE),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          TambahJadwalKonsumsi(data: item),
-                    ),
-                  ).then((_) => fetchJadwal());
-                },
-              ),
-              const SizedBox(width: 8),
               _actionButton(
                 icon: Icons.delete_rounded,
                 color: Colors.red,
                 bg: const Color(0xFFFEE2E2),
                 onTap: () {
-                  deleteJadwal(item['jadwal_id']);
+                  _showDeleteConfirmation(item['jadwal_id']);
                 },
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= DELETE CONFIRMATION =================
+  void _showDeleteConfirmation(int id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Hapus Jadwal?"),
+        content: const Text("Data ini akan dihapus permanen dari riwayat kamu."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
+          ),
+          TextButton(
+            onPressed: () {
+              deleteJadwal(id);
+              Navigator.pop(context);
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -248,3 +259,4 @@ class _JadwalKonsumsiObatMandiriStyledState
     );
   }
 }
+

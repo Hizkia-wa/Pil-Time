@@ -1,347 +1,285 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../models/jadwal_rutinitas_model.dart';
+
 
 class TambahJadwalKonsumsi extends StatefulWidget {
-  final Map<String, dynamic>? data;
-
-  const TambahJadwalKonsumsi({super.key, this.data});
+  final JadwalRutinitasItem? jadwalExist; 
+  const TambahJadwalKonsumsi({super.key, this.jadwalExist});
 
   @override
   State<TambahJadwalKonsumsi> createState() => _TambahJadwalKonsumsiState();
 }
 
 class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
-  // State Variables
-  String selectedWaktu = "Pagi";
-  String selectedFrekuensi = "Setiap Hari";
-  String selectedDurasi = "7 Hari";
-  File? _imageFile;
+  // --- KONFIGURASI WARNA ---
+  static const Color _bgPage        = Color(0xFFF8FAF9);
+  static const Color _green         = Color(0xFF13EC5B);
+  static const Color _streakTeal    = Color(0xFF13ECA4);
+  static const Color _textPrimary   = Color(0xFF0F172A);
+  static const Color _textSecondary = Color(0xFF64748B);
+  static const Color _cardBorder    = Color(0xFFE2E8F0);
+  
+  final String baseUrl = "http://10.0.2.2:8080/api";
 
-  // Controllers
-  final TextEditingController namaController = TextEditingController();
-  final TextEditingController dosisController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  final _formKey = GlobalKey<FormState>();
+  final _namaCtrl = TextEditingController();
+
+  TimeOfDay _waktuMulai   = const TimeOfDay(hour: 7, minute: 0);
+  TimeOfDay _waktuSelesai = const TimeOfDay(hour: 8, minute: 0);
+
+  final List<String> _hariList = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  final Set<String> _selectedHari = {};
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi jika Mode Edit
-    if (widget.data != null) {
-      namaController.text = widget.data!['nama'] ?? '';
-      dosisController.text = widget.data!['dosis'] ?? '';
-      selectedWaktu = widget.data!['waktu'] ?? "Pagi";
-      selectedFrekuensi = widget.data!['frekuensi'] ?? "Setiap Hari";
-      selectedDurasi = widget.data!['durasi'] ?? "7 Hari";
-      if (widget.data!['foto'] != null) {
-        _imageFile = File(widget.data!['foto']);
-      }
+    // Jika data ada (Mode Edit), isi field secara otomatis
+    if (widget.jadwalExist != null) {
+      _namaCtrl.text = widget.jadwalExist!.namaAktivitas;
+      _waktuMulai = _parseTimeOfDay(widget.jadwalExist!.jamMulai);
+      _waktuSelesai = _parseTimeOfDay(widget.jadwalExist!.jamSelesai);
+      _selectedHari.addAll(widget.jadwalExist!.pengulangan);
+    } else {
+      // Default pengulangan hari kerja jika data baru
+      _selectedHari.addAll(['Sen', 'Sel', 'Rab', 'Kam', 'Jum']);
+    }
+  }
+
+  // Fungsi bantu untuk mengubah string jam ke TimeOfDay
+  TimeOfDay _parseTimeOfDay(String time) {
+    try {
+      final parts = time.replaceAll('.', ':').split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    } catch (e) {
+      return const TimeOfDay(hour: 7, minute: 0);
     }
   }
 
   @override
   void dispose() {
-    namaController.dispose();
-    dosisController.dispose();
+    _namaCtrl.dispose();
     super.dispose();
   }
 
-  // Fungsi ambil gambar dari Galeri/Kamera
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 50, // Kompres foto agar hemat memori
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
-      }
-    } catch (e) {
-      debugPrint("Error picking image: $e");
-    }
+  String _formatTime(TimeOfDay t) {
+    final h = t.hour.toString().padLeft(2, '0');
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 
-  // Dialog untuk memilih sumber gambar
-  void _showPickerOptions() {
-    showModalBottomSheet(
+  Future<void> _pickTime({required bool isMulai}) async {
+    final picked = await showTimePicker(
       context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galeri'),
-              onTap: () {
-                _pickImage(ImageSource.gallery);
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Kamera'),
-              onTap: () {
-                _pickImage(ImageSource.camera);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+      initialTime: isMulai ? _waktuMulai : _waktuSelesai,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: _green,
+            onPrimary: _textPrimary,
+          ),
         ),
+        child: child!,
       ),
     );
+    if (picked == null) return;
+    setState(() {
+      if (isMulai) {
+        _waktuMulai = picked;
+      } else {
+        _waktuSelesai = picked;
+      }
+    });
   }
 
-  void simpanData() {
-    // Validasi sederhana
-    if (namaController.text.isEmpty) {
+  // --- LOGIKA SIMPAN KE BACKEND ---
+  Future<void> _simpan() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedHari.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Nama obat tidak boleh kosong")),
+        const SnackBar(content: Text('Pilih minimal 1 hari pengulangan.')),
       );
       return;
     }
 
-    final result = {
-      "id": widget.data?['id'] ?? DateTime.now().millisecondsSinceEpoch,
-      "nama": namaController.text,
-      "dosis": dosisController.text,
-      "waktu": selectedWaktu,
-      "frekuensi": selectedFrekuensi,
-      "durasi": selectedDurasi,
-      "foto": _imageFile?.path, // Mengirim path file ke halaman sebelumnya
+    final Map<String, dynamic> data = {
+      "nama_aktivitas": _namaCtrl.text.trim(),
+      "jam_mulai": _formatTime(_waktuMulai),
+      "jam_selesai": _formatTime(_waktuSelesai),
+      "pengulangan": _selectedHari.toList(),
+      "pasien_id": 1, 
     };
 
-    Navigator.pop(context, result);
+    try {
+      final url = widget.jadwalExist == null 
+          ? '$baseUrl/rutinitas' 
+          : '$baseUrl/rutinitas/${widget.jadwalExist!.jadwalRutinitasId}';
+      
+      final response = widget.jadwalExist == null
+          ? await http.post(Uri.parse(url), headers: {"Content-Type": "application/json"}, body: jsonEncode(data))
+          : await http.put(Uri.parse(url), headers: {"Content-Type": "application/json"}, body: jsonEncode(data));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) Navigator.pop(context, true);
+      } else {
+        debugPrint("Gagal simpan: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Error API: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.data != null;
-
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: Text(
-          isEdit ? "Edit Jadwal" : "Tambah Jadwal",
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: _bgPage,
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tab Selector (Hanya UI)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTabItem("Obat", true),
-                const SizedBox(width: 40),
-                _buildTabItem("Rutinitas", false),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Form Input
-            _buildLabel("Nama Obat"),
-            _buildTextField("Contoh: Paracetamol", namaController),
-
-            const SizedBox(height: 15),
-            _buildLabel("Dosis"),
-            _buildTextField("Contoh: 500mg", dosisController),
-
-            const SizedBox(height: 15),
-            _buildLabel("Foto Obat (Opsional)"),
-            const SizedBox(height: 5),
-            _buildImagePickerBox(),
-
-            const SizedBox(height: 20),
-            _buildLabel("Waktu Pengingat"),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: ["Pagi", "Siang", "Sore", "Malam"]
-                  .map((waktu) => _buildWaktuButton(waktu))
-                  .toList(),
-            ),
-
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDropdownField(
-                    "Frekuensi",
-                    selectedFrekuensi,
-                    ["Setiap Hari", "2x Sehari", "3x Sehari"],
-                    (val) => setState(() => selectedFrekuensi = val!),
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sectionLabel('Nama Aktivitas'),
+                      const SizedBox(height: 8),
+                      _buildNamaField(),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _timeColumn('Waktu Mulai', _waktuMulai, true),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _timeColumn('Waktu Selesai', _waktuSelesai, false),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _sectionLabel('Pengulangan'),
+                      const SizedBox(height: 12),
+                      _buildHariSelector(),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildDropdownField(
-                    "Durasi",
-                    selectedDurasi,
-                    ["3 Hari", "7 Hari", "14 Hari"],
-                    (val) => setState(() => selectedDurasi = val!),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: simpanData,
-                child: Text(
-                  isEdit ? "Update Jadwal" : "Simpan Jadwal",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
+      floatingActionButton: _buildSimpanButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
   // --- WIDGET COMPONENTS ---
-
-  Widget _buildLabel(String text) {
-    return Text(text, style: const TextStyle(fontWeight: FontWeight.w600));
-  }
-
-  Widget _buildTextField(String hint, TextEditingController controller) {
+  Widget _buildHeader() {
     return Container(
-      margin: const EdgeInsets.only(top: 5),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.chevron_left_rounded, color: _textPrimary),
+            style: IconButton.styleFrom(backgroundColor: const Color(0xFFF1F5F9)),
           ),
-        ),
+          Expanded(
+            child: Text(
+              widget.jadwalExist == null ? 'Tambah Jadwal' : 'Edit Jadwal',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textPrimary),
+            ),
+          ),
+          const SizedBox(width: 48),
+        ],
       ),
     );
   }
 
-  Widget _buildImagePickerBox() {
-    return GestureDetector(
-      onTap: _showPickerOptions,
-      child: Container(
-        width: double.infinity,
-        height: 120,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: _imageFile == null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.camera_alt_outlined, color: Colors.grey, size: 30),
-                  Text("Tambah Foto", style: TextStyle(color: Colors.grey)),
-                ],
-              )
-            : Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(_imageFile!, width: double.infinity, height: 120, fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    right: 5,
-                    top: 5,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _imageFile = null),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        child: const Icon(Icons.close, color: Colors.white, size: 16),
-                      ),
-                    ),
-                  )
-                ],
-              ),
+  Widget _sectionLabel(String text) => Text(
+    text,
+    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textPrimary),
+  );
+
+  Widget _buildNamaField() {
+    return TextFormField(
+      controller: _namaCtrl,
+      decoration: InputDecoration(
+        hintText: 'Contoh: Olahraga Pagi',
+        filled: true,
+        fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _cardBorder)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _streakTeal, width: 1.5)),
       ),
+      validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama aktivitas wajib diisi' : null,
     );
   }
 
-  Widget _buildWaktuButton(String label) {
-    bool isSelected = selectedWaktu == label;
-    return GestureDetector(
-      onTap: () => setState(() => selectedWaktu = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.green : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? Colors.green : Colors.grey.shade300),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(color: isSelected ? Colors.white : Colors.black),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownField(String title, String value, List<String> items, Function(String?) onChanged) {
+  Widget _timeColumn(String label, TimeOfDay time, bool isMulai) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel(title),
-        const SizedBox(height: 5),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: onChanged,
+        _sectionLabel(label),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => _pickTime(isMulai: isMulai),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: _cardBorder)),
+            child: Row(
+              children: [
+                const Icon(Icons.access_time_rounded, size: 16, color: _textSecondary),
+                const SizedBox(width: 8),
+                Text(_formatTime(time), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
-        )
+        ),
       ],
     );
   }
 
-  Widget _buildTabItem(String text, bool active) {
-    return Column(
-      children: [
-        Text(
-          text,
-          style: TextStyle(fontWeight: FontWeight.bold, color: active ? Colors.green : Colors.grey),
-        ),
-        if (active)
-          Container(height: 2, width: 30, color: Colors.green, margin: const EdgeInsets.only(top: 4)),
-      ],
+  Widget _buildHariSelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _hariList.map((hari) {
+        final selected = _selectedHari.contains(hari);
+        return GestureDetector(
+          onTap: () => setState(() {
+            selected ? _selectedHari.remove(hari) : _selectedHari.add(hari);
+          }),
+          child: Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: selected ? _green : Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: selected ? _green : _cardBorder, width: 1.5),
+            ),
+            alignment: Alignment.center,
+            child: Text(hari, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: selected ? _textPrimary : _textSecondary)),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSimpanButton() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width - 40,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: _simpan,
+        style: ElevatedButton.styleFrom(backgroundColor: _green, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+        child: const Text('Simpan Jadwal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _textPrimary)),
+      ),
     );
   }
 }

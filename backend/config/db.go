@@ -34,8 +34,15 @@ func InitPostgres() *gorm.DB {
 
 	log.Println("Database connected!")
 
-	// Auto-migrate schema (hanya membuat tabel jika belum ada)
-	if err := db.AutoMigrate(&domain.Pasien{}, &domain.Nakes{}, &domain.Jadwal{}, &domain.Obat{}); err != nil {
+	// Auto-migrate schema (Menambahkan Rutinitas dan Tracking ke daftar migrasi)
+	if err := db.AutoMigrate(
+		&domain.Pasien{}, 
+		&domain.Nakes{}, 
+		&domain.Jadwal{}, 
+		&domain.Obat{},
+		&domain.Rutinitas{},         // <--- Tambahan
+		&domain.TrackingRutinitas{}, // <--- Tambahan
+	); err != nil {
 		panic("Gagal auto-migrate: " + err.Error())
 	}
 	log.Println("Database migration completed!")
