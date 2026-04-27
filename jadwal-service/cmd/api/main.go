@@ -4,6 +4,7 @@ import (
 	"jadwal-service/internal/adapters/inbound/http"
 	"jadwal-service/internal/adapters/outbound/persistence"
 	"jadwal-service/internal/config"
+	"jadwal-service/internal/domain"
 	"jadwal-service/internal/usecase"
 	"log"
 
@@ -14,14 +15,24 @@ func main() {
 	// Initialize database
 	db := config.InitPostgres()
 
+	// Auto-migrate domain models
+	db.AutoMigrate(
+		&domain.ResepObat{},
+		&domain.JadwalObat{},
+	)
+
 	// Setup repositories
 	jadwalRepo := persistence.NewJadwalRepo(db)
+	resepObatRepo := persistence.NewResepObatRepo(db)
+	jadwalObatRepo := persistence.NewJadwalObatRepo(db)
 
 	// Setup usecases
 	jadwalUsecase := usecase.NewJadwalUsecase(jadwalRepo)
+	resepJadwalUsecase := usecase.NewResepJadwalUsecase(resepObatRepo, jadwalObatRepo, jadwalRepo)
 
 	// Setup handlers
 	jadwalHandler := http.NewJadwalHandler(jadwalUsecase)
+	resepJadwalHandler := http.NewResepJadwalHandler(resepJadwalUsecase)
 
 	// Setup router
 	r := gin.New()
@@ -54,6 +65,9 @@ func main() {
 	r.POST("/api/jadwal", jadwalHandler.CreateJadwal)
 	r.PUT("/api/jadwal/:id", jadwalHandler.UpdateJadwal)
 	r.DELETE("/api/jadwal/:id", jadwalHandler.DeleteJadwal)
+
+	// Resep Jadwal route
+	r.POST("/api/resep-jadwal", resepJadwalHandler.Create)
 
 	log.Println("Jadwal Service starting on port 8081...")
 	r.Run(":8081")

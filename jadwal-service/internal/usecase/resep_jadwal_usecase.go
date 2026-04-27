@@ -1,29 +1,25 @@
 package usecase
 
 import (
-	"backend/internal/domain"
-	"backend/internal/dto"
-	"backend/internal/ports/outbound"
+	"jadwal-service/internal/adapters/outbound/persistence"
+	"jadwal-service/internal/domain"
+	"jadwal-service/internal/dto"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// HELPER FUNCTION
-func parseInt(s string) int {
-	if i, err := strconv.Atoi(s); err == nil {
-		return i
-	}
-	return 1
-}
-
 type ResepJadwalUsecase struct {
-	resepRepo      outbound.ResepObatRepository
-	jadwalObatRepo outbound.JadwalObatRepository
-	jadwalRepo     outbound.JadwalRepository
+	resepRepo      persistence.ResepObatRepository
+	jadwalObatRepo persistence.JadwalObatRepository
+	jadwalRepo     persistence.JadwalRepository
 }
 
-func NewResepJadwalUsecase(r outbound.ResepObatRepository, j outbound.JadwalObatRepository, jr outbound.JadwalRepository) *ResepJadwalUsecase {
+func NewResepJadwalUsecase(
+	r persistence.ResepObatRepository,
+	j persistence.JadwalObatRepository,
+	jr persistence.JadwalRepository,
+) *ResepJadwalUsecase {
 	return &ResepJadwalUsecase{
 		resepRepo:      r,
 		jadwalObatRepo: j,
@@ -42,6 +38,14 @@ func generateJamMinum(frekuensi int) []string {
 	default:
 		return []string{"08:00"}
 	}
+}
+
+// Helper function
+func parseInt(s string) int {
+	if i, err := strconv.Atoi(s); err == nil {
+		return i
+	}
+	return 1
 }
 
 func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
@@ -67,15 +71,13 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 
 	// BUAT RESEP
 	resep := &domain.ResepObat{
-		PasienID: req.PasienID,
-		ObatID:   req.ObatID,
-		NakesID:  req.NakesID,
-		Dosis:    req.Dosis,
-		Catatan:  req.Catatan,
-
-		TanggalMulai:   tanggalMulai,
-		TanggalSelesai: tanggalSelesai,
-
+		PasienID:         req.PasienID,
+		ObatID:           req.ObatID,
+		NakesID:          req.NakesID,
+		Dosis:            req.Dosis,
+		Catatan:          req.Catatan,
+		TanggalMulai:     tanggalMulai,
+		TanggalSelesai:   tanggalSelesai,
 		FrekuensiPerHari: req.FrekuensiPerHari,
 		AturanKonsumsi:   req.AturanKonsumsi,
 	}
@@ -114,7 +116,7 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		}
 	}
 
-	// BUAT JADWAL DI TABEL JADWAL (UNTUK JADWAL-SERVICE)
+	// BUAT JADWAL DI TABEL JADWAL
 	// Hitung jumlah hari
 	jumlahHari := 0
 	if !tanggalSelesai.IsZero() && !tanggalMulai.IsZero() {
@@ -128,12 +130,12 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		tglSelesaiStr = tanggalSelesai.Format("2006-01-02")
 	}
 
-	// Buat jadwal entry di tabel jadwal dengan waktu reminder dari jadwal obat
+	// Buat jadwal entry di tabel jadwal
 	jadwalForService := &domain.Jadwal{
 		PasienID:           req.PasienID,
-		NamaObat:           "Obat ID: " + string(rune(req.ObatID)), // placeholder, ideally fetch dari obat table
+		NamaObat:           "Obat ID: " + string(rune(req.ObatID)),
 		JumlahDosis:        parseInt(req.Dosis),
-		Satuan:             "tablet", // default
+		Satuan:             "tablet",
 		KategoriObat:       "-",
 		TakaranObat:        req.Dosis,
 		FrekuensiPerHari:   strconv.Itoa(req.FrekuensiPerHari),
@@ -149,8 +151,8 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		Status:             "aktif",
 	}
 
-	_, err = u.jadwalRepo.Create(jadwalForService)
-	if err != nil {
+	// Simpan ke repo
+	if err := u.jadwalRepo.Create(jadwalForService); err != nil {
 		return err
 	}
 

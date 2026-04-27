@@ -8,18 +8,19 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gin-gonic/gin"
 	"backend/internal/domain"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	// 1. DATABASE INIT
 	db := config.InitPostgres()
-	
+
 	db.AutoMigrate(
-    &domain.ResepObat{},
-    &domain.JadwalObat{},
-)
+		&domain.ResepObat{},
+		&domain.JadwalObat{},
+	)
 	if db == nil {
 		log.Fatal("Gagal mengoneksikan database")
 	}
@@ -43,7 +44,7 @@ func main() {
 	obatUC := usecase.NewObatUsecase(obatRepo)
 	trackingUC := usecase.NewTrackingJadwalUsecase(trackingRepo, jadwalRepo, pasienRepo)
 	rutinitasUC := usecase.NewRutinitasUsecase(rutinitasRepo)
-	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo)
+	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo, jadwalRepo)
 
 	// Handlers
 	adminHandler := http.NewAdminHandler(adminUC)
@@ -58,14 +59,14 @@ func main() {
 
 	// 3. ROUTER SETUP
 	r := gin.New()
-	r.SetTrustedProxies(nil) 
+	r.SetTrustedProxies(nil)
 	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(CORSConfig())
 
 	// 4. STATIC FILES (PENTING untuk PWA & Uploads)
 	r.Static("/uploads", "./public/uploads")
-    r.StaticFile("/manifest.json", "./public/manifest.json")
-    r.Static("/img", "./public/img")
+	r.StaticFile("/manifest.json", "./public/manifest.json")
+	r.Static("/img", "./public/img")
 
 	// 5. API ROUTES
 	api := r.Group("/api")
@@ -147,7 +148,7 @@ func main() {
 func CORSConfig() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		c.Header("Access-Control-Allow-Origin", origin) 
+		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With, X-Pasien-ID")
 		c.Header("Access-Control-Allow-Credentials", "true")

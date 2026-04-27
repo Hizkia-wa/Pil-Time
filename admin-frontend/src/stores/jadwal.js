@@ -28,7 +28,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan']
 
-  // ✅ FORM DEFAULT (RAPI & LENGKAP)
+  // FORM DEFAULT (RAPI & LENGKAP)
   const defaultForm = () => ({
   patientId: null,
   obatId: null,
@@ -127,20 +127,18 @@ const submitJadwal = async () => {
     if (!form.value.obatId) throw new Error('Pilih obat dulu')
     if (!form.value.tanggal_mulai) throw new Error('Tanggal mulai wajib')
 
-    // ✅ mapping ke object backend
-    const jadwal_obats = selectedWaktuMinum.value.map(w => {
+    // Kumpulkan waktu minum dari selectedWaktuMinum
+    const jamMinumList = selectedWaktuMinum.value.map(w => {
       let jam = null
 
       if (w === 'Pagi') jam = form.value.waktu_reminder_pagi
       if (w === 'Siang') jam = form.value.waktu_reminder_siang
       if (w === 'Malam') jam = form.value.waktu_reminder_malam
 
-      return {
-        waktu_minum: jam
-      }
-    }).filter(j => j.waktu_minum)
+      return jam
+    }).filter(j => j)
 
-    if (jadwal_obats.length === 0) {
+    if (jamMinumList.length === 0) {
       throw new Error('Pilih minimal 1 waktu minum')
     }
 
@@ -157,15 +155,20 @@ const submitJadwal = async () => {
 
       catatan: form.value.catatan || '',
 
-      frekuensi_per_hari: jadwal_obats.length,
+      frekuensi_per_hari: jamMinumList.length,
       aturan_konsumsi: form.value.aturan_konsumsi,
 
-      jadwal_obats
+      // POST ke jadwal-service (port 8081)
+      jadwal_obats: jamMinumList
     }
 
     console.log('FINAL FIX PAYLOAD:', payload)
 
-    await jadwalApiClient.post('/admin/resep-jadwal', payload)
+    // POST ke jadwal-service, bukan main backend
+    await jadwalApiClient.post('/resep-jadwal', payload)
+
+    // Refresh list setelah berhasil menambah
+    await fetchJadwals()
 
     form.value = defaultForm()
     selectedWaktuMinum.value = []
@@ -182,7 +185,7 @@ const submitJadwal = async () => {
   const fetchJadwals = async () => {
     loading.value = true
     try {
-      const res = await jadwalApiClient.get('/admin/jadwal')
+      const res = await jadwalApiClient.get('/jadwal')
       jadwalList.value = res.data.data || []
     } catch (err) {
       error.value = err.message
