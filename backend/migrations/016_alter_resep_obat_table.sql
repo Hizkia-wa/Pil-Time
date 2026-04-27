@@ -1,0 +1,1 @@
+ALTER TABLE resep_obat RENAME TO resep_obats;

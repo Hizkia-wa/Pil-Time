@@ -7,58 +7,55 @@ import { useObatStore } from './obat'
 export const useJadwalStore = defineStore('jadwal', () => {
   const pasienStore = usePasienStore()
   const obatStore = useObatStore()
-  
-  // ── API State ──────────────────────────────────────────────
+
   const jadwalList = ref([])
   const loading = ref(false)
   const error = ref(null)
 
-  // ── UI State ───────────────────────────────────────────────
   const currentStep = ref(0)
   const searchQuery = ref('')
   const searchPasien = ref('')
   const searchObat = ref('')
   const selectedWaktuMinum = ref([])
 
-  // ── Constants ──────────────────────────────────────────────
   const steps = ['Pasien & Obat', 'Aturan Minum', 'Konfirmasi']
-  const wakteMinum = [
+
+  const waktuMinumOptions = [
     { value: 'Pagi', label: 'Pagi', icon: '☀️' },
     { value: 'Siang', label: 'Siang', icon: '🌤️' },
-    { value: 'Malam', label: 'Malam', icon: '🌙' },
-    { value: 'Saat gejala', label: 'Saat gejala', icon: '⏰' },
+    { value: 'Malam', label: 'Malam', icon: '🌙' }
   ]
-  const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan', 'Bebas']
 
-  // ── Form State ────────────────────────────────────────────
+  const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan']
+
+  // ✅ FORM DEFAULT (RAPI & LENGKAP)
   const defaultForm = () => ({
-    patientId: null,
-    obatId: null,
-    nama_obat: '',
-    jumlah_dosis: 1,
-    satuan: 'tablet',
-    kategori_obat: '',
-    takaran_obat: '',
-    frekuensi_per_hari: '',
-    waktu_minum: '',
-    aturan_konsumsi: '',
-    catatan: '',
-    tipe_durasi: 'hari',
-    jumlah_hari: 7,
-    tanggal_mulai: new Date().toISOString().split('T')[0],
-    tanggal_selesai: '',
-    waktu_reminder_pagi: '07:00',
-    waktu_reminder_malam: '19:00',
-    kirim_notifikasi: true,
-  })
+  patientId: null,
+  obatId: null,
+  nama_obat: '',
+  jumlah_dosis: 1,
+
+  frekuensi_per_hari: 1,
+  aturan_konsumsi: 'Sesudah makan',
+  catatan: '',
+
+  tanggal_mulai: '',
+  tanggal_selesai: '',
+
+  waktu_reminder_pagi: '07:00',
+  waktu_reminder_siang: '13:00',
+  waktu_reminder_malam: '19:00'
+})
 
   const form = ref(defaultForm())
 
-  // ── Computed (DIUBAH AGAR MUNCUL SEMUA DI AWAL) ─────────────
+  // =========================
+  // COMPUTED
+  // =========================
   const filteredPasien = computed(() => {
     const list = pasienStore.pasienList || []
-    // Jika kolom cari kosong, tampilkan semua list pasien
     if (!searchPasien.value.trim()) return list
+
     return list.filter(p =>
       p.nama.toLowerCase().includes(searchPasien.value.toLowerCase()) ||
       p.nik?.includes(searchPasien.value)
@@ -67,8 +64,8 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const filteredObat = computed(() => {
     const list = obatStore.obatList || []
-    // Jika kolom cari kosong, tampilkan semua list obat
-    if (!searchObat.value.trim()) return list 
+    if (!searchObat.value.trim()) return list
+
     return list.filter(o =>
       o.nama_obat.toLowerCase().includes(searchObat.value.toLowerCase())
     )
@@ -77,107 +74,174 @@ export const useJadwalStore = defineStore('jadwal', () => {
   const filteredJadwalList = computed(() => {
     const list = jadwalList.value || []
     if (!searchQuery.value) return list
-    const q = searchQuery.value.toLowerCase()
+
     return list.filter(j =>
-      j.pasien_nama?.toLowerCase().includes(q) ||
-      j.nama_obat?.toLowerCase().includes(q)
+      j.pasien_nama?.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
   })
 
-  // ── Helpers Pasien ─────────────────────────────────────────
+  // =========================
+  // HELPERS
+  // =========================
   const getSelectedPasien = () =>
     pasienStore.pasienList?.find(p => p.pasien_id === form.value.patientId)
 
-  const getSelectedPasienName = () => getSelectedPasien()?.nama || ''
-  const getSelectedPasienNIK = () => getSelectedPasien()?.nik || '-'
-  const getSelectedPasienJK = () => getSelectedPasien()?.jenis_kelamin || '-'
-  const getSelectedPasienAlamat = () => getSelectedPasien()?.alamat || '-'
-  const getSelectedPasienTelepon = () => getSelectedPasien()?.no_telepon || '-'
-  const getSelectedPasienCode = () => getSelectedPasien()?.nik || '-' 
-
-  const getSelectedPasienTTL = () => {
-    const p = getSelectedPasien()
-    return p ? `${p.tempat_lahir}, ${p.tanggal_lahir}` : '-'
-  }
-
-  // ── Helpers Obat ───────────────────────────────────────────
   const getSelectedObat = () =>
     obatStore.obatList?.find(o => o.obat_id === form.value.obatId)
 
-  const getSelectedObatAturan = () => getSelectedObat()?.aturan_pemakaian || ''
-  const getSelectedObatFungsi = () => getSelectedObat()?.fungsi || ''
-  const getSelectedObatPantangan = () => getSelectedObat()?.pantangan || ''
-  const getSelectedObatGambar = () => getSelectedObat()?.gambar || ''
-
-  // ── Actions ────────────────────────────────────────────────
-  const selectPasien = (pasien) => {
-    form.value.patientId = pasien.pasien_id
-    searchPasien.value = ''
-  }
-
-  const selectObat = (obat) => {
-    form.value.obatId = obat.obat_id
-    form.value.nama_obat = obat.nama_obat
-    searchObat.value = ''
-  }
-
+  // =========================
+  // ACTIONS
+  // =========================
   const toggleWaktuMinum = (value) => {
     const index = selectedWaktuMinum.value.indexOf(value)
+
     if (index > -1) {
       selectedWaktuMinum.value.splice(index, 1)
     } else {
       selectedWaktuMinum.value.push(value)
     }
-    form.value.waktu_minum = selectedWaktuMinum.value.join(', ')
+
+    // auto sync
+    form.value.frekuensi_per_hari = selectedWaktuMinum.value.length
   }
 
-  const openAddSchedule = () => {
+  const selectPasien = (p) => {
+    form.value.patientId = p.pasien_id
+    searchPasien.value = ''
+  }
+
+  const selectObat = (o) => {
+    form.value.obatId = o.obat_id
+    form.value.nama_obat = o.nama_obat
+    searchObat.value = ''
+  }
+
+  const formatDate = (date) => {
+  return date ? new Date(date).toISOString() : null
+}
+
+const submitJadwal = async () => {
+  loading.value = true
+  try {
+    if (!form.value.patientId) throw new Error('Pilih pasien dulu')
+    if (!form.value.obatId) throw new Error('Pilih obat dulu')
+    if (!form.value.tanggal_mulai) throw new Error('Tanggal mulai wajib')
+
+    // ✅ mapping ke object backend
+    const jadwal_obats = selectedWaktuMinum.value.map(w => {
+      let jam = null
+
+      if (w === 'Pagi') jam = form.value.waktu_reminder_pagi
+      if (w === 'Siang') jam = form.value.waktu_reminder_siang
+      if (w === 'Malam') jam = form.value.waktu_reminder_malam
+
+      return {
+        waktu_minum: jam
+      }
+    }).filter(j => j.waktu_minum)
+
+    if (jadwal_obats.length === 0) {
+      throw new Error('Pilih minimal 1 waktu minum')
+    }
+
+    const payload = {
+      pasien_id: form.value.patientId,
+      obat_id: form.value.obatId,
+      nakes_id: 1,
+
+      dosis: String(form.value.jumlah_dosis),
+
+      // 🔥 WAJIB ISO
+      tanggal_mulai: formatDate(form.value.tanggal_mulai),
+      tanggal_selesai: formatDate(form.value.tanggal_selesai),
+
+      catatan: form.value.catatan || '',
+
+      frekuensi_per_hari: jadwal_obats.length,
+      aturan_konsumsi: form.value.aturan_konsumsi,
+
+      jadwal_obats
+    }
+
+    console.log('FINAL FIX PAYLOAD:', payload)
+
+    await jadwalApiClient.post('/admin/resep-jadwal', payload)
+
     form.value = defaultForm()
     selectedWaktuMinum.value = []
-    searchPasien.value = ''
-    searchObat.value = ''
-    currentStep.value = 1
-  }
-
-  const cancelAdd = () => {
-    currentStep.value = 0
-    fetchJadwals()
-  }
-
-  const goToStep2 = () => {
-    if (!form.value.patientId) return alert('Pilih pasien terlebih dahulu')
-    if (!form.value.obatId) return alert('Pilih obat terlebih dahulu')
-    currentStep.value = 2
-  }
-
-  const goToStep3 = () => {
-    if (!form.value.waktu_minum) return alert('Pilih minimal satu waktu minum')
     currentStep.value = 3
+
+  } catch (err) {
+    console.error(err)
+    alert('Error: ' + (err.response?.data?.error || err.message))
+  } finally {
+    loading.value = false
   }
+}
 
   const fetchJadwals = async () => {
     loading.value = true
     try {
-      const response = await jadwalApiClient.get('/jadwal')
-      jadwalList.value = response.data.data || []
-    } catch (err) { 
-      error.value = err.message 
-    } finally { 
-      loading.value = false 
+      const res = await jadwalApiClient.get('/admin/jadwal')
+      jadwalList.value = res.data.data || []
+    } catch (err) {
+      error.value = err.message
+    } finally {
+      loading.value = false
     }
   }
 
+  // =========================
+  // RETURN
+  // =========================
   return {
-    jadwalList, loading, error,
-    currentStep, steps, searchQuery, searchPasien, searchObat,
-    selectedWaktuMinum, form, wakteMinum, aturanKonsumsi,
-    filteredPasien, filteredObat, filteredJadwalList,
-    getSelectedPasienName, getSelectedPasienNIK, getSelectedPasienJK, 
-    getSelectedPasienAlamat, getSelectedPasienTelepon, getSelectedPasienTTL,
-    getSelectedPasienCode,
-    getSelectedObatAturan, getSelectedObatFungsi, 
-    getSelectedObatPantangan, getSelectedObatGambar,
-    fetchJadwals, selectPasien, selectObat, toggleWaktuMinum,
-    openAddSchedule, cancelAdd, goToStep2, goToStep3
+    jadwalList,
+    loading,
+    error,
+    currentStep,
+    steps,
+    searchQuery,
+    searchPasien,
+    searchObat,
+    selectedWaktuMinum,
+    form,
+    waktuMinumOptions,
+    aturanKonsumsi,
+
+    filteredPasien,
+    filteredObat,
+    filteredJadwalList,
+
+    getSelectedPasienName: () => getSelectedPasien()?.nama || '',
+    getSelectedPasienNIK: () => getSelectedPasien()?.nik || '-',
+    getSelectedPasienJK: () => getSelectedPasien()?.jenis_kelamin || '-',
+    getSelectedPasienAlamat: () => getSelectedPasien()?.alamat || '-',
+    getSelectedPasienTelepon: () => getSelectedPasien()?.no_telepon || '-',
+
+    getSelectedObatAturan: () => getSelectedObat()?.aturan_pemakaian || '',
+    getSelectedObatFungsi: () => getSelectedObat()?.fungsi || '',
+    getSelectedObatGambar: () => getSelectedObat()?.gambar || '',
+
+    fetchJadwals,
+    selectPasien,
+    selectObat,
+    toggleWaktuMinum,
+
+    openAddSchedule: () => {
+      form.value = defaultForm()
+      selectedWaktuMinum.value = []
+      currentStep.value = 1
+    },
+
+    cancelAdd: () => {
+      currentStep.value = 0
+      fetchJadwals()
+    },
+
+    goToStep2: () => {
+      currentStep.value = 2
+    },
+
+    submitJadwal
   }
 })

@@ -8,9 +8,8 @@ const apiClient = axios.create({
   }
 })
 
-// Jadwal Service Client (Microservice pada port 8081)
 const jadwalApiClient = axios.create({
-  baseURL: 'http://localhost:8081/api',
+  baseURL: 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json'
   }

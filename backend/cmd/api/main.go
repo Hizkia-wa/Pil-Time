@@ -1,163 +1,179 @@
 package main
 
 import (
-    "backend/config"
-    "backend/internal/adapters/inbound/http"
-    "backend/internal/adapters/outbound/persistence"
-    "backend/internal/usecase"
-    "fmt" // Digunakan di baris 144
+	"backend/config"
+	"backend/internal/adapters/inbound/http"
+	"backend/internal/adapters/outbound/persistence"
+	"backend/internal/usecase"
+	"fmt"
+	"log"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
+	"backend/internal/domain"
 )
 
 func main() {
-    db := config.InitPostgres()
+	// 1. DATABASE INIT
+	db := config.InitPostgres()
+	
+	db.AutoMigrate(
+    &domain.ResepObat{},
+    &domain.JadwalObat{},
+)
+	if db == nil {
+		log.Fatal("Gagal mengoneksikan database")
+	}
 
-    // admin/nakes repo + usecase + handler
-    nakesRepo := persistence.NewNakesRepo(db)
-    adminUsecase := usecase.NewAdminUsecase(nakesRepo)
-    adminHandler := http.NewAdminHandler(adminUsecase)
+	// 2. DEPENDENCY INJECTION (DI)
+	// Repositories
+	nakesRepo := persistence.NewNakesRepo(db)
+	pasienRepo := persistence.NewPasienRepo(db)
+	jadwalRepo := persistence.NewJadwalRepo(db)
+	obatRepo := persistence.NewObatRepo(db)
+	trackingRepo := persistence.NewTrackingJadwalRepo(db)
+	rutinitasRepo := persistence.NewRutinitasRepo(db)
+	resepRepo := persistence.NewResepObatRepo(db)
+	jadwalObatRepo := persistence.NewJadwalObatRepo(db)
 
-    // jadwal repo - declare first since it's used in pasien usecase
-    jadwalRepo := persistence.NewJadwalRepo(db)
+	// Usecases
+	adminUC := usecase.NewAdminUsecase(nakesRepo)
+	pasienUC := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
+	jadwalUC := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo)
+	dashboardUC := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
+	obatUC := usecase.NewObatUsecase(obatRepo)
+	trackingUC := usecase.NewTrackingJadwalUsecase(trackingRepo, jadwalRepo, pasienRepo)
+	rutinitasUC := usecase.NewRutinitasUsecase(rutinitasRepo)
+	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo)
 
-    // pasien repo + usecase + handler
-    pasienRepo := persistence.NewPasienRepo(db)
-    pasienUsecase := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
-    pasienHandler := http.NewPasienHandler(pasienUsecase)
-    jadwalUsecase := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo)
-    jadwalHandler := http.NewJadwalHandler(jadwalUsecase)
+	// Handlers
+	adminHandler := http.NewAdminHandler(adminUC)
+	pasienHandler := http.NewPasienHandler(pasienUC)
+	jadwalHandler := http.NewJadwalHandler(jadwalUC)
+	dashboardHandler := http.NewDashboardHandler(dashboardUC)
+	obatHandler := http.NewObatHandler(obatUC)
+	trackingHandler := http.NewTrackingJadwalHandler(trackingUC)
+	rutinitasHandler := http.NewRutinitasHandler(rutinitasUC)
+	resepJadwalHandler := http.NewResepJadwalHandler(resepJadwalUC)
+	fileHandler := http.NewFileHandler()
 
-    // dashboard repo + usecase + handler
-    dashboardUsecase := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
-    dashboardHandler := http.NewDashboardHandler(dashboardUsecase)
+	// 3. ROUTER SETUP
+	r := gin.New()
+	r.SetTrustedProxies(nil) 
+	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(CORSConfig())
 
-    // obat repo + usecase + handler
-    obatRepo := persistence.NewObatRepo(db)
-    obatUsecase := usecase.NewObatUsecase(obatRepo)
-    obatHandler := http.NewObatHandler(obatUsecase)
+	// 4. STATIC FILES (PENTING untuk PWA & Uploads)
+	r.Static("/uploads", "./public/uploads")
+    r.StaticFile("/manifest.json", "./public/manifest.json")
+    r.Static("/img", "./public/img")
 
-    // tracking jadwal repo + usecase + handler
-    trackingJadwalRepo := persistence.NewTrackingJadwalRepo(db)
-    trackingJadwalUsecase := usecase.NewTrackingJadwalUsecase(trackingJadwalRepo, jadwalRepo, pasienRepo)
-    trackingJadwalHandler := http.NewTrackingJadwalHandler(trackingJadwalUsecase)
+	// 5. API ROUTES
+	api := r.Group("/api")
+	{
+		// --- ADMIN ROUTES ---
+		admin := api.Group("/admin")
+		{
+			admin.POST("/login", adminHandler.Login)
+			admin.GET("/dashboard", dashboardHandler.GetDashboard)
+			admin.GET("/pasien", pasienHandler.GetAll)
 
-    // --- TAMBAHAN RUTINITAS DIMULAI ---
-    rutinitasRepo := persistence.NewRutinitasRepo(db)
-    rutinitasUsecase := usecase.NewRutinitasUsecase(rutinitasRepo)
-    rutinitasHandler := http.NewRutinitasHandler(rutinitasUsecase)
-    // --- TAMBAHAN RUTINITAS SELESAI ---
+			// Admin - Info Obat
+			obat := admin.Group("/info-obat")
+			{
+				obat.GET("", obatHandler.GetAll)
+				obat.GET("/:id", obatHandler.GetByID)
+				obat.POST("", obatHandler.Create)
+				obat.PUT("/:id", obatHandler.Update)
+				obat.DELETE("/:id", obatHandler.Delete)
+			}
 
-    // file handler
-    fileHandler := http.NewFileHandler()
+			// Admin - Jadwal
+			jadwal := admin.Group("/jadwal")
+			{
+				jadwal.GET("", jadwalHandler.GetAllJadwal)
+				jadwal.GET("/:id", jadwalHandler.GetJadwalByID)
+				jadwal.GET("/pasien/:pasien_id", jadwalHandler.GetJadwalByPasien)
+				jadwal.POST("", jadwalHandler.CreateJadwal)
+				jadwal.PUT("/:id", jadwalHandler.UpdateJadwal)
+				jadwal.DELETE("/:id", jadwalHandler.DeleteJadwal)
+			}
+			admin.POST("/resep-jadwal", resepJadwalHandler.Create)
 
-    // router - gunakan gin.New() untuk kontrol penuh
-    r := gin.New()
-    r.Use(gin.Logger())
-    r.Use(gin.Recovery())
+			// Admin - Tracking/Riwayat
+			riwayat := admin.Group("/riwayat")
+			{
+				riwayat.GET("", trackingHandler.GetAll)
+				riwayat.GET("/statistics", trackingHandler.GetStatistics)
+				riwayat.GET("/:id", trackingHandler.GetByID)
+				riwayat.GET("/pasien/:pasien_id", trackingHandler.GetByPasienID)
+				riwayat.POST("", trackingHandler.Create)
+				riwayat.PUT("/:id", trackingHandler.Update)
+				riwayat.DELETE("/:id", trackingHandler.Delete)
+			}
+		}
 
-    // Manual CORS middleware
-    r.Use(func(c *gin.Context) {
-        origin := c.GetHeader("Origin")
-        allowedOrigins := map[string]bool{
-            "http://localhost:5173": true,
-            "http://localhost:5174": true,
-            "http://127.0.0.1:5173": true,
-            "http://127.0.0.1:5174": true,
-            "http://localhost:3000": true,
-            "http://127.0.0.1:3000": true,
-        }
+		// --- PASIEN PUBLIC ROUTES ---
+		api.POST("/pasien/register", pasienHandler.Register)
+		api.POST("/pasien/login", pasienHandler.Login)
+		api.POST("/pasien/forgot-password", pasienHandler.ForgotPassword)
+		api.POST("/pasien/verify-reset-code", pasienHandler.VerifyResetCode)
+		api.POST("/pasien/reset-password", pasienHandler.ResetPassword)
 
-        if allowedOrigins[origin] {
-            c.Header("Access-Control-Allow-Origin", origin)
-        }
+		// --- PASIEN AUTHENTICATED ROUTES ---
+		pasienAuth := api.Group("/pasien")
+		pasienAuth.Use(PasienAuthMiddleware())
+		{
+			pasienAuth.GET("/dashboard", pasienHandler.GetDashboard)
+			pasienAuth.GET("/jadwal", pasienHandler.GetJadwal)
+			pasienAuth.GET("/profile", pasienHandler.GetProfile)
 
-        c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
-        c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With, Access-Control-Request-Headers, X-Pasien-ID")
-        c.Header("Access-Control-Allow-Credentials", "true")
-        c.Header("Access-Control-Max-Age", "86400")
+			// Pasien - Rutinitas
+			pasienAuth.GET("/rutinitas/streak/:pasien_id", rutinitasHandler.GetStreak)
+			pasienAuth.POST("/rutinitas/tracking", rutinitasHandler.UpdateTracking)
+			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
+			pasienAuth.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
+		}
 
-        if c.Request.Method == "OPTIONS" {
-            c.AbortWithStatus(204)
-            return
-        }
+		// --- UPLOAD ROUTES ---
+		api.POST("/upload/image", fileHandler.UploadImage)
+		api.POST("/upload/image-base64", fileHandler.UploadBase64Image)
+	}
 
-        c.Next()
-    })
+	fmt.Println("🚀 Nauli Reminder Server running on :8080")
+	r.Run(":8080")
+}
 
-    // Admin routes
-    r.POST("/api/admin/login", adminHandler.Login)
-    r.GET("/api/admin/dashboard", dashboardHandler.GetDashboard)
+// MIDDLEWARES
+func CORSConfig() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		c.Header("Access-Control-Allow-Origin", origin) 
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With, X-Pasien-ID")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Max-Age", "86400")
 
-    // Admin pasien routes
-    r.GET("/api/admin/pasien", pasienHandler.GetAll)
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
+}
 
-    // Admin obat routes (Info Obat)
-    r.GET("/api/admin/info-obat", obatHandler.GetAll)
-    r.GET("/api/admin/info-obat/:id", obatHandler.GetByID)
-    r.POST("/api/admin/info-obat", obatHandler.Create)
-    r.PUT("/api/admin/info-obat/:id", obatHandler.Update)
-    r.DELETE("/api/admin/info-obat/:id", obatHandler.Delete)
+func PasienAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pasienIDStr := c.GetHeader("X-Pasien-ID")
+		if pasienIDStr == "" {
+			pasienIDStr = c.Query("pasien_id")
+		}
 
-    // File upload routes
-    r.POST("/api/upload/image", fileHandler.UploadImage)
-    r.POST("/api/upload/image-base64", fileHandler.UploadBase64Image)
-
-    // Static file serving - arahkan ke public/uploads sesuai handler
-    r.Static("/uploads", "./public/uploads")
-
-    // Admin jadwal routes
-    r.GET("/api/admin/jadwal", jadwalHandler.GetAllJadwal)
-    r.GET("/api/admin/jadwal/:id", jadwalHandler.GetJadwalByID)
-    r.GET("/api/admin/jadwal/pasien/:pasien_id", jadwalHandler.GetJadwalByPasien)
-    r.POST("/api/admin/jadwal", jadwalHandler.CreateJadwal)
-    r.PUT("/api/admin/jadwal/:id", jadwalHandler.UpdateJadwal)
-    r.DELETE("/api/admin/jadwal/:id", jadwalHandler.DeleteJadwal)
-
-    // Admin tracking jadwal routes
-    r.GET("/api/admin/riwayat/statistics", trackingJadwalHandler.GetStatistics)
-    r.GET("/api/admin/riwayat", trackingJadwalHandler.GetAll)
-    r.GET("/api/admin/riwayat/:id", trackingJadwalHandler.GetByID)
-    r.GET("/api/admin/riwayat/pasien/:pasien_id", trackingJadwalHandler.GetByPasienID)
-    r.POST("/api/admin/riwayat", trackingJadwalHandler.Create)
-    r.PUT("/api/admin/riwayat/:id", trackingJadwalHandler.Update)
-    r.DELETE("/api/admin/riwayat/:id", trackingJadwalHandler.Delete)
-
-    // Pasien routes
-    r.POST("/api/pasien/register", pasienHandler.Register)
-    r.POST("/api/pasien/login", pasienHandler.Login)
-    r.POST("/api/pasien/forgot-password", pasienHandler.ForgotPassword)
-    r.POST("/api/pasien/verify-reset-code", pasienHandler.VerifyResetCode)
-    r.POST("/api/pasien/reset-password", pasienHandler.ResetPassword)
-
-    // Pasien auth group
-    pasienAuthGroup := r.Group("/api/pasien")
-    pasienAuthGroup.Use(func(c *gin.Context) {
-        pasienIDStr := c.GetHeader("X-Pasien-ID")
-        if pasienIDStr == "" {
-            pasienIDStr = c.Query("pasien_id")
-        }
-
-        if pasienIDStr != "" {
-            var pasienID int
-            _, err := fmt.Sscanf(pasienIDStr, "%d", &pasienID)
-            if err == nil {
-                c.Set("pasien_id", pasienID)
-            }
-        }
-        c.Next()
-    })
-
-    pasienAuthGroup.GET("/dashboard", pasienHandler.GetDashboard)
-    pasienAuthGroup.GET("/jadwal", pasienHandler.GetJadwal)
-    pasienAuthGroup.GET("/profile", pasienHandler.GetProfile)
-
-    // --- TAMBAHAN ROUTE RUTINITAS ---
-    pasienAuthGroup.GET("/rutinitas/streak/:pasien_id", rutinitasHandler.GetStreak)
-    pasienAuthGroup.POST("/rutinitas/tracking", rutinitasHandler.UpdateTracking)
-    pasienAuthGroup.POST("/rutinitas", rutinitasHandler.Create)
-	pasienAuthGroup.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
-    // --- SELESAI ---
-
-    r.Run(":8080")
+		if pasienIDStr != "" {
+			var pasienID int
+			if _, err := fmt.Sscanf(pasienIDStr, "%d", &pasienID); err == nil {
+				c.Set("pasien_id", pasienID)
+			}
+		}
+		c.Next()
+	}
 }

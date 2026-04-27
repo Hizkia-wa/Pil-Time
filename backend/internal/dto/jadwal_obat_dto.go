@@ -25,3 +25,11 @@ type JadwalObatResponseDTO struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
+
+type JadwalObat struct {
+    JadwalObatID int `gorm:"primaryKey"`
+
+    ResepObatID int `gorm:"column:resep_obat_id"` // ini jadi FK
+
+    WaktuMinum string
+}

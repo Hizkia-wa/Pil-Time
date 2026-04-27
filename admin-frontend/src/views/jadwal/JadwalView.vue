@@ -1,168 +1,252 @@
 <template>
   <LayoutWrapper>
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-gray-100 p-6">
 
-      <!-- ===== STEP HEADER (tampil saat step > 0) ===== -->
-      <div v-if="jadwalStore.currentStep > 0" class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div class="flex items-center gap-2 md:gap-4">
-          <button @click="jadwalStore.cancelAdd"
-            class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-xs md:text-sm font-medium">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Kembali
-          </button>
-          <div>
-            <h2 class="text-base md:text-lg font-bold text-slate-900">Tambah Jadwal Obat</h2>
-            <p class="text-xs text-gray-500">Isi formulir untuk jadwal minum obat</p>
-          </div>
-        </div>
+      <!-- STEP -->
+      <div v-if="jadwal.currentStep > 0" class="flex justify-between mb-6">
+        <button @click="jadwal.cancelAdd" class="text-gray-600">
+          ← Kembali
+        </button>
 
-        <!-- Stepper -->
-        <div class="flex items-center gap-1 md:gap-2 overflow-x-auto">
-          <div v-for="(step, i) in jadwalStore.steps" :key="i" class="flex items-center gap-2">
-            <div class="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div :class="[
-                'w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0',
-                jadwalStore.currentStep > i + 1  ? 'bg-teal-600 text-white' :
-                jadwalStore.currentStep === i + 1 ? 'bg-teal-600 text-white ring-2 md:ring-4 ring-teal-100' :
-                'bg-gray-200 text-gray-500'
-              ]">
-                <svg v-if="jadwalStore.currentStep > i + 1" class="w-3 h-3 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                </svg>
-                <span v-else>{{ i + 1 }}</span>
-              </div>
-              <span :class="[
-                'text-xs md:text-sm font-medium hidden md:inline',
-                jadwalStore.currentStep >= i + 1 ? 'text-teal-600' : 'text-gray-400'
-              ]">{{ step }}</span>
+        <div class="flex gap-3">
+          <div v-for="(s,i) in jadwal.steps" :key="i"
+            class="flex items-center gap-2">
+            <div
+              class="w-7 h-7 flex items-center justify-center rounded-full text-xs"
+              :class="jadwal.currentStep >= i+1 ? 'bg-teal-600 text-white' : 'bg-gray-300'">
+              {{ i+1 }}
             </div>
-            <div v-if="i < jadwalStore.steps.length - 1"
-              :class="['w-8 md:w-12 h-0.5 flex-shrink-0', jadwalStore.currentStep > i + 1 ? 'bg-teal-600' : 'bg-gray-200']">
-            </div>
+            <span class="text-sm">{{ s }}</span>
           </div>
         </div>
       </div>
 
-      <!-- ===== STEP 1 ===== -->
-      <Step1PasienObat
-  v-if="jadwalStore.currentStep === 1"
-  :form="jadwalStore.form"
-  :pasien-list="jadwalStore.filteredPasien"
-  :obat-list="jadwalStore.filteredObat"
-  v-model:search-pasien="jadwalStore.searchPasien"
-  v-model:search-obat="jadwalStore.searchObat"
-  
-  :selected-pasien-name="jadwalStore.getSelectedPasienName()"
-  :selected-pasien-nik="jadwalStore.getSelectedPasienNIK()"
-  :selected-pasien-jk="jadwalStore.getSelectedPasienJK()"
-  :selected-pasien-telepon="jadwalStore.getSelectedPasienTelepon()"
-  :selected-pasien-alamat="jadwalStore.getSelectedPasienAlamat()"
-  
-  :selected-obat-aturan="jadwalStore.getSelectedObatAturan()"
-  :selected-obat-fungsi="jadwalStore.getSelectedObatFungsi()"
-  :selected-obat-pantangan="jadwalStore.getSelectedObatPantangan()"
-  :selected-obat-gambar="jadwalStore.getSelectedObatGambar()"
+      <!-- STEP 1 -->
+      <div v-if="jadwal.currentStep === 1" class="grid md:grid-cols-2 gap-6">
 
-  @update:form="jadwalStore.form = $event"
-  @select-pasien="jadwalStore.selectPasien"
-  @select-obat="jadwalStore.selectObat"
-  @next="jadwalStore.goToStep2"
-  @cancel="jadwalStore.cancelAdd"
-/>
+        <!-- PASIEN -->
+        <div class="card">
+          <h3 class="title">Pilih Pasien</h3>
 
-      <!-- ===== STEP 2 ===== -->
-      <Step2AturanMinum
-        v-if="jadwalStore.currentStep === 2"
-        :form="jadwalStore.form"
-        :selected-pasien-name="jadwalStore.getSelectedPasienName()"
-        :selected-pasien-code="jadwalStore.getSelectedPasienCode()"
-        :selected-waktu-minum="jadwalStore.selectedWaktuMinum"
-        :waktu-minum="jadwalStore.wakteMinum"
-        :aturan-konsumsi="jadwalStore.aturanKonsumsi"
-        @update:form="jadwalStore.form = $event"
-        @toggle-waktu="jadwalStore.toggleWaktuMinum"
-        @back="jadwalStore.currentStep = 1"
-        @next="jadwalStore.goToStep3"
-      />
+          <input v-model="jadwal.searchPasien" class="input" placeholder="Cari pasien..." />
 
-      <!-- ===== STEP 3 ===== -->
-      <Step3Konfirmasi
-        v-if="jadwalStore.currentStep === 3"
-        :form="jadwalStore.form"
-        :selected-pasien-name="jadwalStore.getSelectedPasienName()"
-        :selected-waktu-minum="jadwalStore.selectedWaktuMinum"
-        :pasien-jadwal-list="jadwalStore.jadwalList.filter(j => j.pasien_nama === jadwalStore.getSelectedPasienName()).slice(0, 3)"
-        @back-to-list="jadwalStore.cancelAdd"
-        @add-another="jadwalStore.openAddSchedule"
-      />
+          <div class="list">
+            <div v-for="p in jadwal.filteredPasien"
+              :key="p.pasien_id"
+              @click="jadwal.selectPasien(p)"
+              :class="['item',
+                jadwal.form.patientId === p.pasien_id ? 'active' : ''
+              ]">
+              {{ p.nama }}
+            </div>
+          </div>
+        </div>
 
-      <!-- ===== MAIN LIST ===== -->
-      <JadwalTable
-        v-if="jadwalStore.currentStep === 0"
-        :jadwal-list="jadwalStore.filteredJadwalList"
-        :search-query="jadwalStore.searchQuery"
-        @update:searchQuery="jadwalStore.searchQuery = $event"
-        @open-add="jadwalStore.openAddSchedule"
-        @view="handleViewDetail"
-        @edit="handleEditJadwal"
-        @delete="jadwalStore.deleteJadwal"
-      />
+        <!-- OBAT -->
+        <div class="card">
+          <h3 class="title">Pilih Obat</h3>
+
+          <input v-model="jadwal.searchObat" class="input" placeholder="Cari obat..." />
+
+          <div class="list">
+            <div v-for="o in jadwal.filteredObat"
+              :key="o.obat_id"
+              @click="jadwal.selectObat(o)"
+              :class="['item',
+                jadwal.form.obatId === o.obat_id ? 'active' : ''
+              ]">
+              {{ o.nama_obat }}
+            </div>
+          </div>
+        </div>
+
+        <button 
+          @click="jadwal.form.patientId && jadwal.form.obatId 
+            ? jadwal.goToStep2() 
+            : alert('Pilih pasien & obat dulu')"
+          class="btn-primary col-span-full">
+          Lanjut
+        </button>
+      </div>
+
+      <!-- STEP 2 -->
+      <div v-if="jadwal.currentStep === 2" class="grid md:grid-cols-2 gap-6">
+
+        <!-- KIRI -->
+        <div class="card">
+          <h3 class="title">Frekuensi & Waktu Minum</h3>
+
+          <div class="flex gap-2 mb-4">
+            <button v-for="w in jadwal.waktuMinumOptions"
+              :key="w.value"
+              @click="jadwal.toggleWaktuMinum(w.value)"
+              :class="['chip',
+                jadwal.selectedWaktuMinum.includes(w.value) ? 'active' : ''
+              ]">
+              {{ w.icon }} {{ w.label }}
+            </button>
+          </div>
+
+          <select v-model="jadwal.form.aturan_konsumsi" class="input">
+            <option v-for="a in jadwal.aturanKonsumsi" :key="a">
+              {{ a }}
+            </option>
+          </select>
+
+          <input v-model="jadwal.form.jumlah_dosis"
+            type="number"
+            class="input mt-3"
+            placeholder="Jumlah Dosis" />
+
+          <textarea v-model="jadwal.form.catatan"
+            class="input mt-3"
+            placeholder="Catatan"></textarea>
+        </div>
+
+        <!-- KANAN -->
+        <div class="card">
+  <h3 class="title">Durasi & Jadwal</h3>
+
+  <label>Tanggal Mulai *</label>
+  <input type="date" v-model="jadwal.form.tanggal_mulai" class="input mb-3"/>
+
+  <label>Tanggal Selesai</label>
+  <input type="date" v-model="jadwal.form.tanggal_selesai" class="input mb-4"/>
+
+  <h4 class="font-semibold mb-2">Waktu Reminder</h4>
+
+  <label>Pagi</label>
+  <input type="time" v-model="jadwal.form.waktu_reminder_pagi" class="input mb-2"/>
+
+  <label>Siang</label>
+  <input type="time" v-model="jadwal.form.waktu_reminder_siang" class="input mb-2"/>
+
+  <label>Malam</label>
+  <input type="time" v-model="jadwal.form.waktu_reminder_malam" class="input"/>
+</div>
+
+        <div class="flex gap-2 col-span-full">
+          <button @click="jadwal.currentStep = 1" class="btn-secondary">
+            Kembali
+          </button>
+
+          <button 
+            @click="handleSubmit"
+            class="btn-primary">
+            Simpan
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div v-if="jadwal.currentStep === 3" class="card text-center">
+        <h2 class="text-green-600 font-bold text-lg">
+          ✅ Berhasil disimpan
+        </h2>
+
+        <button @click="jadwal.cancelAdd" class="btn-primary mt-4">
+          Kembali
+        </button>
+      </div>
+
+      <!-- TABLE -->
+      <div v-if="jadwal.currentStep === 0">
+
+        <div class="flex justify-between mb-4">
+          <input v-model="jadwal.searchQuery"
+            class="input"
+            placeholder="Cari pasien..." />
+
+          <button @click="jadwal.openAddSchedule"
+            class="btn-primary">
+            + Tambah
+          </button>
+        </div>
+
+        <div class="card">
+          <div v-for="j in jadwal.filteredJadwalList"
+            :key="j.id"
+            class="border-b p-3">
+            {{ j.pasien_nama }}
+          </div>
+        </div>
+      </div>
+
+      <!-- LOADING -->
+      <div v-if="jadwal.loading" class="overlay">
+        Loading...
+      </div>
 
     </div>
   </LayoutWrapper>
 </template>
 
-<script>
+<script setup>
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
-import JadwalTable from './components/JadwalTable.vue'
-import Step1PasienObat from './components/step1pasienobat.vue'
-import Step2AturanMinum from './components/step2aturanminum.vue'
-import Step3Konfirmasi from './components/step3konfirmasi.vue'
 import { useJadwalStore } from '../../stores/jadwal'
 import { usePasienStore } from '../../stores/pasien'
-import { useObatStore } from '../../stores/obat' //
+import { useObatStore } from '../../stores/obat'
 
-export default {
-  name: 'JadwalView',
-  components: {
-    LayoutWrapper,
-    JadwalTable,
-    Step1PasienObat,
-    Step2AturanMinum,
-    Step3Konfirmasi,
-  },
-  setup() {
-    const router = useRouter()
-    const jadwalStore = useJadwalStore()
-    const pasienStore = usePasienStore()
-    const obatStore = useObatStore()
+const jadwal = useJadwalStore()
+const pasien = usePasienStore()
+const obat = useObatStore()
 
-    const handleViewDetail = (jadwal) => {
-      router.push({ name: 'jadwal-detail', params: { id: jadwal.id } })
-    }
+onMounted(async () => {
+  await Promise.all([
+    jadwal.fetchJadwals(),
+    pasien.fetchPasiens(),
+    obat.fetchObats()
+  ])
+})
 
-    const handleEditJadwal = (jadwal) => {
-      router.push({ name: 'jadwal-edit', params: { id: jadwal.id } })
-    }
+const handleSubmit = () => {
+  if (!jadwal.form.tanggal_mulai) {
+    alert('Tanggal mulai wajib diisi')
+    return
+  }
 
-    // Di dalam setup() JadwalView.vue
-    onMounted(() => {
-      jadwalStore.fetchJadwals()
-      pasienStore.fetchPasiens()
-      obatStore.fetchObats() // Sekarang ini tidak akan error lagi
-    })
+  if (jadwal.selectedWaktuMinum.length === 0) {
+    alert('Pilih waktu minum dulu')
+    return
+  }
 
-    return {
-      jadwalStore,
-      pasienStore,
-      obatStore,
-      handleViewDetail,
-      handleEditJadwal,
-    }
-  },
+  jadwal.submitJadwal()
 }
 </script>
+
+<style scoped>
+.card {
+  @apply bg-white p-5 rounded-xl shadow;
+}
+.title {
+  @apply font-bold mb-3;
+}
+.input {
+  @apply w-full border p-2 rounded-lg;
+}
+.list {
+  @apply border rounded-lg mt-2 max-h-40 overflow-y-auto;
+}
+.item {
+  @apply p-2 cursor-pointer hover:bg-gray-100;
+}
+.item.active {
+  @apply bg-teal-600 text-white;
+}
+.btn-primary {
+  @apply bg-teal-600 text-white px-4 py-2 rounded-lg;
+}
+.btn-secondary {
+  @apply bg-gray-300 px-4 py-2 rounded-lg;
+}
+.chip {
+  @apply px-3 py-1 border rounded-full cursor-pointer;
+}
+.chip.active {
+  @apply bg-teal-600 text-white;
+}
+.overlay {
+  @apply fixed inset-0 bg-black/30 flex items-center justify-center text-white;
+}
+</style>
