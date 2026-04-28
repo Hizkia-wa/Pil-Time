@@ -94,6 +94,101 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getRiwayat({
+    required int pasienId,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/admin/riwayat/pasien/$pasienId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Pasien-ID': pasienId.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        // Backend returns { "data": [...] }
+        return {'success': true, 'data': responseBody['data'] ?? []};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error':
+              errorBody['message'] ??
+              errorBody['error'] ??
+              'Gagal mengambil riwayat',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getMedicines({
+    required int pasienId,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/pasien/jadwal?pasien_id=$pasienId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Pasien-ID': pasienId.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorBody['message'] ?? 'Gagal mengambil data obat',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createRutinitas({
+    required int pasienId,
+    required String namaRutinitas,
+    required String waktuReminder,
+    String? deskripsi,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/pasien/rutinitas'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Pasien-ID': pasienId.toString(),
+        },
+        body: jsonEncode({
+          'pasien_id': pasienId,
+          'nama_rutinitas': namaRutinitas,
+          'deskripsi': deskripsi ?? '',
+          'waktu_reminder': waktuReminder,
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error':
+              errorBody['error'] ??
+              errorBody['message'] ??
+              'Gagal membuat rutinitas',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
+
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     try {
       final response = await http.post(

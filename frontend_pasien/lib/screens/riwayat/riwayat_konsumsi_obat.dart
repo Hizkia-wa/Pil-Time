@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/auth_service.dart';
 
 // ─── MODEL ───────────────────────────────────────────────────────────────────
 
@@ -24,92 +27,58 @@ class DayLog {
   const DayLog({required this.date, required this.logs});
 }
 
-// ─── DUMMY DATA ───────────────────────────────────────────────────────────────
+// ─── HELPER FUNCTIONS ───────────────────────────────────────────────────────
 
-List<DayLog> _generateDummyData() {
-  final now = DateTime.now();
-  DateTime ago(int days) => now.subtract(Duration(days: days));
+List<DayLog> _mapResponseToDayLogs(List<dynamic> response) {
+  if (response.isEmpty) return [];
 
-  MedLog taken(String name, String jam) =>
-      MedLog(name: name, instruction: jam, status: MedStatus.taken);
-  MedLog late(String name, String jam) => MedLog(
-    name: name,
-    instruction: jam,
-    status: MedStatus.late,
-    color: const Color(0xFFFFA726),
-  );
-  MedLog missed(String name, String jam) =>
-      MedLog(name: name, instruction: jam, status: MedStatus.missed);
+  // Group by tanggal
+  final Map<String, List<Map<String, dynamic>>> grouped = {};
+  for (final item in response) {
+    final tanggal = item['tanggal'] as String?;
+    if (tanggal != null) {
+      grouped.putIfAbsent(tanggal, () => []);
+      grouped[tanggal]!.add(item as Map<String, dynamic>);
+    }
+  }
 
-  return [
-    DayLog(
-      date: ago(0),
-      logs: [
-        taken('Paracetamol', '08:10'),
-        late('Amoxicillin', '09:45'),
-        missed('Vitamin C', '08:00'),
-      ],
-    ),
-    DayLog(
-      date: ago(1),
-      logs: [
-        taken('Paracetamol', '08:10'),
-        missed('Amoxicillin', '08:10'),
-        late('Paracetamol', '12:10'),
-      ],
-    ),
-    DayLog(
-      date: ago(2),
-      logs: [taken('Paracetamol', '08:10'), taken('Vitamin C', '08:10')],
-    ),
-    DayLog(
-      date: ago(3),
-      logs: [missed('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')],
-    ),
-    DayLog(
-      date: ago(4),
-      logs: [taken('Paracetamol', '08:10'), late('Amoxicillin', '12:10')],
-    ),
-    DayLog(
-      date: ago(5),
-      logs: [taken('Vitamin C', '08:10'), missed('Paracetamol', '20:00')],
-    ),
-    DayLog(
-      date: ago(6),
-      logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '08:10')],
-    ),
-    DayLog(
-      date: ago(10),
-      logs: [taken('Paracetamol', '08:10'), missed('Vitamin C', '12:10')],
-    ),
-    DayLog(
-      date: ago(15),
-      logs: [missed('Amoxicillin', '08:10'), taken('Paracetamol', '08:10')],
-    ),
-    DayLog(
-      date: ago(20),
-      logs: [taken('Paracetamol', '08:10'), late('Vitamin C', '20:00')],
-    ),
-    DayLog(
-      date: ago(29),
-      logs: [taken('Amoxicillin', '08:10'), missed('Paracetamol', '12:10')],
-    ),
-    DayLog(
-      date: ago(45),
-      logs: [taken('Paracetamol', '08:10'), taken('Amoxicillin', '08:10')],
-    ),
-    DayLog(
-      date: ago(60),
-      logs: [missed('Vitamin C', '08:10'), taken('Paracetamol', '20:00')],
-    ),
-    DayLog(
-      date: ago(80),
-      logs: [taken('Paracetamol', '08:10'), missed('Amoxicillin', '08:10')],
-    ),
-  ];
+  // Convert to DayLog
+  final dayLogs = <DayLog>[];
+  for (final entry in grouped.entries) {
+    final date = DateTime.parse(entry.key);
+    final logs = <MedLog>[];
+
+    for (final item in entry.value) {
+      final status = item['status'] as String?;
+      final namaObat = item['nama_obat'] as String? ?? 'Obat';
+      final waktuMinum = item['waktu_minum'] as String?;
+      final jadwal = item['jadwal'] as String?;
+
+      // Map status
+      MedStatus medStatus;
+      if (status == 'Diminum') {
+        medStatus = MedStatus.taken;
+      } else if (status == 'Terlambat') {
+        medStatus = MedStatus.late;
+      } else {
+        medStatus = MedStatus.missed;
+      }
+
+      // Build instruction from waktu_minum or jadwal
+      final instruction = waktuMinum ?? jadwal ?? 'Tidak ada waktu';
+
+      logs.add(
+        MedLog(name: namaObat, instruction: instruction, status: medStatus),
+      );
+    }
+
+    dayLogs.add(DayLog(date: date, logs: logs));
+  }
+
+  // Sort by date descending (newest first)
+  dayLogs.sort((a, b) => b.date.compareTo(a.date));
+  return dayLogs;
 }
-
-final List<DayLog> _allData = _generateDummyData();
 
 // ─── SCREEN ───────────────────────────────────────────────────────────────────
 
@@ -124,6 +93,96 @@ class RiwayatKonsumsiObatScreen extends StatefulWidget {
 class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   int _selectedFilter = 0;
   final List<String> _filters = ['Semua', '7 Hari', '30 Hari', '3 Bulan'];
+
+  int? _pasienId;
+  List<DayLog> _allData = [];
+  bool _isLoading = true;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final session = await AuthService.getPasienSession();
+      if (session == null) {
+        setState(() {
+          _errorMsg = 'User session tidak ditemukan';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final pasienId = session['pasien_id'] as int;
+      setState(() => _pasienId = pasienId);
+
+      await _fetchRiwayat(pasienId);
+    } catch (e) {
+      debugPrint("Error loading data: $e");
+      setState(() {
+        _errorMsg = 'Gagal memuat data: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchRiwayat(int pasienId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              "http://10.0.2.2:8080/api/admin/riwayat/pasien/$pasienId",
+            ),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Pasien-ID': pasienId.toString(),
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+
+        // Backend returns { "data": [...] }
+        final List<dynamic> data = responseBody['data'] ?? [];
+
+        if (data.isEmpty) {
+          setState(() {
+            _allData = [];
+            _isLoading = false;
+            _errorMsg = null;
+          });
+        } else {
+          final dayLogs = _mapResponseToDayLogs(data);
+          setState(() {
+            _allData = dayLogs;
+            _isLoading = false;
+            _errorMsg = null;
+          });
+        }
+      } else {
+        final Map<String, dynamic> errorBody = jsonDecode(response.body);
+        final errorMsg =
+            errorBody['message'] ??
+            errorBody['error'] ??
+            'Server Error ${response.statusCode}';
+        debugPrint("Error Response: ${response.statusCode} - $errorMsg");
+        setState(() {
+          _errorMsg = errorMsg;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Exception in _fetchRiwayat: $e");
+      setState(() {
+        _errorMsg = 'Gagal memuat data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
 
   // ── Compliance: selalu dari SEMUA data, tidak terpengaruh filter ──
   int get _takenDoses => _allData
@@ -164,16 +223,55 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
           ),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          _buildComplianceCard(),
-          _buildFilterRow(),
-          const SizedBox(height: 8),
-          ..._buildDayLogs(),
-          const SizedBox(height: 24),
-        ],
-      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMsg != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Gagal Memuat Data',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMsg!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() => _isLoading = true);
+                _loadData();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        _buildComplianceCard(),
+        _buildFilterRow(),
+        const SizedBox(height: 8),
+        ..._buildDayLogs(),
+        const SizedBox(height: 24),
+      ],
     );
   }
 

@@ -73,6 +73,12 @@ func ObatToResponseDTO(obat *domain.Obat) *dto.ObatResponseDTO {
 		AturanPemakaian: obat.AturanPemakaian,
 		Pantangan:       obat.Pantangan,
 		Gambar:          obat.Gambar,
+		PasienID:        obat.PasienID,
+		Pengingat:       obat.GetPengingat(), // Convert JSON string to array
+		Frekuensi:       obat.Frekuensi,
+		DurasiHari:      obat.DurasiHari,
+		Catatan:         obat.Catatan,
+		IsMandiri:       obat.IsMandiri,
 		CreatedAt:       obat.CreatedAt,
 		UpdatedAt:       obat.UpdatedAt,
 	}

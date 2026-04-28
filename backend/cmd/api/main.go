@@ -133,6 +133,13 @@ func main() {
 			pasienAuth.POST("/rutinitas/tracking", rutinitasHandler.UpdateTracking)
 			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
 			pasienAuth.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
+
+			// Pasien - Obat Mandiri
+			pasienAuth.POST("/obat-mandiri", obatHandler.CreateMandiri)
+			pasienAuth.GET("/obat-mandiri", obatHandler.GetAll)
+			pasienAuth.GET("/obat-mandiri/:id", obatHandler.GetByID)
+			pasienAuth.PUT("/obat-mandiri/:id", obatHandler.Update)
+			pasienAuth.DELETE("/obat-mandiri/:id", obatHandler.Delete)
 		}
 
 		// --- UPLOAD ROUTES ---
@@ -140,7 +147,7 @@ func main() {
 		api.POST("/upload/image-base64", fileHandler.UploadBase64Image)
 	}
 
-	fmt.Println("🚀 Nauli Reminder Server running on :8080")
+	fmt.Println("Pil Time Server running on :8080")
 	r.Run(":8080")
 }
 

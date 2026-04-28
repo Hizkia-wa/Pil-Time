@@ -6,10 +6,7 @@ import './tambah_jadwal_konsumsi_obat_mandiri.dart';
 class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
   final int streakHari;
 
-  const JadwalKonsumsiObatMandiriStyled({
-    super.key,
-    required this.streakHari,
-  });
+  const JadwalKonsumsiObatMandiriStyled({super.key, required this.streakHari});
 
   @override
   State<JadwalKonsumsiObatMandiriStyled> createState() =>
@@ -77,10 +74,7 @@ class _JadwalKonsumsiObatMandiriStyledState
           const SizedBox(height: 16),
           const Text(
             "Daftar Obat",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           if (isLoading)
@@ -151,16 +145,10 @@ class _JadwalKonsumsiObatMandiriStyledState
         children: [
           Text(
             item['nama_jadwal'] ?? '-',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
-          Text(
-            item['dosis'] ?? '-',
-            style: const TextStyle(fontSize: 12),
-          ),
+          Text(item['dosis'] ?? '-', style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -185,7 +173,9 @@ class _JadwalKonsumsiObatMandiriStyledState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Hapus Jadwal?"),
-        content: const Text("Data ini akan dihapus permanen dari riwayat kamu."),
+        content: const Text(
+          "Data ini akan dihapus permanen dari riwayat kamu.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -233,9 +223,7 @@ class _JadwalKonsumsiObatMandiriStyledState
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const TambahJadwalKonsumsi(),
-            ),
+            MaterialPageRoute(builder: (_) => const TambahJadwalKonsumsi()),
           ).then((_) => fetchJadwal());
         },
         style: ElevatedButton.styleFrom(
@@ -244,10 +232,7 @@ class _JadwalKonsumsiObatMandiriStyledState
             borderRadius: BorderRadius.circular(20),
           ),
         ),
-        icon: const Icon(
-          Icons.add_rounded,
-          color: Color(0xFF0F172A),
-        ),
+        icon: const Icon(Icons.add_rounded, color: Color(0xFF0F172A)),
         label: const Text(
           "Tambahkan Jadwal Konsumsi Obat",
           style: TextStyle(
@@ -259,4 +244,3 @@ class _JadwalKonsumsiObatMandiriStyledState
     );
   }
 }
-

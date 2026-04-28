@@ -1,112 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_pasien/screens/info_obat/detail_info_obat.dart';
+import 'package:frontend_pasien/services/api_service.dart';
+import 'package:frontend_pasien/models/obat.dart';
+import 'detail_info_obat.dart';
 
-// ─── MODEL ───────────────────────────────────────────────────────────────────
+// ─── GROUPED OBAT DATA ────────────────────────────────────────────────────
 
-class InfoObatItem {
-  final String nama;
-  final String kategori;
-  final Color color;
-  final String frekuensi;
-  final String durasi;
-  final String waktuMinum;
-  final String fungsi;
-  final String aturanPakai;
-  final String perhatian;
-
-  const InfoObatItem({
-    required this.nama,
-    required this.kategori,
-    required this.color,
-    this.frekuensi = '3-4x sehari',
-    this.durasi = '3-5 hari',
-    this.waktuMinum = 'Sesudah makan',
-    this.fungsi = 'Fungsi obat akan diisi dari backend.',
-    this.aturanPakai = 'Aturan pakai akan diisi dari backend.',
-    this.perhatian = 'Perhatian akan diisi dari backend.',
-  });
-}
-
-class InfoObatHari {
+class ObatDay {
   final DateTime tanggal;
-  final List<InfoObatItem> obatList;
+  final List<ObatDetail> obatList;
 
-  const InfoObatHari({required this.tanggal, required this.obatList});
-}
-
-// ─── DUMMY DATA ───────────────────────────────────────────────────────────────
-
-List<InfoObatHari> _generateData() {
-  final now = DateTime.now();
-  DateTime ago(int days) => now.subtract(Duration(days: days));
-
-  return [
-    InfoObatHari(tanggal: ago(0), obatList: [
-      InfoObatItem(
-        nama: 'Paracetamol', kategori: 'Pereda Nyeri & Demam', color: const Color(0xFF4CAF82),
-        frekuensi: '3-4x sehari', durasi: '3-5 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Membantu meredakan sakit kepala, nyeri otot, sakit gigi, serta menurunkan demam dengan cara menghambat pembentukan prostaglandin di dalam tubuh.',
-        aturanPakai: 'Minum 1 tablet setiap 4 hingga 6 jam jika diperlukan. Telan utuh dengan air putih. Jangan melebihi 8 tablet dalam 24 jam.',
-        perhatian: 'Simpan di tempat sejuk dan kering, jauh dari jangkauan anak-anak. Konsultasikan dengan dokter jika kondisi tidak membaik setelah 3 hari.',
-      ),
-      InfoObatItem(
-        nama: 'Amocilin', kategori: 'Pereda Nyeri & Demam', color: const Color(0xFFE57373),
-        frekuensi: '3x sehari', durasi: '5-7 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Mengobati berbagai jenis infeksi bakteri, seperti infeksi saluran pernapasan, infeksi telinga, infeksi kulit, hingga infeksi saluran kemih.',
-        aturanPakai: 'Minum 1 kapsul setiap 8 jam secara teratur. Wajib dihabiskan sesuai petunjuk dokter meskipun gejala sudah hilang.',
-        perhatian: 'Jangan digunakan jika memiliki riwayat alergi terhadap Penicillin. Segera hubungi dokter jika muncul gejala alergi berat.',
-      ),
-    ]),
-    InfoObatHari(tanggal: ago(1), obatList: [
-      InfoObatItem(
-        nama: 'Flutamol', kategori: 'Obat Flu & Batuk', color: const Color(0xFF64B5F6),
-        frekuensi: '2-3x sehari', durasi: '3-5 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Meringankan gejala flu seperti demam, sakit kepala, hidung tersumbat, dan bersin-bersin yang disertai batuk tidak berdahak.',
-        aturanPakai: 'Minum 1 kaplet setiap 6-8 jam. Jangan melebihi 3 kaplet dalam 24 jam. Hindari mengemudi setelah mengonsumsi obat ini.',
-        perhatian: 'Simpan di bawah suhu 30°C. Tidak dianjurkan untuk penderita tekanan darah tinggi, gangguan jantung, atau yang sedang mengonsumsi obat antidepresan.',
-      ),
-    ]),
-    InfoObatHari(tanggal: ago(5), obatList: [
-      InfoObatItem(
-        nama: 'Amoxicillin', kategori: 'Antibiotik', color: const Color(0xFFFFB74D),
-        frekuensi: '3x sehari', durasi: '7 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Antibiotik spektrum luas yang digunakan untuk mengobati berbagai infeksi bakteri.',
-        aturanPakai: 'Minum 1 kapsul setiap 8 jam. Habiskan seluruh dosis meskipun gejala sudah membaik.',
-        perhatian: 'Beritahu dokter jika ada riwayat alergi penisilin. Hentikan penggunaan jika muncul ruam atau kesulitan bernapas.',
-      ),
-      InfoObatItem(
-        nama: 'Vitamin C', kategori: 'Suplemen', color: const Color(0xFF81C784),
-        frekuensi: '1x sehari', durasi: 'Sesuai anjuran', waktuMinum: 'Sesudah makan',
-        fungsi: 'Membantu meningkatkan daya tahan tubuh, berperan sebagai antioksidan, dan membantu penyerapan zat besi.',
-        aturanPakai: 'Konsumsi 1 tablet per hari setelah makan. Tidak perlu diminum saat perut kosong.',
-        perhatian: 'Konsumsi berlebihan dapat menyebabkan gangguan pencernaan. Jangan melebihi dosis yang dianjurkan.',
-      ),
-    ]),
-    InfoObatHari(tanggal: ago(10), obatList: [
-      InfoObatItem(
-        nama: 'Ibuprofen', kategori: 'Pereda Nyeri', color: const Color(0xFFBA68C8),
-        frekuensi: '3x sehari', durasi: '3-5 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Meredakan nyeri ringan hingga sedang, seperti sakit kepala, nyeri haid, nyeri gigi, dan demam.',
-        aturanPakai: 'Minum 1 tablet setiap 6-8 jam bersama makanan atau susu untuk menghindari iritasi lambung.',
-        perhatian: 'Hindari penggunaan jika memiliki riwayat maag atau tukak lambung. Tidak dianjurkan untuk ibu hamil.',
-      ),
-    ]),
-    InfoObatHari(tanggal: ago(20), obatList: [
-      InfoObatItem(
-        nama: 'Paracetamol', kategori: 'Pereda Nyeri & Demam', color: const Color(0xFF4CAF82),
-        frekuensi: '3-4x sehari', durasi: '3-5 hari', waktuMinum: 'Sesudah makan',
-        fungsi: 'Membantu meredakan sakit kepala, nyeri otot, sakit gigi, serta menurunkan demam.',
-        aturanPakai: 'Minum 1 tablet setiap 4 hingga 6 jam jika diperlukan. Jangan melebihi 8 tablet dalam 24 jam.',
-        perhatian: 'Simpan di tempat sejuk dan kering, jauh dari jangkauan anak-anak.',
-      ),
-    ]),
-  ];
+  const ObatDay({required this.tanggal, required this.obatList});
 }
 
 // ─── SCREEN ───────────────────────────────────────────────────────────────────
 
 class InfoObatScreen extends StatefulWidget {
-  const InfoObatScreen({super.key});
+  final int pasienId;
+
+  const InfoObatScreen({super.key, required this.pasienId});
 
   @override
   State<InfoObatScreen> createState() => _InfoObatScreenState();
@@ -118,24 +29,91 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  final List<InfoObatHari> _allData = _generateData();
+  late Future<List<ObatDay>> _obatFuture;
 
-  List<InfoObatHari> get _filteredByDate {
-    final now = DateTime.now();
-    final cutoffDays = [null, 7, 30, 90][_selectedFilter];
-    if (cutoffDays == null) return _allData;
-    final cutoff = now.subtract(Duration(days: cutoffDays));
-    return _allData.where((d) => d.tanggal.isAfter(cutoff)).toList();
+  @override
+  void initState() {
+    super.initState();
+    _obatFuture = _fetchObat();
   }
 
-  List<InfoObatHari> get _displayData {
-    if (_searchQuery.isEmpty) return _filteredByDate;
-    return _filteredByDate.map((hari) {
-      final filtered = hari.obatList
-          .where((o) => o.nama.toLowerCase().contains(_searchQuery.toLowerCase()))
+  Future<List<ObatDay>> _fetchObat() async {
+    try {
+      final response = await ApiService.getMedicines(pasienId: widget.pasienId);
+      if (!response['success']) {
+        throw Exception(response['error'] ?? 'Gagal mengambil data obat');
+      }
+
+      // Backend returns PasienJadwalResponse with structure: {PasienID, Nama, Jadwals: [...]}
+      final responseData = response['data'] as Map<String, dynamic>;
+      final List<dynamic> jadwalsList = responseData['Jadwals'] ?? [];
+      final obats = jadwalsList
+          .map((item) => ObatDetail.fromJson(item as Map<String, dynamic>))
           .toList();
-      return InfoObatHari(tanggal: hari.tanggal, obatList: filtered);
-    }).where((h) => h.obatList.isNotEmpty).toList();
+
+      // Group medicines by tanggalMulai
+      final Map<String, List<ObatDetail>> grouped = {};
+      for (var obat in obats) {
+        if (obat.status.toLowerCase() == 'aktif') {
+          final key = obat.tanggalMulai;
+          if (!grouped.containsKey(key)) {
+            grouped[key] = [];
+          }
+          grouped[key]!.add(obat);
+        }
+      }
+
+      // Convert to ObatDay sorted by date (newest first)
+      final List<ObatDay> days = grouped.entries
+          .map((e) {
+            try {
+              final date = DateTime.parse(e.key);
+              return ObatDay(tanggal: date, obatList: e.value);
+            } catch (e) {
+              // Skip invalid dates
+              return null;
+            }
+          })
+          .whereType<ObatDay>()
+          .toList();
+
+      days.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+
+      return days;
+    } catch (e) {
+      debugPrint('Error fetching obat: $e');
+      rethrow;
+    }
+  }
+
+  List<ObatDay> _filterData(List<ObatDay> days) {
+    final now = DateTime.now();
+    final cutoffDays = [null, 7, 30, 90][_selectedFilter];
+    List<ObatDay> filtered;
+
+    if (cutoffDays == null) {
+      filtered = days;
+    } else {
+      final cutoff = now.subtract(Duration(days: cutoffDays));
+      filtered = days.where((d) => d.tanggal.isAfter(cutoff)).toList();
+    }
+
+    if (_searchQuery.isEmpty) return filtered;
+    return filtered
+        .map((hari) {
+          final filteredObats = hari.obatList
+              .where(
+                (o) => o.namaObat.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+              )
+              .toList();
+          return filteredObats.isEmpty
+              ? null
+              : ObatDay(tanggal: hari.tanggal, obatList: filteredObats);
+        })
+        .whereType<ObatDay>()
+        .toList();
   }
 
   @override
@@ -156,25 +134,94 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
           icon: const Icon(Icons.chevron_left, color: Colors.black87, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Info Obat',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 18)),
-      ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          _buildFilterRow(),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _displayData.isEmpty
-                ? const Center(
-                    child: Text('Tidak ada obat ditemukan',
-                        style: TextStyle(color: Colors.black45, fontSize: 14)))
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: _buildDayGroups(),
-                  ),
+        title: const Text(
+          'Info Obat',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
           ),
-        ],
+        ),
+      ),
+      body: FutureBuilder<List<ObatDay>>(
+        future: _obatFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF2BB673)),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Gagal mengambil data obat',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => setState(() => _obatFuture = _fetchObat()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Coba Lagi'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2BB673),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.medication, color: Colors.grey[300], size: 64),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Belum ada data obat',
+                    style: TextStyle(color: Colors.black45, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final allData = snapshot.data!;
+          final displayData = _filterData(allData);
+
+          return Column(
+            children: [
+              _buildSearchBar(),
+              _buildFilterRow(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: displayData.isEmpty
+                    ? Center(
+                        child: Text(
+                          _searchQuery.isNotEmpty
+                              ? 'Obat "${_searchQuery}" tidak ditemukan'
+                              : 'Tidak ada obat untuk periode ini',
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        children: _buildDayGroups(displayData),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -185,7 +232,9 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+        ],
       ),
       child: TextField(
         controller: _searchController,
@@ -217,7 +266,9 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+        ],
       ),
       child: Row(
         children: List.generate(_filters.length, (i) {
@@ -229,15 +280,20 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: selected ? const Color(0xFF2BB673) : Colors.transparent,
+                  color: selected
+                      ? const Color(0xFF2BB673)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Text(_filters[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : Colors.black54)),
+                child: Text(
+                  _filters[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : Colors.black54,
+                  ),
+                ),
               ),
             ),
           );
@@ -246,30 +302,53 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
     );
   }
 
-  List<Widget> _buildDayGroups() {
+  List<Widget> _buildDayGroups(List<ObatDay> days) {
     final now = DateTime.now();
     final widgets = <Widget>[];
 
-    for (final hari in _displayData) {
+    for (final hari in days) {
       final isToday = _isSameDay(hari.tanggal, now);
-      final isYesterday = _isSameDay(hari.tanggal, now.subtract(const Duration(days: 1)));
-      final dayLabel = isToday ? 'Hari Ini' : isYesterday ? 'Kemarin' : '';
-      final dayStr = '${_dayName(hari.tanggal.weekday)}, ${hari.tanggal.day} ${_monthName(hari.tanggal.month)}';
+      final isYesterday = _isSameDay(
+        hari.tanggal,
+        now.subtract(const Duration(days: 1)),
+      );
+      final dayLabel = isToday
+          ? 'Hari Ini'
+          : isYesterday
+          ? 'Kemarin'
+          : '';
+      final dayStr =
+          '${_dayName(hari.tanggal.weekday)}, ${hari.tanggal.day} ${_monthName(hari.tanggal.month)}';
 
-      widgets.add(Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-        child: RichText(
-          text: TextSpan(children: [
-            if (dayLabel.isNotEmpty)
-              TextSpan(
-                  text: '$dayLabel · ',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2BB673))),
-            TextSpan(
-                text: dayStr.toUpperCase(),
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45, letterSpacing: 0.5)),
-          ]),
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                if (dayLabel.isNotEmpty)
+                  TextSpan(
+                    text: '$dayLabel · ',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2BB673),
+                    ),
+                  ),
+                TextSpan(
+                  text: dayStr.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black45,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ));
+      );
 
       for (final obat in hari.obatList) {
         widgets.add(_buildObatCard(obat));
@@ -279,70 +358,128 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
     return widgets;
   }
 
-  Widget _buildObatCard(InfoObatItem obat) {
+  Widget _buildObatCard(ObatDetail obat) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => DetailInfoObatScreen(
-            obat: DetailObat(
-              nama: obat.nama,
-              kategori: obat.kategori,
-              color: obat.color,
-              frekuensi: obat.frekuensi,
-              durasi: obat.durasi,
-              waktuMinum: obat.waktuMinum,
-              fungsi: obat.fungsi,
-              aturanPakai: obat.aturanPakai,
-              perhatian: obat.perhatian,
-            ),
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => DetailInfoObatScreen(obat: obat)),
       ),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
-                color: obat.color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                color: _getCategoryColor(
+                  obat.kategoriObat,
+                ).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.medication_rounded, color: obat.color, size: 24),
+              child: Icon(
+                _getCategoryIcon(obat.kategoriObat),
+                color: _getCategoryColor(obat.kategoriObat),
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(obat.nama,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  Text(
+                    obat.namaObat,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 2),
-                  Text(obat.kategori,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text(
+                    obat.kategoriObat.isEmpty ? 'Obat' : obat.kategoriObat,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${obat.frekuensiPerHari} • ${obat.waktuMinum}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 22),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
           ],
         ),
       ),
     );
   }
 
+  // ─── UTILITIES ────────────────────────────────────────────────────────────
+
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _dayName(int weekday) =>
-      ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][weekday - 1];
+  String _dayName(int weekday) => const [
+    '',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ][weekday];
 
-  String _monthName(int month) =>
-      ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][month - 1];
+  String _monthName(int month) => const [
+    '',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ][month];
+
+  Color _getCategoryColor(String category) {
+    if (category.contains('Antibiotik')) return const Color(0xFF4CAF50);
+    if (category.contains('Pereda')) return const Color(0xFFFFC107);
+    if (category.contains('Suplemen')) return const Color(0xFF2196F3);
+    if (category.contains('Flu')) return const Color(0xFF9C27B0);
+    if (category.contains('Darah')) return const Color(0xFFF44336);
+    return const Color(0xFF607D8B);
+  }
+
+  IconData _getCategoryIcon(String category) {
+    if (category.contains('Antibiotik')) return Icons.shield;
+    if (category.contains('Pereda')) return Icons.healing;
+    if (category.contains('Suplemen')) return Icons.energy_savings_leaf;
+    if (category.contains('Flu')) return Icons.thermostat;
+    return Icons.medication;
+  }
 }

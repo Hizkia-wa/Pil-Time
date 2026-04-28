@@ -118,3 +118,53 @@ func (u *ObatUsecase) Delete(id int) error {
 
 	return u.repo.Delete(id)
 }
+
+// CreateMandiri membuat obat mandiri untuk pasien
+func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatResponseDTO, error) {
+	// 1. Validasi Input
+	if req.NamaObat == "" {
+		return nil, errors.New("nama obat tidak boleh kosong")
+	}
+	if req.Dosis == "" {
+		return nil, errors.New("dosis tidak boleh kosong")
+	}
+	if len(req.Pengingat) == 0 {
+		return nil, errors.New("pengingat tidak boleh kosong")
+	}
+	if req.Frekuensi == "" {
+		return nil, errors.New("frekuensi tidak boleh kosong")
+	}
+	if req.DurasiHari <= 0 {
+		return nil, errors.New("durasi hari harus lebih dari 0")
+	}
+	if req.PasienID <= 0 {
+		return nil, errors.New("pasien_id tidak valid")
+	}
+
+	// 2. Mapping DTO ke Domain
+	obat := &domain.Obat{
+		NamaObat:   req.NamaObat,
+		Gambar:     req.Gambar,
+		PasienID:   &req.PasienID,
+		Frekuensi:  req.Frekuensi,
+		DurasiHari: &req.DurasiHari,
+		Catatan:    req.Catatan,
+		IsMandiri:  true,
+	}
+
+	// Set pengingat sebagai JSON array
+	if err := obat.SetPengingat(req.Pengingat); err != nil {
+		return nil, errors.New("gagal menyimpan waktu pengingat")
+	}
+
+	// Dosis diisi di field Fungsi untuk kompatibilitas
+	obat.Fungsi = req.Dosis
+
+	// 3. Simpan ke Database
+	result, err := u.repo.Create(obat)
+	if err != nil {
+		return nil, errors.New("gagal menyimpan data obat mandiri: " + err.Error())
+	}
+
+	return persistence.ObatToResponseDTO(result), nil
+}

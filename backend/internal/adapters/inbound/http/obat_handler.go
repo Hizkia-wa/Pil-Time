@@ -130,3 +130,42 @@ func (h *ObatHandler) Delete(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Obat berhasil dihapus"})
 }
+
+// CreateMandiri menangani pembuatan obat mandiri (independent medication)
+func (h *ObatHandler) CreateMandiri(c *gin.Context) {
+	var req dto.CreateObatMandiriDTO
+
+	// Bind data form/JSON
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Ambil file gambar jika ada
+	file, err := c.FormFile("gambar_file")
+	if err == nil {
+		uploadDir := "public/uploads"
+		os.MkdirAll(uploadDir, os.ModePerm)
+
+		filename := uuid.New().String() + filepath.Ext(file.Filename)
+		filePath := filepath.Join(uploadDir, filename)
+
+		if err := c.SaveUploadedFile(file, filePath); err == nil {
+			req.Gambar = "/uploads/" + filename
+		}
+	}
+
+	// Simpan ke Database via Usecase
+	resp, err := h.usecase.CreateMandiri(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "CREATE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": resp})
+}

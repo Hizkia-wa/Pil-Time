@@ -5,6 +5,7 @@ import "backend/internal/domain"
 // ObatRepository defines the interface for obat data access
 type ObatRepository interface {
 	GetAll() ([]domain.Obat, error)
+	GetByPasienID(pasienID int) ([]domain.Obat, error)
 	GetByID(id int) (*domain.Obat, error)
 	GetByName(name string) (*domain.Obat, error)
 	Create(o *domain.Obat) (*domain.Obat, error)

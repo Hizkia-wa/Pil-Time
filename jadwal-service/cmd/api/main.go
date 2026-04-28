@@ -55,7 +55,7 @@ func main() {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "Jadwal Service is running"})
+		c.JSON(200, gin.H{"status": "Pil Time Jadwal Service is running"})
 	})
 
 	// Jadwal routes

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
 import "package:frontend_pasien/screens/rutinitas_mandiri/rutinitas_sehat_screen.dart";
+import 'package:frontend_pasien/screens/rutinitas_mandiri/tambah_rutinitas_screen.dart';
 import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
 import 'package:frontend_pasien/screens/notifikasi/notifikasi_screen.dart';
 import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
+import 'package:frontend_pasien/screens/profile/profile.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -245,7 +246,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => AlarmScreen()),
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AlarmScreen(pasienId: widget.pasienId),
+                    ),
                   );
                 },
               ),
@@ -260,7 +264,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InfoObatScreen(),
+                      builder: (context) =>
+                          InfoObatScreen(pasienId: widget.pasienId),
                     ),
                   );
                 },
@@ -825,7 +830,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           // FAB +
           GestureDetector(
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TambahRutinitasScreen(),
+                ),
+              );
+            },
             child: Container(
               width: 52,
               height: 52,
@@ -845,7 +857,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           // Profile
           IconButton(
-            onPressed: () => _showLogoutDialog(context),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
             icon: Icon(
               Icons.person_outline_rounded,
               color: Colors.grey[400],
@@ -874,33 +891,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Desember',
     ];
     return '${months[date.month - 1]} ${date.year}';
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Anda yakin ingin logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await AuthService.clearSession();
-              if (mounted && context.mounted) {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/login', (route) => false);
-              }
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
   }
 }
