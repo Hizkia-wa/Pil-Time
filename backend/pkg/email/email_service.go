@@ -24,7 +24,7 @@ func NewEmailService() *EmailService {
 
 func (e *EmailService) SendResetCode(recipientEmail, resetCode string) error {
 	// Email content
-	subject := "Kode Reset Password Nauli Reminder"
+	subject := "Kode Reset Password Pil Time"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -46,14 +46,14 @@ func (e *EmailService) SendResetCode(recipientEmail, resetCode string) error {
 		</div>
 		<div class="content">
 			<p>Halo,</p>
-			<p>Anda telah meminta untuk mereset password akun Nauli Reminder Anda.</p>
+			<p>Anda telah meminta untuk mereset password akun Pil Time Anda.</p>
 			<p>Gunakan kode berikut untuk mereset password Anda:</p>
 			<div class="code">%s</div>
 			<p><strong>Kode ini berlaku selama 15 menit.</strong></p>
 			<p>Jika Anda tidak meminta ini, abaikan email ini.</p>
 		</div>
 		<div class="footer">
-			<p>Nauli Reminder - Layanan Kesehatan Terpercaya</p>
+			<p>Pil Time - Layanan Kesehatan Terpercaya</p>
 			<p>&copy; 2026 All rights reserved.</p>
 		</div>
 	</div>

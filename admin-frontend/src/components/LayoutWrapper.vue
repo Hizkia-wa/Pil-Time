@@ -3,12 +3,8 @@
     <!-- Mobile Header -->
     <header class="md:hidden bg-slate-900 px-4 py-4 flex items-center justify-between sticky top-0 z-40">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-          </svg>
-        </div>
-        <h1 class="text-base font-bold text-white">SahabatSehat</h1>
+        <img src="/img/icon-192x192.png" alt="Pil Time" class="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
+        <h1 class="text-base font-bold text-white">Pil Time</h1>
       </div>
       <button
         @click="isSidebarOpen = !isSidebarOpen"
@@ -40,13 +36,9 @@
       
       <!-- Logo Header -->
       <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-700/50">
-        <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-          </svg>
-        </div>
+        <img src="/img/icon-192x192.png" alt="Pil Time" class="w-10 h-10 rounded-xl object-contain flex-shrink-0" />
         <div>
-          <h1 class="text-sm font-bold text-white leading-tight">SahabatSehat</h1>
+          <h1 class="text-sm font-bold text-white leading-tight">Pil Time</h1>
           <p class="text-xs text-slate-400">Portal Nakes</p>
         </div>
       </div>

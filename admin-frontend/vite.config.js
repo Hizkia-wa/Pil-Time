@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Admin Panel - SahabatSehat',
-        short_name: 'SahabatSehat Admin',
+        name: 'Admin Panel - Pil Time',
+        short_name: 'Pil Time Admin',
         description: 'Admin Panel untuk Tracking Jadwal & Obat',
         theme_color: '#1e40af',
         background_color: '#ffffff',

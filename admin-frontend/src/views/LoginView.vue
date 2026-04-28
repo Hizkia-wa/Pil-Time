@@ -10,7 +10,7 @@
           </svg>
         </div>
         <div>
-          <h1 class="text-xl font-bold text-white leading-tight">SahabatSehat</h1>
+          <h1 class="text-xl font-bold text-white leading-tight">Pil Time</h1>
           <p class="text-slate-400 text-xs">Portal Tenaga Kesehatan</p>
         </div>
       </div>
@@ -72,7 +72,7 @@
         <!-- Header -->
         <div class="text-center mb-8">
           <h2 class="text-3xl font-bold text-slate-900 mb-2">Selamat Datang</h2>
-          <p class="text-gray-500 text-sm">Masuk ke portal tenaga kesehatan SahabatSehat</p>
+          <p class="text-gray-500 text-sm">Masuk ke portal tenaga kesehatan Pil Time</p>
         </div>
 
         <!-- Error Message -->
