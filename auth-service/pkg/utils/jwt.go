@@ -18,8 +18,6 @@ type Claims struct {
 const defaultSecret = "your-secret-key-change-this-in-production"
 
 // getSecret selalu membaca JWT_SECRET dari environment saat runtime.
-// Ini memastikan secret yang dipakai backend sama dengan auth-service,
-// terlepas dari kapan godotenv.Load() dipanggil.
 func getSecret() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -28,8 +26,8 @@ func getSecret() []byte {
 	return []byte(secret)
 }
 
-// GenerateToken membuat JWT token baru untuk admin/nakes
-func GenerateToken(nakesID int, email string) (string, error) {
+// GenerateNakesToken membuat JWT token untuk nakes/admin
+func GenerateNakesToken(nakesID int, email string) (string, error) {
 	claims := Claims{
 		ID:    nakesID,
 		Email: email,
@@ -60,7 +58,7 @@ func GeneratePasienToken(pasienID int, email string) (string, error) {
 	return token.SignedString(getSecret())
 }
 
-// ValidateToken memvalidasi JWT token — selalu pakai secret terkini dari env
+// ValidateToken memvalidasi JWT token
 func ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 

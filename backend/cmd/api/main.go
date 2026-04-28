@@ -2,13 +2,13 @@ package main
 
 import (
 	"backend/config"
-	"backend/internal/adapters/inbound/http"
+	inboundHttp "backend/internal/adapters/inbound/http"
 	"backend/internal/adapters/outbound/persistence"
+	"backend/internal/domain"
 	"backend/internal/usecase"
+	"backend/pkg/middleware"
 	"fmt"
 	"log"
-
-	"backend/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,15 +47,15 @@ func main() {
 	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo, jadwalRepo)
 
 	// Handlers
-	adminHandler := http.NewAdminHandler(adminUC)
-	pasienHandler := http.NewPasienHandler(pasienUC)
-	jadwalHandler := http.NewJadwalHandler(jadwalUC)
-	dashboardHandler := http.NewDashboardHandler(dashboardUC)
-	obatHandler := http.NewObatHandler(obatUC)
-	trackingHandler := http.NewTrackingJadwalHandler(trackingUC)
-	rutinitasHandler := http.NewRutinitasHandler(rutinitasUC)
-	resepJadwalHandler := http.NewResepJadwalHandler(resepJadwalUC)
-	fileHandler := http.NewFileHandler()
+	adminHandler := inboundHttp.NewAdminHandler(adminUC)
+	pasienHandler := inboundHttp.NewPasienHandler(pasienUC)
+	jadwalHandler := inboundHttp.NewJadwalHandler(jadwalUC)
+	dashboardHandler := inboundHttp.NewDashboardHandler(dashboardUC)
+	obatHandler := inboundHttp.NewObatHandler(obatUC)
+	trackingHandler := inboundHttp.NewTrackingJadwalHandler(trackingUC)
+	rutinitasHandler := inboundHttp.NewRutinitasHandler(rutinitasUC)
+	resepJadwalHandler := inboundHttp.NewResepJadwalHandler(resepJadwalUC)
+	fileHandler := inboundHttp.NewFileHandler()
 
 	// 3. ROUTER SETUP
 	r := gin.New()
@@ -74,61 +74,63 @@ func main() {
 		// --- ADMIN ROUTES ---
 		admin := api.Group("/admin")
 		{
+			// Login tidak butuh middleware JWT
 			admin.POST("/login", adminHandler.Login)
-			admin.GET("/dashboard", dashboardHandler.GetDashboard)
-			admin.GET("/pasien", pasienHandler.GetAll)
 
-			// Admin - Info Obat
-			obat := admin.Group("/info-obat")
+			// Semua route admin lainnya diproteksi JWT nakes
+			adminProtected := admin.Group("")
+			adminProtected.Use(middleware.JWTNakesMiddleware())
 			{
-				obat.GET("", obatHandler.GetAll)
-				obat.GET("/:id", obatHandler.GetByID)
-				obat.POST("", obatHandler.Create)
-				obat.PUT("/:id", obatHandler.Update)
-				obat.DELETE("/:id", obatHandler.Delete)
-			}
+				adminProtected.GET("/dashboard", dashboardHandler.GetDashboard)
+				adminProtected.GET("/pasien", pasienHandler.GetAll)
 
-			// Admin - Jadwal
-			jadwal := admin.Group("/jadwal")
-			{
-				jadwal.GET("", jadwalHandler.GetAllJadwal)
-				jadwal.GET("/:id", jadwalHandler.GetJadwalByID)
-				jadwal.GET("/pasien/:pasien_id", jadwalHandler.GetJadwalByPasien)
-				jadwal.POST("", jadwalHandler.CreateJadwal)
-				jadwal.PUT("/:id", jadwalHandler.UpdateJadwal)
-				jadwal.DELETE("/:id", jadwalHandler.DeleteJadwal)
-			}
-			admin.POST("/resep-jadwal", resepJadwalHandler.Create)
+				// Admin - Info Obat
+				obat := adminProtected.Group("/info-obat")
+				{
+					obat.GET("", obatHandler.GetAll)
+					obat.GET("/:id", obatHandler.GetByID)
+					obat.POST("", obatHandler.Create)
+					obat.PUT("/:id", obatHandler.Update)
+					obat.DELETE("/:id", obatHandler.Delete)
+				}
 
-			// Admin - Tracking/Riwayat
-			riwayat := admin.Group("/riwayat")
-			{
-				riwayat.GET("", trackingHandler.GetAll)
-				riwayat.GET("/statistics", trackingHandler.GetStatistics)
-				riwayat.GET("/:id", trackingHandler.GetByID)
-				riwayat.GET("/pasien/:pasien_id", trackingHandler.GetByPasienID)
-				riwayat.POST("", trackingHandler.Create)
-				riwayat.PUT("/:id", trackingHandler.Update)
-				riwayat.DELETE("/:id", trackingHandler.Delete)
+				// Admin - Jadwal
+				jadwal := adminProtected.Group("/jadwal")
+				{
+					jadwal.GET("", jadwalHandler.GetAllJadwal)
+					jadwal.GET("/:id", jadwalHandler.GetJadwalByID)
+					jadwal.GET("/pasien/:pasien_id", jadwalHandler.GetJadwalByPasien)
+					jadwal.POST("", jadwalHandler.CreateJadwal)
+					jadwal.PUT("/:id", jadwalHandler.UpdateJadwal)
+					jadwal.DELETE("/:id", jadwalHandler.DeleteJadwal)
+				}
+				adminProtected.POST("/resep-jadwal", resepJadwalHandler.Create)
+
+				// Admin - Tracking/Riwayat
+				riwayat := adminProtected.Group("/riwayat")
+				{
+					riwayat.GET("", trackingHandler.GetAll)
+					riwayat.GET("/statistics", trackingHandler.GetStatistics)
+					riwayat.GET("/:id", trackingHandler.GetByID)
+					riwayat.GET("/pasien/:pasien_id", trackingHandler.GetByPasienID)
+					riwayat.POST("", trackingHandler.Create)
+					riwayat.PUT("/:id", trackingHandler.Update)
+					riwayat.DELETE("/:id", trackingHandler.Delete)
+				}
 			}
 		}
 
-		// --- PASIEN PUBLIC ROUTES ---
-		api.POST("/pasien/register", pasienHandler.Register)
-		api.POST("/pasien/login", pasienHandler.Login)
-		api.POST("/pasien/forgot-password", pasienHandler.ForgotPassword)
-		api.POST("/pasien/verify-reset-code", pasienHandler.VerifyResetCode)
-		api.POST("/pasien/reset-password", pasienHandler.ResetPassword)
-
 		// --- PASIEN AUTHENTICATED ROUTES ---
+		// Semua route pasien diproteksi JWT pasien (dari auth-service)
 		pasienAuth := api.Group("/pasien")
-		pasienAuth.Use(PasienAuthMiddleware())
+		pasienAuth.Use(middleware.JWTPasienMiddleware())
 		{
 			pasienAuth.GET("/dashboard", pasienHandler.GetDashboard)
 			pasienAuth.GET("/jadwal", pasienHandler.GetJadwal)
 			pasienAuth.GET("/profile", pasienHandler.GetProfile)
 
 			// Pasien - Rutinitas
+			pasienAuth.GET("/rutinitas", rutinitasHandler.GetAllForPasien)
 			pasienAuth.GET("/rutinitas/streak/:pasien_id", rutinitasHandler.GetStreak)
 			pasienAuth.POST("/rutinitas/tracking", rutinitasHandler.UpdateTracking)
 			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
@@ -136,7 +138,7 @@ func main() {
 
 			// Pasien - Obat Mandiri
 			pasienAuth.POST("/obat-mandiri", obatHandler.CreateMandiri)
-			pasienAuth.GET("/obat-mandiri", obatHandler.GetAll)
+			pasienAuth.GET("/obat-mandiri", obatHandler.GetAllForPasien)
 			pasienAuth.GET("/obat-mandiri/:id", obatHandler.GetByID)
 			pasienAuth.PUT("/obat-mandiri/:id", obatHandler.Update)
 			pasienAuth.DELETE("/obat-mandiri/:id", obatHandler.Delete)
@@ -151,36 +153,19 @@ func main() {
 	r.Run(":8080")
 }
 
-// MIDDLEWARES
+// CORSConfig mengatur CORS untuk semua request
 func CORSConfig() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With, X-Pasien-ID")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
-		}
-		c.Next()
-	}
-}
-
-func PasienAuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		pasienIDStr := c.GetHeader("X-Pasien-ID")
-		if pasienIDStr == "" {
-			pasienIDStr = c.Query("pasien_id")
-		}
-
-		if pasienIDStr != "" {
-			var pasienID int
-			if _, err := fmt.Sscanf(pasienIDStr, "%d", &pasienID); err == nil {
-				c.Set("pasien_id", pasienID)
-			}
 		}
 		c.Next()
 	}

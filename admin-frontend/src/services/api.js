@@ -8,8 +8,10 @@ const apiClient = axios.create({
   }
 })
 
+// jadwalApiClient sekarang juga mengarah ke main backend (port 8080)
+// karena jadwal-service sudah di-merge ke dalam backend
 const jadwalApiClient = axios.create({
-  baseURL: 'http://localhost:8081/api',
+  baseURL: 'http://localhost:8080/api/admin',
   headers: {
     'Content-Type': 'application/json'
   }

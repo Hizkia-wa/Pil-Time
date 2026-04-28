@@ -143,11 +143,12 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     };
 
     try {
+      final token = await AuthService.getToken();
       final response = await http.post(
         Uri.parse('$baseUrl/pasien/obat-mandiri'),
         headers: {
           'Content-Type': 'application/json',
-          'X-Pasien-ID': _pasienId.toString(),
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode(data),
       );

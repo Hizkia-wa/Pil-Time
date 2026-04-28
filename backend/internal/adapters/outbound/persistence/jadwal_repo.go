@@ -20,19 +20,36 @@ func NewJadwalRepo(db *gorm.DB) outbound.JadwalRepository {
 
 func (r *jadwalRepoImpl) GetAll() ([]domain.Jadwal, error) {
 	var jadwals []domain.Jadwal
-	err := r.db.Find(&jadwals).Error
+	err := r.db.
+		Table("jadwal j").
+		Select("j.*, p.nama as pasien_nama").
+		Joins("LEFT JOIN pasien p ON j.pasien_id = p.pasien_id").
+		Scan(&jadwals).Error
 	return jadwals, err
 }
 
 func (r *jadwalRepoImpl) GetByID(id int) (*domain.Jadwal, error) {
 	var jadwal domain.Jadwal
-	err := r.db.First(&jadwal, id).Error
-	return &jadwal, err
+	err := r.db.
+		Table("jadwal j").
+		Select("j.*, p.nama as pasien_nama").
+		Joins("LEFT JOIN pasien p ON j.pasien_id = p.pasien_id").
+		Where("j.jadwal_id = ?", id).
+		Scan(&jadwal).Error
+	if err != nil {
+		return nil, err
+	}
+	return &jadwal, nil
 }
 
 func (r *jadwalRepoImpl) GetByPasienID(pasienID int) ([]domain.Jadwal, error) {
 	var jadwals []domain.Jadwal
-	err := r.db.Where("pasien_id = ?", pasienID).Find(&jadwals).Error
+	err := r.db.
+		Table("jadwal j").
+		Select("j.*, p.nama as pasien_nama").
+		Joins("LEFT JOIN pasien p ON j.pasien_id = p.pasien_id").
+		Where("j.pasien_id = ?", pasienID).
+		Scan(&jadwals).Error
 	return jadwals, err
 }
 
@@ -42,7 +59,25 @@ func (r *jadwalRepoImpl) Create(j *domain.Jadwal) (*domain.Jadwal, error) {
 }
 
 func (r *jadwalRepoImpl) Update(id int, j *domain.Jadwal) (*domain.Jadwal, error) {
-	err := r.db.Model(&domain.Jadwal{}).Where("jadwal_id = ?", id).Updates(j).Error
+	updateMap := map[string]interface{}{
+		"nama_obat":            j.NamaObat,
+		"jumlah_dosis":         j.JumlahDosis,
+		"satuan":               j.Satuan,
+		"kategori_obat":        j.KategoriObat,
+		"takaran_obat":         j.TakaranObat,
+		"frekuensi_per_hari":   j.FrekuensiPerHari,
+		"waktu_minum":          j.WaktuMinum,
+		"aturan_konsumsi":      j.AturanKonsumsi,
+		"catatan":              j.Catatan,
+		"tipe_durasi":          j.TipeDurasi,
+		"jumlah_hari":          j.JumlahHari,
+		"tanggal_mulai":        j.TanggalMulai,
+		"tanggal_selesai":      j.TanggalSelesai,
+		"waktu_reminder_pagi":  j.WaktuReminderPagi,
+		"waktu_reminder_malam": j.WaktuReminderMalam,
+		"status":               j.Status,
+	}
+	err := r.db.Model(&domain.Jadwal{}).Where("jadwal_id = ?", id).Updates(updateMap).Error
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +88,13 @@ func (r *jadwalRepoImpl) Delete(id int) error {
 	return r.db.Delete(&domain.Jadwal{}, id).Error
 }
 
-// Helper to convert domain to DTO
-func JadwalToResponseDTO(jadwal *domain.Jadwal, pasienNama string) *dto.JadwalResponseDTO {
+// JadwalToResponseDTO converts domain Jadwal to JadwalResponseDTO.
+// PasienNama diambil dari field domain.Jadwal.PasienNama (hasil JOIN).
+func JadwalToResponseDTO(jadwal *domain.Jadwal) *dto.JadwalResponseDTO {
 	return &dto.JadwalResponseDTO{
 		ID:                 jadwal.JadwalID,
 		PasienID:           jadwal.PasienID,
-		PasienNama:         pasienNama,
+		PasienNama:         jadwal.PasienNama,
 		NamaObat:           jadwal.NamaObat,
 		JumlahDosis:        jadwal.JumlahDosis,
 		Satuan:             jadwal.Satuan,

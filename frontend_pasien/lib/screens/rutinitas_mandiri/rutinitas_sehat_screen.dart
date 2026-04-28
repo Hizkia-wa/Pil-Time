@@ -56,42 +56,63 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     }
   }
 
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await AuthService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
   // Mengambil data dari Backend
   Future<void> _initData() async {
     if (!mounted || _pasienId == null) return;
     setState(() => _isLoading = true);
     try {
-      // Fetch obat mandiri pasien (endpoint yang benar)
+      final headers = await _getAuthHeaders();
+
+      // Fetch obat mandiri pasien (obat yang ditambah pasien sendiri)
       final obatResponse = await http.get(
         Uri.parse("$_baseUrl/obat-mandiri"),
-        headers: {'X-Pasien-ID': _pasienId.toString()},
+        headers: headers,
       );
 
-      // Fetch jadwal pasien dari dashboard untuk rutinitas
-      final dashboardResponse = await http.get(
-        Uri.parse("$_baseUrl/dashboard?pasien_id=$_pasienId"),
-        headers: {'X-Pasien-ID': _pasienId.toString()},
+      // Fetch rutinitas pasien (rutinitas yang dibuat pasien sendiri)
+      final rutinitasResponse = await http.get(
+        Uri.parse("$_baseUrl/rutinitas"),
+        headers: headers,
+      );
+
+      // Fetch streak dari endpoint streak
+      final streakResponse = await http.get(
+        Uri.parse("$_baseUrl/rutinitas/streak/$_pasienId"),
+        headers: headers,
       );
 
       if (obatResponse.statusCode == 200) {
         final obatData = jsonDecode(obatResponse.body);
         setState(() {
-          // Backend mengembalikan {"data": [...]} dari GetAll
           _listObat = obatData['data'] ?? [];
         });
       } else {
         debugPrint("Gagal fetch obat mandiri: ${obatResponse.statusCode} ${obatResponse.body}");
       }
 
-      if (dashboardResponse.statusCode == 200) {
-        final dashData = jsonDecode(dashboardResponse.body);
+      if (rutinitasResponse.statusCode == 200) {
+        final rutinitasData = jsonDecode(rutinitasResponse.body);
         setState(() {
-          // Key yang benar dari PasienDashboardResponse: today_jadwals
-          _listRutinitas = dashData['today_jadwals'] ?? [];
-          _streakHari = dashData['streak'] ?? 0;
+          // Backend mengembalikan { "data": [...] }
+          _listRutinitas = rutinitasData['data'] ?? [];
         });
       } else {
-        debugPrint("Gagal fetch dashboard: ${dashboardResponse.statusCode} ${dashboardResponse.body}");
+        debugPrint("Gagal fetch rutinitas: ${rutinitasResponse.statusCode} ${rutinitasResponse.body}");
+      }
+
+      if (streakResponse.statusCode == 200) {
+        final streakData = jsonDecode(streakResponse.body);
+        setState(() {
+          _streakHari = streakData['current_streak'] ?? 0;
+        });
       }
     } catch (e) {
       debugPrint("Gagal load data: $e");
@@ -295,8 +316,12 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     );
   }
 
-  // Card untuk rutinitas / jadwal dari dokter (field dari JadwalResponseDTO)
+  // Card untuk rutinitas yang dibuat pasien sendiri (field dari domain.Rutinitas)
   Widget _buildCard(dynamic item) {
+    final namaRutinitas = item['nama_rutinitas'] ?? '-';
+    final waktuReminder = item['waktu_reminder'] ?? '';
+    final deskripsi = item['deskripsi'] ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -312,16 +337,24 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['nama_aktivitas'] ?? item['nama_obat'] ?? '-',
+                  namaRutinitas,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
                 ),
-                Text(
-                  item['waktu_minum'] ?? item['kategori_obat'] ?? '-',
-                  style: const TextStyle(color: _textSecondary, fontSize: 13),
-                ),
+                if (waktuReminder.isNotEmpty)
+                  Text(
+                    '⏰ $waktuReminder',
+                    style: const TextStyle(color: _textSecondary, fontSize: 13),
+                  ),
+                if (deskripsi.isNotEmpty)
+                  Text(
+                    deskripsi,
+                    style: const TextStyle(color: _textSecondary, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),

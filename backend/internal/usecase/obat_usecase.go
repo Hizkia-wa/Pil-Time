@@ -30,6 +30,20 @@ func (u *ObatUsecase) GetAll() ([]dto.ObatResponseDTO, error) {
 	return responses, nil
 }
 
+// GetAllByPasien mendapatkan semua obat mandiri milik pasien tertentu
+func (u *ObatUsecase) GetAllByPasien(pasienID int) ([]dto.ObatResponseDTO, error) {
+	obats, err := u.repo.GetByPasienID(pasienID)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := []dto.ObatResponseDTO{}
+	for _, obat := range obats {
+		responses = append(responses, *persistence.ObatToResponseDTO(&obat))
+	}
+	return responses, nil
+}
+
 // GetByID mendapatkan obat berdasarkan ID
 func (u *ObatUsecase) GetByID(id int) (*dto.ObatResponseDTO, error) {
 	obat, err := u.repo.GetByID(id)

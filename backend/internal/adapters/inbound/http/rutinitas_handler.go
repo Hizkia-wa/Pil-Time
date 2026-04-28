@@ -32,6 +32,23 @@ func (h *RutinitasHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, result)
 }
 
+// GetAllForPasien - Mengambil semua rutinitas milik pasien yang login (dari JWT)
+func (h *RutinitasHandler) GetAllForPasien(c *gin.Context) {
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pasien_id tidak ditemukan di token"})
+		return
+	}
+
+	list, err := h.usecase.GetAllByPasien(pasienID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
 // GetStreak - Mengambil jumlah streak pasien
 func (h *RutinitasHandler) GetStreak(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("pasien_id"))

@@ -1,21 +1,36 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'auth_service.dart';
+
 class ApiService {
-  // Gunakan 10.0.2.2 untuk Android Emulator (alias host machine)
-  // Gunakan localhost untuk iOS Simulator atau testing lokal
+  // Main backend (port 8080) — semua data aplikasi
   static const String baseUrl = 'http://10.0.2.2:8080';
+
+  // Auth service (port 8081) — untuk forgot/reset password (public)
+  static const String authUrl = 'http://10.0.2.2:8081';
+
+  /// Helper: buat header dengan JWT token
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await AuthService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // ============================
+  //         DASHBOARD
+  // ============================
 
   static Future<Map<String, dynamic>> getDashboard({
     required int pasienId,
   }) async {
     try {
+      final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/api/pasien/dashboard?pasien_id=$pasienId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
+        Uri.parse('$baseUrl/api/pasien/dashboard'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -32,14 +47,16 @@ class ApiService {
     }
   }
 
+  // ============================
+  //          JADWAL
+  // ============================
+
   static Future<Map<String, dynamic>> getJadwal({required int pasienId}) async {
     try {
+      final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/api/pasien/jadwal?pasien_id=$pasienId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
+        Uri.parse('$baseUrl/api/pasien/jadwal'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -56,16 +73,30 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getMedicines({
+    required int pasienId,
+  }) async {
+    return getJadwal(pasienId: pasienId);
+  }
+
+  static Future<Map<String, dynamic>> getTodayMedications({
+    required int pasienId,
+  }) async {
+    return getDashboard(pasienId: pasienId);
+  }
+
+  // ============================
+  //          PROFILE
+  // ============================
+
   static Future<Map<String, dynamic>> getProfile({
     required int pasienId,
   }) async {
     try {
+      final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/api/pasien/profile?pasien_id=$pasienId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
+        Uri.parse('$baseUrl/api/pasien/profile'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -82,33 +113,22 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getTodayMedications({
-    required int pasienId,
-  }) async {
-    try {
-      // Get dashboard which includes today's jadwals
-      final response = await getDashboard(pasienId: pasienId);
-      return response;
-    } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
-    }
-  }
+  // ============================
+  //          RIWAYAT
+  // ============================
 
   static Future<Map<String, dynamic>> getRiwayat({
     required int pasienId,
   }) async {
     try {
+      final headers = await _authHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/api/admin/riwayat/pasien/$pasienId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
-        // Backend returns { "data": [...] }
         return {'success': true, 'data': responseBody['data'] ?? []};
       } else {
         final errorBody = jsonDecode(response.body);
@@ -125,31 +145,9 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getMedicines({
-    required int pasienId,
-  }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/pasien/jadwal?pasien_id=$pasienId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
-      } else {
-        final errorBody = jsonDecode(response.body);
-        return {
-          'success': false,
-          'error': errorBody['message'] ?? 'Gagal mengambil data obat',
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
-    }
-  }
+  // ============================
+  //         RUTINITAS
+  // ============================
 
   static Future<Map<String, dynamic>> createRutinitas({
     required int pasienId,
@@ -158,12 +156,10 @@ class ApiService {
     String? deskripsi,
   }) async {
     try {
+      final headers = await _authHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/api/pasien/rutinitas'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Pasien-ID': pasienId.toString(),
-        },
+        headers: headers,
         body: jsonEncode({
           'pasien_id': pasienId,
           'nama_rutinitas': namaRutinitas,
@@ -189,10 +185,15 @@ class ApiService {
     }
   }
 
+  // ============================
+  //       FORGOT PASSWORD
+  //    (Public — via auth-service)
+  // ============================
+
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/pasien/forgot-password'),
+        Uri.parse('$authUrl/auth/pasien/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -218,7 +219,7 @@ class ApiService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/pasien/verify-reset-code'),
+        Uri.parse('$authUrl/auth/pasien/verify-reset-code'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'code': otp}),
       );
@@ -242,7 +243,7 @@ class ApiService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/pasien/reset-password'),
+        Uri.parse('$authUrl/auth/pasien/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,

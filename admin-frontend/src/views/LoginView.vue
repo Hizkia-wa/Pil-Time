@@ -185,16 +185,16 @@ export default {
       try {
         const axiosResponse = await authService.loginAdmin(form.value.email, form.value.password)
         const response = axiosResponse.data
-        
-        if (response.data && response.data.token) {
-          const { token, user } = response.data
+
+        // Auth-service mengembalikan: { token, message, data: { nakes_id, nama, email } }
+        if (response.token) {
           const userData = {
-            nakes_id: user.nakes_id,
-            nama: user.nama,
-            email: user.email
+            nakes_id: response.data?.nakes_id,
+            nama: response.data?.nama,
+            email: response.data?.email
           }
-          
-          authStore.setAuth(token, userData)
+
+          authStore.setAuth(response.token, userData)
           router.push('/dashboard')
         } else {
           errorMessage.value = response.message || 'Login gagal'

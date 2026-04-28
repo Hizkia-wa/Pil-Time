@@ -3,9 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class AuthService {
-  // Gunakan 10.0.2.2 untuk Android Emulator (alias host machine)
-  // Gunakan localhost untuk iOS Simulator atau testing lokal
-  static const String baseUrl = 'http://10.0.2.2:8080';
+  // Main backend (port 8080) — untuk data aplikasi
+  static const String backendUrl = 'http://10.0.2.2:8080';
+
+  // Auth service (port 8081) — untuk login, register, reset password
+  static const String authUrl = 'http://10.0.2.2:8081';
 
   // Shared Preferences keys
   static const String _pasienIdKey = 'pasien_id';
@@ -13,16 +15,21 @@ class AuthService {
   static const String _pasienEmailKey = 'pasien_email';
   static const String _tokenKey = 'auth_token';
 
-  // Static methods for managing session
-  static Future<void> _savePasienSession({
+  // ============================
+  //      SESSION MANAGEMENT
+  // ============================
+
+  static Future<void> _saveSession({
     required int pasienId,
     required String pasienName,
     required String pasienEmail,
+    required String token,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_pasienIdKey, pasienId);
     await prefs.setString(_pasienNameKey, pasienName);
     await prefs.setString(_pasienEmailKey, pasienEmail);
+    await prefs.setString(_tokenKey, token);
   }
 
   static Future<Map<String, dynamic>?> getPasienSession() async {
@@ -30,8 +37,9 @@ class AuthService {
     final pasienId = prefs.getInt(_pasienIdKey);
     final pasienName = prefs.getString(_pasienNameKey);
     final pasienEmail = prefs.getString(_pasienEmailKey);
+    final token = prefs.getString(_tokenKey);
 
-    if (pasienId == null || pasienName == null || pasienEmail == null) {
+    if (pasienId == null || pasienName == null || pasienEmail == null || token == null) {
       return null;
     }
 
@@ -39,7 +47,14 @@ class AuthService {
       'pasien_id': pasienId,
       'pasien_name': pasienName,
       'pasien_email': pasienEmail,
+      'token': token,
     };
+  }
+
+  /// Ambil JWT token yang tersimpan
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
   }
 
   static Future<void> clearSession() async {
@@ -51,9 +66,16 @@ class AuthService {
   }
 
   static Future<bool> isLoggedIn() async {
-    final session = await getPasienSession();
-    return session != null;
+    final prefs = await SharedPreferences.getInstance();
+    final pasienId = prefs.getInt(_pasienIdKey);
+    final token = prefs.getString(_tokenKey);
+    // Session valid hanya jika ada pasien_id DAN token JWT
+    return pasienId != null && token != null && token.isNotEmpty;
   }
+
+  // ============================
+  //        AUTH: REGISTER
+  // ============================
 
   static Future<Map<String, dynamic>> register({
     required String nama,
@@ -67,7 +89,7 @@ class AuthService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/pasien/register'),
+        Uri.parse('$authUrl/auth/pasien/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'nama_lengkap': nama,
@@ -95,13 +117,17 @@ class AuthService {
     }
   }
 
+  // ============================
+  //         AUTH: LOGIN
+  // ============================
+
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/pasien/login'),
+        Uri.parse('$authUrl/auth/pasien/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -109,11 +135,12 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Save session
-        await _savePasienSession(
+        // Simpan session termasuk JWT token
+        await _saveSession(
           pasienId: data['pasien_id'] ?? 0,
           pasienName: data['nama_lengkap'] ?? data['nama'] ?? '',
           pasienEmail: data['email'] ?? '',
+          token: data['token'] ?? '',
         );
 
         return {'success': true, 'data': data};

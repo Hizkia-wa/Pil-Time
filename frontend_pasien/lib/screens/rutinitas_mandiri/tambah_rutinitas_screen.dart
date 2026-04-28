@@ -155,12 +155,15 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
 
       debugPrint("Payload: ${jsonEncode(payload)}");
 
+      final token = await AuthService.getToken();
+      final Map<String, String> headers = {
+        "Content-Type": "application/json",
+        if (token != null && token.isNotEmpty) "Authorization": "Bearer $token",
+      };
+
       final response = await http.post(
         Uri.parse("http://10.0.2.2:8080/api/pasien/rutinitas"),
-        headers: {
-          "Content-Type": "application/json",
-          "X-Pasien-ID": _pasienId.toString(),
-        },
+        headers: headers,
         body: jsonEncode(payload),
       );
 

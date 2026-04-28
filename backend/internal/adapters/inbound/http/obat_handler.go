@@ -21,9 +21,30 @@ func NewObatHandler(u *usecase.ObatUsecase) *ObatHandler {
 	return &ObatHandler{usecase: u}
 }
 
-// GetAll mendapatkan semua obat
+// GetAll mendapatkan semua obat (admin)
 func (h *ObatHandler) GetAll(c *gin.Context) {
 	obats, err := h.usecase.GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "FETCH_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": obats})
+}
+
+// GetAllForPasien mendapatkan obat mandiri milik pasien yang sedang login (dari JWT)
+func (h *ObatHandler) GetAllForPasien(c *gin.Context) {
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id tidak ditemukan di token",
+		})
+		return
+	}
+	obats, err := h.usecase.GetAllByPasien(pasienID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "FETCH_ERROR",

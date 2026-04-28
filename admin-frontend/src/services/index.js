@@ -1,8 +1,18 @@
 import apiClient from './api'
+import axios from 'axios'
+
+// Auth Service client (port 8081) — login, register, reset password
+const authApiClient = axios.create({
+  baseURL: 'http://localhost:8081',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 
 export const authService = {
+  // Admin/Nakes login → auth-service
   loginAdmin(email, password) {
-    return apiClient.post('/admin/login', {
+    return authApiClient.post('/auth/nakes/login', {
       email,
       password
     })

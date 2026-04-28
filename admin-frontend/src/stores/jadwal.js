@@ -3,10 +3,12 @@ import { ref, computed } from 'vue'
 import { jadwalApiClient } from '../services/api'
 import { usePasienStore } from './pasien'
 import { useObatStore } from './obat'
+import { useAuthStore } from './auth'
 
 export const useJadwalStore = defineStore('jadwal', () => {
   const pasienStore = usePasienStore()
   const obatStore = useObatStore()
+  const authStore = useAuthStore()
 
   const jadwalList = ref([])
   const loading = ref(false)
@@ -145,26 +147,26 @@ const submitJadwal = async () => {
     const payload = {
       pasien_id: form.value.patientId,
       obat_id: form.value.obatId,
-      nakes_id: 1,
+      nakes_id: authStore.user?.nakes_id || authStore.user?.id || 1,
 
       dosis: String(form.value.jumlah_dosis),
 
-      // 🔥 WAJIB ISO
-      tanggal_mulai: formatDate(form.value.tanggal_mulai),
-      tanggal_selesai: formatDate(form.value.tanggal_selesai),
+      // Format tanggal: YYYY-MM-DD (bukan ISO)
+      tanggal_mulai: form.value.tanggal_mulai || '',
+      tanggal_selesai: form.value.tanggal_selesai || '',
 
       catatan: form.value.catatan || '',
 
       frekuensi_per_hari: jamMinumList.length,
       aturan_konsumsi: form.value.aturan_konsumsi,
 
-      // POST ke jadwal-service (port 8081)
-      jadwal_obats: jamMinumList
+      // Backend menggunakan 'jam_minum' bukan 'jadwal_obats'
+      jam_minum: jamMinumList
     }
 
-    console.log('FINAL FIX PAYLOAD:', payload)
+    console.log('Payload resep-jadwal:', payload)
 
-    // POST ke jadwal-service, bukan main backend
+    // POST ke backend (port 8080) — jadwal sudah di-merge
     await jadwalApiClient.post('/resep-jadwal', payload)
 
     // Refresh list setelah berhasil menambah

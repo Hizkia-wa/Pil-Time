@@ -131,15 +131,18 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
   Future<void> _fetchRiwayat(int pasienId) async {
     try {
+      final token = await AuthService.getToken();
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      };
+
       final response = await http
           .get(
             Uri.parse(
               "http://10.0.2.2:8080/api/admin/riwayat/pasien/$pasienId",
             ),
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Pasien-ID': pasienId.toString(),
-            },
+            headers: headers,
           )
           .timeout(const Duration(seconds: 10));
 

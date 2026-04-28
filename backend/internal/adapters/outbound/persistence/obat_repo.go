@@ -52,6 +52,13 @@ func (r *obatRepo) Delete(id int) error {
 	return r.db.Delete(&domain.Obat{}, id).Error
 }
 
+func (r *obatRepo) GetByPasienID(pasienID int) ([]domain.Obat, error) {
+	var data []domain.Obat
+	err := r.db.Where("pasien_id = ?", pasienID).Find(&data).Error
+	return data, err
+}
+
+
 // --- TAMBAHKAN METHOD INI UNTUK MENGHILANGKAN ERROR ---
 func (r *obatRepo) Count() (int64, error) {
 	var count int64

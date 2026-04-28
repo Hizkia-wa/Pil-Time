@@ -6,6 +6,7 @@ import (
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
 	"errors"
+	"time"
 )
 
 type JadwalUsecase struct {
@@ -28,12 +29,7 @@ func (u *JadwalUsecase) GetAllJadwal() ([]dto.JadwalResponseDTO, error) {
 
 	var responses []dto.JadwalResponseDTO
 	for _, jadwal := range jadwals {
-		pasien, _ := u.pasienRepo.GetByID(uint(jadwal.PasienID))
-		pasienNama := ""
-		if pasien != nil {
-			pasienNama = pasien.Nama
-		}
-		dto := persistence.JadwalToResponseDTO(&jadwal, pasienNama)
+		dto := persistence.JadwalToResponseDTO(&jadwal)
 		responses = append(responses, *dto)
 	}
 
@@ -46,13 +42,7 @@ func (u *JadwalUsecase) GetJadwalByID(id int) (*dto.JadwalResponseDTO, error) {
 		return nil, err
 	}
 
-	pasien, _ := u.pasienRepo.GetByID(uint(jadwal.PasienID))
-	pasienNama := ""
-	if pasien != nil {
-		pasienNama = pasien.Nama
-	}
-
-	return persistence.JadwalToResponseDTO(jadwal, pasienNama), nil
+	return persistence.JadwalToResponseDTO(jadwal), nil
 }
 
 func (u *JadwalUsecase) GetJadwalByPasien(pasienID int) ([]dto.JadwalResponseDTO, error) {
@@ -61,15 +51,9 @@ func (u *JadwalUsecase) GetJadwalByPasien(pasienID int) ([]dto.JadwalResponseDTO
 		return nil, err
 	}
 
-	pasien, _ := u.pasienRepo.GetByID(uint(pasienID))
-	pasienNama := ""
-	if pasien != nil {
-		pasienNama = pasien.Nama
-	}
-
 	var responses []dto.JadwalResponseDTO
 	for _, jadwal := range jadwals {
-		dto := persistence.JadwalToResponseDTO(&jadwal, pasienNama)
+		dto := persistence.JadwalToResponseDTO(&jadwal)
 		responses = append(responses, *dto)
 	}
 
@@ -77,13 +61,26 @@ func (u *JadwalUsecase) GetJadwalByPasien(pasienID int) ([]dto.JadwalResponseDTO
 }
 
 func (u *JadwalUsecase) CreateJadwal(req *dto.CreateJadwalDTO) (*dto.JadwalResponseDTO, error) {
+	if req.PasienID <= 0 {
+		return nil, errors.New("pasien_id harus valid")
+	}
+
 	// Validate pasien exists
 	pasien, _ := u.pasienRepo.GetByID(uint(req.PasienID))
 	if pasien == nil || pasien.PasienID == 0 {
 		return nil, errors.New("pasien tidak ditemukan")
 	}
 
-	// Create jadwal
+	// Hitung tanggal selesai jika tipe_durasi = "hari"
+	tanggalSelesai := req.TanggalSelesai
+	if req.TipeDurasi == "hari" && req.JumlahHari > 0 && req.TanggalMulai != "" {
+		mulai, err := time.Parse("2006-01-02", req.TanggalMulai)
+		if err == nil {
+			selesai := mulai.AddDate(0, 0, req.JumlahHari)
+			tanggalSelesai = selesai.Format("2006-01-02")
+		}
+	}
+
 	jadwal := &domain.Jadwal{
 		PasienID:           req.PasienID,
 		NamaObat:           req.NamaObat,
@@ -98,10 +95,10 @@ func (u *JadwalUsecase) CreateJadwal(req *dto.CreateJadwalDTO) (*dto.JadwalRespo
 		TipeDurasi:         req.TipeDurasi,
 		JumlahHari:         req.JumlahHari,
 		TanggalMulai:       req.TanggalMulai,
-		TanggalSelesai:     req.TanggalSelesai,
+		TanggalSelesai:     tanggalSelesai,
 		WaktuReminderPagi:  req.WaktuReminderPagi,
 		WaktuReminderMalam: req.WaktuReminderMalam,
-		Status:             req.Status,
+		Status:             "aktif",
 	}
 
 	result, err := u.jadwalRepo.Create(jadwal)
@@ -109,17 +106,18 @@ func (u *JadwalUsecase) CreateJadwal(req *dto.CreateJadwalDTO) (*dto.JadwalRespo
 		return nil, err
 	}
 
-	return persistence.JadwalToResponseDTO(result, pasien.Nama), nil
+	// Isi PasienNama secara manual karena Create tidak JOIN
+	result.PasienNama = pasien.Nama
+	return persistence.JadwalToResponseDTO(result), nil
 }
 
 func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.JadwalResponseDTO, error) {
-	// Check if jadwal exists
 	jadwal, err := u.jadwalRepo.GetByID(id)
-	if err != nil {
+	if err != nil || jadwal == nil {
 		return nil, errors.New("jadwal tidak ditemukan")
 	}
 
-	// Update fields
+	// Update fields yang tidak kosong
 	if req.NamaObat != "" {
 		jadwal.NamaObat = req.NamaObat
 	}
@@ -169,18 +167,13 @@ func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.Jad
 		jadwal.Status = req.Status
 	}
 
+	// Update dan re-fetch dengan JOIN agar PasienNama terisi
 	result, err := u.jadwalRepo.Update(id, jadwal)
 	if err != nil {
 		return nil, err
 	}
 
-	pasien, _ := u.pasienRepo.GetByID(uint(jadwal.PasienID))
-	pasienNama := ""
-	if pasien != nil {
-		pasienNama = pasien.Nama
-	}
-
-	return persistence.JadwalToResponseDTO(result, pasienNama), nil
+	return persistence.JadwalToResponseDTO(result), nil
 }
 
 func (u *JadwalUsecase) DeleteJadwal(id int) error {

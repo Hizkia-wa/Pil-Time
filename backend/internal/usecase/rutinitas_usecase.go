@@ -19,6 +19,11 @@ func (u *RutinitasUsecase) GetByID(id int) (*domain.Rutinitas, error) {
 	return u.repo.GetByID(id)
 }
 
+// GetAllByPasien mengambil semua rutinitas yang dibuat oleh pasien sendiri
+func (u *RutinitasUsecase) GetAllByPasien(pasienID int) ([]domain.Rutinitas, error) {
+	return u.repo.GetByPasienID(pasienID)
+}
+
 func (u *RutinitasUsecase) Delete(id int) error {
 	return u.repo.Delete(id)
 }

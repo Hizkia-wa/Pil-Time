@@ -46,8 +46,16 @@ func generateJamMinum(frekuensi int) []string {
 
 func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 
-	// PARSE TANGGAL
-	tanggalMulai, err := time.Parse(time.RFC3339, req.TanggalMulai)
+	// parseDate: support format YYYY-MM-DD dan RFC3339
+	parseDate := func(s string) (time.Time, error) {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			return t, nil
+		}
+		return time.Parse(time.RFC3339, s)
+	}
+
+	// PARSE TANGGAL MULAI
+	tanggalMulai, err := parseDate(req.TanggalMulai)
 	if err != nil {
 		return err
 	}
@@ -55,14 +63,13 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 	// Handle tanggal_selesai yang mungkin kosong
 	var tanggalSelesai time.Time
 	if req.TanggalSelesai != "" && req.TanggalSelesai != "null" {
-		var err error
-		tanggalSelesai, err = time.Parse(time.RFC3339, req.TanggalSelesai)
+		tanggalSelesai, err = parseDate(req.TanggalSelesai)
 		if err != nil {
 			return err
 		}
 	} else {
-		// Jika kosong, set ke 1 tahun setelah tanggal mulai
-		tanggalSelesai = tanggalMulai.AddDate(1, 0, 0)
+		// Jika kosong, set ke 30 hari setelah tanggal mulai
+		tanggalSelesai = tanggalMulai.AddDate(0, 0, 30)
 	}
 
 	// BUAT RESEP
@@ -131,7 +138,7 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 	// Buat jadwal entry di tabel jadwal dengan waktu reminder dari jadwal obat
 	jadwalForService := &domain.Jadwal{
 		PasienID:           req.PasienID,
-		NamaObat:           "Obat ID: " + string(rune(req.ObatID)), // placeholder, ideally fetch dari obat table
+		NamaObat:           "Obat #" + strconv.Itoa(req.ObatID),
 		JumlahDosis:        parseInt(req.Dosis),
 		Satuan:             "tablet", // default
 		KategoriObat:       "-",
