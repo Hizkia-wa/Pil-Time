@@ -82,6 +82,41 @@ func (h *TrackingJadwalHandler) GetByPasienID(c *gin.Context) {
 	})
 }
 
+// GetMyRiwayat digunakan oleh pasien untuk melihat riwayatnya sendiri.
+// pasien_id diambil dari JWT context (inject oleh JWTPasienMiddleware).
+func (h *TrackingJadwalHandler) GetMyRiwayat(c *gin.Context) {
+	pasienIDRaw, exists := c.Get("pasien_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error:   "UNAUTHORIZED",
+			Message: "Sesi tidak valid, silakan login ulang",
+		})
+		return
+	}
+
+	pasienID, ok := pasienIDRaw.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "INTERNAL_ERROR",
+			Message: "Gagal membaca ID pasien dari token",
+		})
+		return
+	}
+
+	trackings, err := h.usecase.GetByPasienID(pasienID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "FETCH_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": trackings,
+	})
+}
+
 func (h *TrackingJadwalHandler) Create(c *gin.Context) {
 	var req dto.CreateTrackingJadwalDTO
 

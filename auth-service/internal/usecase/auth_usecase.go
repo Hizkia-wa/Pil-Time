@@ -93,6 +93,7 @@ func (u *AuthUsecase) RegisterPasien(req *dto.RegisterPasienRequest) (*dto.Regis
 		Password:     hashedPassword,
 		NIK:          req.NIK,
 		TanggalLahir: tanggalLahir,
+		TempatLahir:  req.TempatLahir,
 		NoTelepon:    req.Telepon,
 		JenisKelamin: req.JenisKelamin,
 		Alamat:       req.Alamat,

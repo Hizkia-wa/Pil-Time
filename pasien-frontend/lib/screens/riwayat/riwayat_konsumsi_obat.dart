@@ -140,7 +140,7 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       final response = await http
           .get(
             Uri.parse(
-              "http://10.0.2.2:8080/api/admin/riwayat/pasien/$pasienId",
+              "http://10.0.2.2:8080/api/pasien/riwayat",
             ),
             headers: headers,
           )

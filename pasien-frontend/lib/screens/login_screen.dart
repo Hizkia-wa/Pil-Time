@@ -4,7 +4,8 @@ import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool isReturningUser;
+  const LoginScreen({super.key, this.isReturningUser = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -88,8 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
               // Logo
               Image.asset(
                 'assets/images/logo.png',
-                width: 240,
-                height: 180,
+                width: widget.isReturningUser ? 320 : 240,
+                height: widget.isReturningUser ? 240 : 180,
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 32),

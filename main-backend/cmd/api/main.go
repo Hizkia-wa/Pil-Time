@@ -136,6 +136,9 @@ func main() {
 			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
 			pasienAuth.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
 
+			// Pasien - Riwayat Kepatuhan (pasien melihat riwayatnya sendiri)
+			pasienAuth.GET("/riwayat", trackingHandler.GetMyRiwayat)
+
 			// Pasien - Obat Mandiri
 			pasienAuth.POST("/obat-mandiri", obatHandler.CreateMandiri)
 			pasienAuth.GET("/obat-mandiri", obatHandler.GetAllForPasien)

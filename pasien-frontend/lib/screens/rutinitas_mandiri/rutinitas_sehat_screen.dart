@@ -33,6 +33,9 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
     _loadPasienSession();
   }
 
@@ -95,7 +98,9 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
           _listObat = obatData['data'] ?? [];
         });
       } else {
-        debugPrint("Gagal fetch obat mandiri: ${obatResponse.statusCode} ${obatResponse.body}");
+        debugPrint(
+          "Gagal fetch obat mandiri: ${obatResponse.statusCode} ${obatResponse.body}",
+        );
       }
 
       if (rutinitasResponse.statusCode == 200) {
@@ -105,7 +110,9 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
           _listRutinitas = rutinitasData['data'] ?? [];
         });
       } else {
-        debugPrint("Gagal fetch rutinitas: ${rutinitasResponse.statusCode} ${rutinitasResponse.body}");
+        debugPrint(
+          "Gagal fetch rutinitas: ${rutinitasResponse.statusCode} ${rutinitasResponse.body}",
+        );
       }
 
       if (streakResponse.statusCode == 200) {
@@ -264,9 +271,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   // Card untuk obat mandiri (field dari ObatResponseDTO)
   Widget _buildObatCard(dynamic item) {
     final List<dynamic> pengingatRaw = item['pengingat'] ?? [];
-    final pengingat = pengingatRaw.isNotEmpty
-        ? pengingatRaw.join(', ')
-        : '-';
+    final pengingat = pengingatRaw.isNotEmpty ? pengingatRaw.join(', ') : '-';
     final frekuensi = item['frekuensi'] ?? '-';
     // Dosis disimpan di field 'fungsi' karena CreateMandiri memakai: obat.Fungsi = req.Dosis
     final dosis = item['fungsi'] ?? '-';
@@ -295,17 +300,11 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                 const SizedBox(height: 4),
                 Text(
                   "Dosis: $dosis",
-                  style: const TextStyle(
-                    color: _textSecondary,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: _textSecondary, fontSize: 13),
                 ),
                 Text(
                   "$frekuensi • $pengingat",
-                  style: const TextStyle(
-                    color: _textSecondary,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: _textSecondary, fontSize: 12),
                 ),
               ],
             ),

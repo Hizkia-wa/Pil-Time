@@ -20,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nikController = TextEditingController();
+  final _tempatLahirController = TextEditingController();
   final _tanggalLahirController = TextEditingController();
   final _teleponController = TextEditingController();
   final _alamatController = TextEditingController();
@@ -30,6 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _nikController.dispose();
+    _tempatLahirController.dispose();
     _tanggalLahirController.dispose();
     _teleponController.dispose();
     _alamatController.dispose();
@@ -73,6 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         nik: _nikController.text,
+        tempatLahir: _tempatLahirController.text,
         tanggalLahir: _tanggalLahirController.text,
         telepon: _teleponController.text,
         jenisKelamin: _selectedGender!,
@@ -191,10 +194,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     horizontal: 16,
                     vertical: 12,
                   ),
-                  suffixIcon: const Padding(
-                    padding: EdgeInsets.only(right: 12),
-                    child: Icon(Icons.visibility, color: Color(0xFF757575)),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -297,6 +296,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                   if (!RegExp(r'^\d+$').hasMatch(value)) {
                     return 'NIK hanya boleh angka';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Tempat Lahir
+              const Text(
+                'Tempat Lahir',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _tempatLahirController,
+                decoration: InputDecoration(
+                  hintText: 'Contoh: Jakarta',
+                  hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.location_city,
+                    color: Color(0xFF757575),
+                    size: 20,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Tempat lahir tidak boleh kosong';
                   }
                   return null;
                 },

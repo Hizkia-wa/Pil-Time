@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
@@ -28,6 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late Future<Dashboard?> dashboardFuture;
   DateTime _selectedDate = DateTime.now();
   bool _isWeekView = true; // toggle Minggu/Bulan
+
+  // Track jadwal yang sudah ditandai diminum di sesi ini
+  final Set<int> _takenJadwalIds = {};
+  bool _isMarkingTaken = false;
 
   @override
   void initState() {
@@ -63,9 +70,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Trigger dashboard refresh
     setState(() {
       dashboardFuture = _fetchDashboard();
+      _takenJadwalIds.clear();
     });
     // Wait for the future to complete
     await dashboardFuture;
+  }
+
+  /// Log jadwal sebagai 'Diminum' ke backend tracking API
+  Future<void> _markAsTaken(Jadwal jadwal, int pasienId) async {
+    if (_isMarkingTaken) return;
+    setState(() => _isMarkingTaken = true);
+
+    try {
+      final token = await AuthService.getToken();
+      final now = DateTime.now();
+      final today = '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}';
+      final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
+          '${now.minute.toString().padLeft(2, '0')}';
+
+      // Tentukan status: tepat waktu atau terlambat
+      final jadwalStatus = _getJadwalStatus(jadwal.waktuMinum);
+      final status =
+          jadwalStatus == _JadwalStatus.upcoming ? 'Diminum' : 'Diminum';
+
+      final response = await http
+          .post(
+            Uri.parse('http://10.0.2.2:8080/api/admin/riwayat'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'jadwal_id': jadwal.id,
+              'pasien_id': pasienId,
+              'tanggal': today,
+              'status': status,
+              'waktu_minum': waktuSekarang,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        setState(() => _takenJadwalIds.add(jadwal.id));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text('${jadwal.namaObat} berhasil dicatat!'),
+                ],
+              ),
+              backgroundColor: const Color(0xFF15BE77),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Gagal mencatat, coba lagi'),
+              backgroundColor: Colors.red[400],
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red[400],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMarkingTaken = false);
+    }
   }
 
   @override
@@ -133,8 +225,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           _buildHeader(dashboard),
                           _buildMenuUtama(),
-                          _buildCalendarSection(),
-                          _buildJadwalList(dashboard.todayJadwals),
+                          _buildCalendarSection(dashboard.allJadwals),
+                          _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -379,7 +471,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ── CALENDAR ──────────────────────────────────────────────────────────────
-  Widget _buildCalendarSection() {
+
+  /// Mengecek apakah [date] jatuh dalam rentang tanggal salah satu jadwal aktif.
+  bool _hasJadwalOnDate(DateTime date, List<Jadwal> jadwals) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    for (final j in jadwals) {
+      if (j.tanggalMulai.isEmpty || j.tanggalSelesai.isEmpty) continue;
+      try {
+        final mulai = DateTime.parse(j.tanggalMulai);
+        final selesai = DateTime.parse(j.tanggalSelesai);
+        final start = DateTime(mulai.year, mulai.month, mulai.day);
+        final end = DateTime(selesai.year, selesai.month, selesai.day);
+        if (!dateOnly.isBefore(start) && !dateOnly.isAfter(end)) {
+          return true;
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return false;
+  }
+
+  Widget _buildCalendarSection(List<Jadwal> allJadwals) {
     return Container(
       color: Colors.white,
       margin: const EdgeInsets.only(top: 8),
@@ -422,7 +535,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _isWeekView ? _buildWeekCalendar() : _buildMonthCalendar(),
+          _isWeekView
+              ? _buildWeekCalendar(allJadwals)
+              : _buildMonthCalendar(allJadwals),
         ],
       ),
     );
@@ -457,7 +572,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildWeekCalendar() {
+  Widget _buildWeekCalendar(List<Jadwal> allJadwals) {
     // Tampilkan 7 hari mulai dari Senin minggu ini
     final now = DateTime.now();
     final mondayOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -495,8 +610,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 day.day == now.day &&
                 day.month == now.month &&
                 day.year == now.year;
-            // dot: simulasi ada jadwal
-            final hasDot = i < 4;
+            // Dot real: cek apakah tanggal ini masuk rentang jadwal pasien
+            final hasDot = _hasJadwalOnDate(day, allJadwals);
 
             return SizedBox(
               width: 36,
@@ -547,7 +662,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMonthCalendar() {
+  Widget _buildMonthCalendar(List<Jadwal> allJadwals) {
     final firstDay = DateTime(_selectedDate.year, _selectedDate.month, 1);
     final lastDay = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
     final daysInMonth = lastDay.day;
@@ -623,7 +738,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (index < weekdayOfFirst - 1) return const SizedBox();
             final day = index - (weekdayOfFirst - 1) + 1;
             final isToday = isCurrentMonth && day == now.day;
-            final hasDot = day % 3 == 0; // simulasi dot jadwal
+            // Dot real: cek apakah tanggal ini masuk rentang jadwal pasien
+            final dateToCheck =
+                DateTime(_selectedDate.year, _selectedDate.month, day);
+            final hasDot = _hasJadwalOnDate(dateToCheck, allJadwals);
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -672,123 +790,343 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ── JADWAL LIST ───────────────────────────────────────────────────────────
-  Widget _buildJadwalList(List<Jadwal> jadwals) {
-    if (jadwals.isEmpty) {
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: Text(
-            'Tidak ada jadwal obat untuk hari ini',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
-    }
 
-    // Simulasi jadwal aktif (yang sedang waktunya) — highlight row ke-1 (index 1)
-    // Dalam produksi, bandingkan waktuMinum dengan jam sekarang
+  /// Klasifikasi status jadwal berdasarkan waktu sekarang
+  _JadwalStatus _getJadwalStatus(String waktuMinum) {
+    try {
+      final now = DateTime.now();
+      final parts = waktuMinum.split(':');
+      if (parts.length < 2) return _JadwalStatus.upcoming;
+      final jadwalDt = DateTime(
+        now.year, now.month, now.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+      final diffMinutes = now.difference(jadwalDt).inMinutes;
+      if (diffMinutes < -5) return _JadwalStatus.upcoming;   // belum waktunya
+      if (diffMinutes <= 30) return _JadwalStatus.onTime;    // dalam 30 menit
+      return _JadwalStatus.late;                             // sudah lewat
+    } catch (_) {
+      return _JadwalStatus.upcoming;
+    }
+  }
+
+  Widget _buildJadwalList(List<Jadwal> jadwals, int pasienId) {
+    final now = DateTime.now();
+    final dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+    final monthNames = [
+      'Januari','Februari','Maret','April','Mei','Juni',
+      'Juli','Agustus','September','Oktober','November','Desember',
+    ];
+    final dayName = dayNames[now.weekday - 1];
+    final dateStr = '$dayName, ${now.day} ${monthNames[now.month - 1]} ${now.year}';
 
     return Container(
-      color: Colors.white,
       margin: const EdgeInsets.only(top: 8),
       child: Column(
-        children: List.generate(jadwals.length, (i) {
-          final jadwal = jadwals[i];
-          final isActive = i == 1; // highlight baris ke-2 seperti desain
-          final isDone = i == 0; // baris pertama sudah selesai (centang)
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Jadwal Hari Ini',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      dateStr,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+                if (jadwals.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F8F1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${jadwals.length} obat',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF15BE77),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
 
-          return _buildJadwalRow(
-            jadwal: jadwal,
-            isActive: isActive,
-            isDone: isDone,
-          );
-        }),
+          // ── Empty state ──────────────────────────────────────────────────
+          if (jadwals.isEmpty)
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(28),
+              child: Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F8F1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.event_available_rounded,
+                        color: Color(0xFF15BE77),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Tidak ada jadwal obat hari ini',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Selamat, tidak ada obat yang perlu diminum hari ini',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── Jadwal cards ─────────────────────────────────────────────────
+          ...jadwals.map(
+            (jadwal) => _buildJadwalCard(
+              jadwal: jadwal,
+              pasienId: pasienId,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildJadwalRow({
+  Widget _buildJadwalCard({
     required Jadwal jadwal,
-    bool isActive = false,
-    bool isDone = false,
+    required int pasienId,
   }) {
+    final isTaken = _takenJadwalIds.contains(jadwal.id);
+    final status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(jadwal.waktuMinum);
+
+    // ── Warna & teks per status ──────────────────────────────────────────
+    final Color statusColor;
+    final Color statusBg;
+    final String statusLabel;
+    final IconData statusIcon;
+
+    if (isTaken) {
+      statusColor = const Color(0xFF15BE77);
+      statusBg = const Color(0xFFE8F8F1);
+      statusLabel = 'Sudah Diminum';
+      statusIcon = Icons.check_circle_rounded;
+    } else {
+      switch (status) {
+        case _JadwalStatus.onTime:
+          statusColor = const Color(0xFF15BE77);
+          statusBg = const Color(0xFFE8F8F1);
+          statusLabel = 'Waktunya Minum!';
+          statusIcon = Icons.alarm_on_rounded;
+          break;
+        case _JadwalStatus.late:
+          statusColor = const Color(0xFFFFA726);
+          statusBg = const Color(0xFFFFF8E1);
+          statusLabel = 'Segera Minum';
+          statusIcon = Icons.alarm_rounded;
+          break;
+        case _JadwalStatus.upcoming:
+          statusColor = const Color(0xFF78909C);
+          statusBg = const Color(0xFFF5F5F5);
+          statusLabel = 'Akan Datang';
+          statusIcon = Icons.schedule_rounded;
+          break;
+      }
+    }
+
     return Container(
-      color: isActive ? const Color(0xFFE8E8E8) : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Row(
-        children: [
-          // Pill emoji / icon
-          Text(
-            _getPillEmoji(jadwal.namaObat),
-            style: const TextStyle(fontSize: 20),
-          ),
-          const SizedBox(width: 14),
-          // Waktu & nama
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 1),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isTaken
+              ? null
+              : () => _markAsTaken(jadwal, pasienId),
+          borderRadius: BorderRadius.zero,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      jadwal.waktuMinum,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isActive
-                            ? const Color(0xFF1A1A1A)
-                            : const Color(0xFF1A1A1A),
-                      ),
+                // ── Ikon obat ──────────────────────────────────────────────
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getPillEmoji(jadwal.namaObat),
+                      style: const TextStyle(fontSize: 22),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${jadwal.jumlahDosis} ${jadwal.satuan} 1x Sehari',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  jadwal.namaObat,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isActive
-                        ? const Color(0xFF1A1A1A)
-                        : Colors.grey[700],
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 12),
+
+                // ── Info obat ─────────────────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nama obat
+                      Text(
+                        jadwal.namaObat,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isTaken
+                              ? Colors.grey[400]
+                              : const Color(0xFF1A1A1A),
+                          decoration: isTaken
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      // Dosis & aturan
+                      Text(
+                        '${jadwal.jumlahDosis} ${jadwal.satuan}  •  ${jadwal.aturanKonsumsi}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Status badge
+                      Row(
+                        children: [
+                          // Waktu minum
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F0F0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time_rounded,
+                                  size: 11,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  jadwal.waktuMinum,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // Status pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusBg,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(statusIcon, size: 11, color: statusColor),
+                                const SizedBox(width: 3),
+                                Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // ── Checkbox interaktif ───────────────────────────────────
+                GestureDetector(
+                  onTap: isTaken
+                      ? null
+                      : () => _markAsTaken(jadwal, pasienId),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isTaken
+                          ? const Color(0xFF15BE77)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isTaken
+                            ? const Color(0xFF15BE77)
+                            : status == _JadwalStatus.upcoming
+                                ? Colors.grey[300]!
+                                : statusColor,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: isTaken
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                        : null,
                   ),
                 ),
               ],
             ),
           ),
-          // Checkbox
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              color: isDone ? const Color(0xFF15BE77) : Colors.transparent,
-              border: Border.all(
-                color: isDone
-                    ? const Color(0xFF15BE77)
-                    : isActive
-                    ? const Color(0xFF15BE77)
-                    : Colors.grey[300]!,
-                width: 1.5,
-              ),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: isDone
-                ? const Icon(Icons.check, color: Colors.white, size: 16)
-                : null,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -893,3 +1231,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '${months[date.month - 1]} ${date.year}';
   }
 }
+
+/// Status jadwal berdasarkan waktu sekarang
+enum _JadwalStatus { onTime, late, upcoming }
