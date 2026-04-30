@@ -5,6 +5,7 @@ import (
 	"backend/internal/domain"
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
+	"backend/internal/utils"
 	"errors"
 	"time"
 )
@@ -114,34 +115,73 @@ func (u *TrackingJadwalUsecase) Create(req *dto.CreateTrackingJadwalDTO) (*dto.T
 		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
 	}
 
+	// ── AUTO-DETERMINE STATUS via Compliance Checker ──────────────
+	// Status ditentukan server berdasarkan waktu konfirmasi vs jadwal.
+	// Jika WaktuMinum kosong, gunakan time.Now() sebagai waktu konfirmasi.
+	confirmationTime := time.Now()
+	if req.WaktuMinum != "" {
+		// Gabungkan tanggal + waktu_minum untuk mendapat timestamp lengkap
+		parsed, parseErr := time.ParseInLocation(
+			"2006-01-02 15:04",
+			req.Tanggal+" "+req.WaktuMinum,
+			time.Local,
+		)
+		if parseErr == nil {
+			confirmationTime = parsed
+		}
+	}
+
+	// Ambil jadwal untuk mendapatkan scheduled_time
+	schedStatus := req.Status // fallback ke status dari request
+	jadwal, jadwalErr := u.jadwalRepo.GetByID(req.JadwalID)
+	if jadwalErr == nil && jadwal != nil && jadwal.WaktuMinum != "" {
+		wibLoc, locErr := utils.GetWIBLocation()
+		if locErr == nil {
+			result, checkErr := utils.CheckComplianceFromStrings(
+				req.Tanggal,
+				jadwal.WaktuMinum,
+				confirmationTime,
+				wibLoc,
+			)
+			if checkErr == nil {
+				schedStatus = string(result.Status)
+			}
+		}
+	}
+	// ─────────────────────────────────────────────────────────────
+
 	tracking := &domain.TrackingJadwal{
 		JadwalID:   req.JadwalID,
 		PasienID:   req.PasienID,
 		Tanggal:    tanggal,
-		Status:     req.Status,
+		Status:     schedStatus,
 		WaktuMinum: req.WaktuMinum,
 		Catatan:    req.Catatan,
 		BuktiFoto:  req.BuktiFoto,
 	}
 
-	result, err := u.trackingRepo.Create(tracking)
+	result2, err := u.trackingRepo.Create(tracking)
 	if err != nil {
 		return nil, err
 	}
 
-	jadwal, _ := u.jadwalRepo.GetByID(result.JadwalID)
 	namaObat := ""
 	if jadwal != nil {
 		namaObat = jadwal.NamaObat
+	} else {
+		jadwal2, _ := u.jadwalRepo.GetByID(result2.JadwalID)
+		if jadwal2 != nil {
+			namaObat = jadwal2.NamaObat
+		}
 	}
 
-	pasien, _ := u.pasienRepo.GetByID(uint(result.PasienID))
+	pasien, _ := u.pasienRepo.GetByID(uint(result2.PasienID))
 	namaPasien := ""
 	if pasien != nil {
 		namaPasien = pasien.Nama
 	}
 
-	return persistence.TrackingJadwalToDTO(result, namaObat, namaPasien), nil
+	return persistence.TrackingJadwalToDTO(result2, namaObat, namaPasien), nil
 }
 
 func (u *TrackingJadwalUsecase) Update(id int, req *dto.UpdateTrackingJadwalDTO) (*dto.TrackingJadwalDTO, error) {

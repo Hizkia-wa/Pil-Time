@@ -544,7 +544,7 @@
       </div>
 
       <!-- Desktop Table View -->
-      <div class="hidden md:block bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+      <div class="hidden md:block bg-white rounded-lg shadow border border-gray-200">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>

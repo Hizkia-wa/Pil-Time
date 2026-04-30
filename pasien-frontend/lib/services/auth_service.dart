@@ -65,6 +65,9 @@ class AuthService {
     await prefs.remove(_tokenKey);
   }
 
+  /// Alias clearSession — dipakai saat token expired (401)
+  static Future<void> logout() => clearSession();
+
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final pasienId = prefs.getInt(_pasienIdKey);

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_config.dart';
 import 'screens/onboarding_screen.dart';
@@ -6,13 +8,29 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
+import 'services/fcm_service.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/otp_verification_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/success_screen.dart';
 
+/// Global key untuk navigasi dari mana saja (khususnya untuk Notifikasi)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Init Firebase (wajib sebelum apapun yang pakai Firebase)
+  await Firebase.initializeApp();
+
+  // 2. Daftarkan background FCM handler SEBELUM runApp
+  //    Harus top-level function
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // 3. Init local notification service
+  await NotificationService.instance.initialize();
+
   runApp(const MyApp());
 }
 
@@ -61,6 +79,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Pil Time',
       theme: ThemeData(
         useMaterial3: true,

@@ -50,7 +50,7 @@
       <!-- MAIN CONTENT AREA -->
       <main>
         <!-- TABLE VIEW (Step 0) -->
-        <div v-if="jadwal.currentStep === 0" class="card overflow-hidden !p-0 border-none shadow-sm">
+        <div v-if="jadwal.currentStep === 0" class="card !p-0 border-none shadow-sm pb-32">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-slate-50/50 border-b border-slate-100">
@@ -83,12 +83,29 @@
                     <span class="text-sm font-semibold text-green-600">Aktif</span>
                   </div>
                 </td>
-                <td class="table-td text-center">
-                  <button class="action-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
+                <td class="table-td text-center relative">
+                  <div class="relative inline-block text-left">
+                    <button @click="toggleDropdown(j.id)" class="action-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                    
+                    <div v-if="openDropdownId === j.id" class="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                      <button @click="viewDetail(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Lihat Detail
+                      </button>
+                      <button @click="editJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        Edit
+                      </button>
+                      <button @click="deleteJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -171,17 +188,22 @@
             </div>
 
             <div class="bg-slate-50 p-4 rounded-xl space-y-4">
-              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Waktu Reminder</h4>
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                Waktu Reminder
+                <span v-if="jadwal.selectedWaktuMinum.length === 0" class="text-red-400 text-[10px] normal-case bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                  Pilih waktu minum di atas
+                </span>
+              </h4>
               <div class="grid grid-cols-3 gap-3">
-                <div>
+                <div v-if="jadwal.selectedWaktuMinum.includes('Pagi')">
                   <label class="text-[10px] font-bold text-slate-500 block mb-1">PAGI</label>
                   <input type="time" v-model="jadwal.form.waktu_reminder_pagi" class="input text-center py-1"/>
                 </div>
-                <div>
+                <div v-if="jadwal.selectedWaktuMinum.includes('Siang')">
                   <label class="text-[10px] font-bold text-slate-500 block mb-1">SIANG</label>
                   <input type="time" v-model="jadwal.form.waktu_reminder_siang" class="input text-center py-1"/>
                 </div>
-                <div>
+                <div v-if="jadwal.selectedWaktuMinum.includes('Malam')">
                   <label class="text-[10px] font-bold text-slate-500 block mb-1">MALAM</label>
                   <input type="time" v-model="jadwal.form.waktu_reminder_malam" class="input text-center py-1"/>
                 </div>
@@ -221,15 +243,49 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../../stores/jadwal'
 import { usePasienStore } from '../../stores/pasien'
 import { useObatStore } from '../../stores/obat'
 
+const router = useRouter()
 const jadwal = useJadwalStore()
 const pasien = usePasienStore()
 const obat = useObatStore()
+
+const openDropdownId = ref(null)
+
+const toggleDropdown = (id) => {
+  if (openDropdownId.value === id) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = id
+  }
+}
+
+const closeDropdown = () => {
+  openDropdownId.value = null
+}
+
+const viewDetail = (id) => {
+  router.push(`/jadwal/${id}`)
+}
+
+const editJadwal = (id) => {
+  router.push(`/jadwal/${id}/edit`)
+}
+
+const deleteJadwal = async (id) => {
+  if (confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) {
+    try {
+      await jadwal.deleteJadwal(id)
+    } catch (error) {
+      alert('Gagal menghapus jadwal.')
+    }
+  }
+}
 
 onMounted(async () => {
   await Promise.all([

@@ -6,6 +6,7 @@ import (
 	"backend/internal/adapters/outbound/persistence"
 	"backend/internal/domain"
 	"backend/internal/usecase"
+	"backend/pkg/fcm"
 	"backend/pkg/middleware"
 	"fmt"
 	"log"
@@ -20,9 +21,15 @@ func main() {
 	db.AutoMigrate(
 		&domain.ResepObat{},
 		&domain.JadwalObat{},
+		&domain.FcmToken{}, // FCM device tokens
 	)
 	if db == nil {
 		log.Fatal("Gagal mengoneksikan database")
+	}
+
+	// Init Firebase Admin SDK untuk FCM
+	if err := fcm.Init("serviceAccountKey.json"); err != nil {
+		log.Printf("[WARNING] Firebase init gagal: %v — FCM notifikasi tidak akan berfungsi", err)
 	}
 
 	// 2. DEPENDENCY INJECTION (DI)
@@ -35,11 +42,12 @@ func main() {
 	rutinitasRepo := persistence.NewRutinitasRepo(db)
 	resepRepo := persistence.NewResepObatRepo(db)
 	jadwalObatRepo := persistence.NewJadwalObatRepo(db)
+	fcmTokenRepo := persistence.NewFcmTokenRepo(db)
 
 	// Usecases
 	adminUC := usecase.NewAdminUsecase(nakesRepo)
 	pasienUC := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
-	jadwalUC := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo)
+	jadwalUC := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo, fcmTokenRepo)
 	dashboardUC := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
 	obatUC := usecase.NewObatUsecase(obatRepo)
 	trackingUC := usecase.NewTrackingJadwalUsecase(trackingRepo, jadwalRepo, pasienRepo)
@@ -56,6 +64,7 @@ func main() {
 	rutinitasHandler := inboundHttp.NewRutinitasHandler(rutinitasUC)
 	resepJadwalHandler := inboundHttp.NewResepJadwalHandler(resepJadwalUC)
 	fileHandler := inboundHttp.NewFileHandler()
+	fcmTokenHandler := inboundHttp.NewFcmTokenHandler(fcmTokenRepo)
 
 	// 3. ROUTER SETUP
 	r := gin.New()
@@ -136,8 +145,12 @@ func main() {
 			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
 			pasienAuth.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
 
-			// Pasien - Riwayat Kepatuhan (pasien melihat riwayatnya sendiri)
+			// Pasien - Riwayat Kepatuhan (pasien melihat/mencatat riwayatnya sendiri)
 			pasienAuth.GET("/riwayat", trackingHandler.GetMyRiwayat)
+			pasienAuth.POST("/riwayat", trackingHandler.CreateMyRiwayat)
+
+			// Pasien - FCM Token Registration
+			pasienAuth.POST("/fcm-token", fcmTokenHandler.RegisterToken)
 
 			// Pasien - Obat Mandiri
 			pasienAuth.POST("/obat-mandiri", obatHandler.CreateMandiri)

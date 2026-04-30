@@ -117,6 +117,54 @@ func (h *TrackingJadwalHandler) GetMyRiwayat(c *gin.Context) {
 	})
 }
 
+// CreateMyRiwayat digunakan oleh pasien untuk mencatat riwayat minum obatnya.
+// pasien_id diambil dari token (JWT) agar pasien tidak bisa memalsukan ID pasien lain.
+func (h *TrackingJadwalHandler) CreateMyRiwayat(c *gin.Context) {
+	pasienIDRaw, exists := c.Get("pasien_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error:   "UNAUTHORIZED",
+			Message: "Sesi tidak valid, silakan login ulang",
+		})
+		return
+	}
+
+	pasienID := 0
+	switch v := pasienIDRaw.(type) {
+	case float64:
+		pasienID = int(v)
+	case int:
+		pasienID = v
+	case uint:
+		pasienID = int(v)
+	}
+
+	var req dto.CreateTrackingJadwalDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Paksa ID pasien pada payload agar sesuai dengan user yang login
+	req.PasienID = pasienID
+
+	result, err := h.usecase.Create(&req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "CREATE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"data": result,
+	})
+}
+
 func (h *TrackingJadwalHandler) Create(c *gin.Context) {
 	var req dto.CreateTrackingJadwalDTO
 

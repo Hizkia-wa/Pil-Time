@@ -5,19 +5,25 @@ import (
 	"backend/internal/domain"
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
+	"backend/pkg/fcm"
+	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 )
 
 type JadwalUsecase struct {
-	jadwalRepo outbound.JadwalRepository
-	pasienRepo outbound.PasienRepository
+	jadwalRepo   outbound.JadwalRepository
+	pasienRepo   outbound.PasienRepository
+	fcmTokenRepo outbound.FcmTokenRepository
 }
 
-func NewJadwalUsecase(jr outbound.JadwalRepository, pr outbound.PasienRepository) *JadwalUsecase {
+func NewJadwalUsecase(jr outbound.JadwalRepository, pr outbound.PasienRepository, fcmRepo outbound.FcmTokenRepository) *JadwalUsecase {
 	return &JadwalUsecase{
-		jadwalRepo: jr,
-		pasienRepo: pr,
+		jadwalRepo:   jr,
+		pasienRepo:   pr,
+		fcmTokenRepo: fcmRepo,
 	}
 }
 
@@ -108,7 +114,41 @@ func (u *JadwalUsecase) CreateJadwal(req *dto.CreateJadwalDTO) (*dto.JadwalRespo
 
 	// Isi PasienNama secara manual karena Create tidak JOIN
 	result.PasienNama = pasien.Nama
-	return persistence.JadwalToResponseDTO(result), nil
+	responseDTO := persistence.JadwalToResponseDTO(result)
+
+	// ── Kirim FCM ke device pasien (non-blocking) ──
+	// Error FCM tidak menggagalkan create jadwal
+	go func() {
+		token, err := u.fcmTokenRepo.GetByPasienID(uint(req.PasienID))
+		if err != nil || token == "" {
+			log.Printf("[FCM] Token tidak ditemukan untuk pasien %d: %v", req.PasienID, err)
+			return
+		}
+
+		payload := map[string]string{
+			"type":                 "jadwal_baru",
+			"jadwal_id":            fmt.Sprintf("%d", result.JadwalID),
+			"nama_obat":            result.NamaObat,
+			"jumlah_dosis":         fmt.Sprintf("%d", result.JumlahDosis),
+			"satuan":               result.Satuan,
+			"waktu_minum":          result.WaktuMinum,
+			"waktu_reminder_pagi":  result.WaktuReminderPagi,
+			"waktu_reminder_malam": result.WaktuReminderMalam,
+			"kategori_obat":        result.KategoriObat,
+			"aturan_konsumsi":      result.AturanKonsumsi,
+			"tanggal_mulai":        result.TanggalMulai,
+			"tanggal_selesai":      result.TanggalSelesai,
+			"status":               result.Status,
+			"title":                "💊 Jadwal Obat Baru",
+			"body":                 fmt.Sprintf("Nakes menambahkan jadwal %s pukul %s", result.NamaObat, result.WaktuMinum),
+		}
+
+		if err := fcm.SendJadwalNotification(context.Background(), token, payload); err != nil {
+			log.Printf("[FCM] Gagal kirim notifikasi jadwal ke pasien %d: %v", req.PasienID, err)
+		}
+	}()
+
+	return responseDTO, nil
 }
 
 func (u *JadwalUsecase) UpdateJadwal(id int, req *dto.UpdateJadwalDTO) (*dto.JadwalResponseDTO, error) {

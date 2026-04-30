@@ -12,6 +12,9 @@ import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
 import 'package:frontend_pasien/screens/notifikasi/notifikasi_screen.dart';
 import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
 import 'package:frontend_pasien/screens/profile/profile.dart';
+import '../services/notification_service.dart';
+import '../services/jadwal_cache_service.dart';
+import '../services/fcm_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -40,15 +43,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     dashboardFuture = _fetchDashboard();
+    // Init FCM service: daftarkan token ke backend (fire-and-forget)
+    FcmService.instance.initialize();
   }
 
   Future<Dashboard?> _fetchDashboard() async {
     try {
       final response = await ApiService.getDashboard(pasienId: widget.pasienId);
       if (!mounted) return null;
+
       if (response['success']) {
-        return Dashboard.fromJson(response['data']);
+        final dashboard = Dashboard.fromJson(response['data']);
+
+        // Simpan jadwal ke cache untuk akses offline
+        await JadwalCacheService.saveJadwals(
+          [...dashboard.todayJadwals, ...dashboard.allJadwals],
+        );
+
+        // Auto-schedule alarm dari jadwal terbaru
+        _scheduleAlarmsBackground(dashboard.todayJadwals);
+
+        return dashboard;
       } else {
+        // ── Jika 401: token expired/hilang → logout & redirect ke login ──
+        if (response['statusCode'] == 401) {
+          await AuthService.logout();
+          if (mounted) {
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/login',
+              (route) => false,
+            );
+          }
+          return null;
+        }
+
+        // ── Offline fallback: coba load dari cache ──
+        final cachedJadwals = await JadwalCacheService.getJadwals();
+        if (cachedJadwals.isNotEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('📴 Offline — menampilkan data tersimpan'),
+                backgroundColor: Color(0xFFF59E0B),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          // Buat Dashboard dari cache dengan todayJadwals berisi semua jadwal aktif
+          return Dashboard(
+            pasienId: widget.pasienId,
+            nama: widget.pasienNama,
+            email: '',
+            noTelepon: '',
+            jenisKelamin: '',
+            tanggalLahir: '',
+            alamat: '',
+            todayJadwals: cachedJadwals.where((j) => j.status == 'aktif').toList(),
+            allJadwals: cachedJadwals,
+          );
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error: ${response['error']}')),
@@ -64,6 +118,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       return null;
     }
+  }
+
+  /// Schedule semua alarm hari ini di background — tidak memblokir UI
+  void _scheduleAlarmsBackground(List<Jadwal> jadwals) {
+    Future(() async {
+      try {
+        final notifModels = jadwals
+            .where((j) => j.status.toLowerCase() == 'aktif')
+            .map((j) => JadwalNotifModel(
+                  jadwalId: j.id,
+                  namaObat: j.namaObat,
+                  dosis: '${j.jumlahDosis} ${j.satuan}',
+                  waktuMinum: j.waktuMinum,
+                  waktuReminderPagi: j.waktuReminderPagi,
+                  waktuReminderMalam: j.waktuReminderMalam,
+                ))
+            .toList();
+
+        await NotificationService.instance.scheduleAllJadwals(notifModels);
+        debugPrint('[Dashboard] ${notifModels.length} alarm dijadwalkan dari dashboard.');
+      } catch (e) {
+        debugPrint('[Dashboard] Gagal jadwalkan alarm (non-fatal): $e');
+      }
+    });
   }
 
   Future<void> _onRefresh() async {
@@ -90,30 +168,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
           '${now.minute.toString().padLeft(2, '0')}';
 
-      // Tentukan status: tepat waktu atau terlambat
-      final jadwalStatus = _getJadwalStatus(jadwal.waktuMinum);
-      final status =
-          jadwalStatus == _JadwalStatus.upcoming ? 'Diminum' : 'Diminum';
+      // ── Gunakan ComplianceStatus untuk menentukan status kepatuhan ──
+      // checkComplianceFromString membandingkan waktu sekarang vs waktu jadwal
+      // menghasilkan: Diminum (0–60 min), Terlambat (61–75 min), Terlewat (>75 min)
+      final complianceStatus = NotificationService.checkComplianceFromString(
+        scheduledTimeStr: jadwal.waktuMinum,
+        confirmationTime: now,
+      );
+      final status = complianceStatus.backendValue;
 
-      final response = await http
-          .post(
-            Uri.parse('http://10.0.2.2:8080/api/admin/riwayat'),
-            headers: {
-              'Content-Type': 'application/json',
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'jadwal_id': jadwal.id,
-              'pasien_id': pasienId,
-              'tanggal': today,
-              'status': status,
-              'waktu_minum': waktuSekarang,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final result = await ApiService.postRiwayat(
+        jadwalId: jadwal.id,
+        status: status,
+        waktuMinum: waktuSekarang,
+      );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (result['success']) {
         setState(() => _takenJadwalIds.add(jadwal.id));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Gagal mencatat, coba lagi'),
+              content: Text('Gagal mencatat: ${result['error']}'),
               backgroundColor: Colors.red[400],
               behavior: SnackBarBehavior.floating,
             ),

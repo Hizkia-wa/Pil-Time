@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 pb-32">
     <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
       <div>
         <h2 class="text-lg font-bold text-slate-800">Daftar Informasi Obat</h2>
@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <div>
       <table class="w-full text-left">
         <thead class="bg-slate-50 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
           <tr>
@@ -46,32 +46,29 @@
             <td class="px-6 py-4 text-sm text-slate-500">{{ index + 1 }}</td>
             <td class="px-6 py-4 font-medium text-slate-700">{{ obat.nama_obat }}</td>
             <td class="px-6 py-4 text-sm text-slate-600 truncate max-w-[200px]">{{ obat.fungsi || '-' }}</td>
-            <td class="px-6 py-4">
-                <div class="flex justify-center gap-2">
-                    <button 
-                    @click.stop="$emit('select-obat', obat)" 
-                    class="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
-                    title="Lihat Detail"
-                    >
-                    👁️
-                    </button>
-
-                    <button 
-                    @click.stop="$emit('edit-obat', obat)" 
-                    class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                    title="Edit"
-                    >
-                    ✏️
-                    </button>
-                    
-                    <button 
-                    @click.stop="deleteData(obat.obat_id)" 
-                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                    title="Hapus"
-                    >
-                    🗑️
-                    </button>
+            <td class="px-6 py-4 text-center relative">
+              <div class="relative inline-block text-left">
+                <button @click.stop="toggleDropdown(obat.obat_id)" class="p-2 text-slate-400 hover:text-teal-600 border border-slate-100 rounded-lg hover:bg-white transition-all shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+                
+                <div v-if="openDropdownId === obat.obat_id" class="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                  <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    Lihat Detail
+                  </button>
+                  <button @click.stop="$emit('edit-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Edit
+                  </button>
+                  <button @click.stop="deleteData(obat.obat_id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Hapus
+                  </button>
                 </div>
+              </div>
             </td>
           </tr>
           <tr v-if="filteredList.length === 0">
@@ -91,6 +88,19 @@ const props = defineProps(['obatList', 'selectedId'])
 const emit = defineEmits(['add-obat', 'edit-obat', 'select-obat'])
 const obatStore = useObatStore()
 const search = ref('')
+const openDropdownId = ref(null)
+
+const toggleDropdown = (id) => {
+  if (openDropdownId.value === id) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = id
+  }
+}
+
+const closeDropdown = () => {
+  openDropdownId.value = null
+}
 
 const filteredList = computed(() => {
   if (!search.value) return props.obatList

@@ -39,11 +39,12 @@ class ApiService {
         final errorBody = jsonDecode(response.body);
         return {
           'success': false,
+          'statusCode': response.statusCode,
           'error': errorBody['message'] ?? 'Gagal mengambil data dashboard',
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'statusCode': 0, 'error': 'Koneksi gagal: ${e.toString()}'};
     }
   }
 
@@ -264,6 +265,51 @@ class ApiService {
       }
     } catch (e) {
       return {'success': false, 'error': 'Koneksi gagal'};
+    }
+  }
+
+  // ============================
+  //         RIWAYAT / TRACKING
+  // ============================
+
+  static Future<Map<String, dynamic>> postRiwayat({
+    required int jadwalId,
+    required String status,
+    required String waktuMinum,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      // YYYY-MM-DD
+      final now = DateTime.now();
+      final dateStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      final body = jsonEncode({
+        'jadwal_id': jadwalId,
+        'tanggal': dateStr,
+        'status': status,
+        'waktu_minum': waktuMinum,
+        'catatan': '',
+        'bukti_foto': '',
+      });
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/pasien/riwayat'),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorBody['message'] ?? 'Gagal menyimpan riwayat',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
     }
   }
 }
