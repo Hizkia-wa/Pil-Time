@@ -1238,31 +1238,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           // FAB +
           GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TambahRutinitasScreen(),
-                ),
-              );
-            },
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(
-                color: Color(0xFF15BE77),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x4015BE77),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
-            ),
-          ),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // Pindah ke halaman list rutinitas, bukan ke form langsung
+        builder: (context) => const RutinitasSehatScreen(initialIndex: 1), 
+      ),
+    );
+  },
+  child: Container(
+    width: 52,
+    height: 52,
+    decoration: const BoxDecoration(
+      color: Color(0xFF15BE77),
+      shape: BoxShape.circle,
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x4015BE77),
+          blurRadius: 10,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: const Icon(Icons.add, color: Colors.white, size: 28),
+  ),
+),
           // Profile
           IconButton(
             onPressed: () {

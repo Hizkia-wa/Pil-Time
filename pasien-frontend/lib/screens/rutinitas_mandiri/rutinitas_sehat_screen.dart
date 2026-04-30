@@ -6,7 +6,8 @@ import 'tambah_rutinitas_screen.dart';
 import '../obat_mandiri/tambah_jadwal_konsumsi_obat_mandiri.dart';
 
 class RutinitasSehatScreen extends StatefulWidget {
-  const RutinitasSehatScreen({super.key});
+  final int initialIndex;
+  const RutinitasSehatScreen({super.key, this.initialIndex = 0});
 
   @override
   State<RutinitasSehatScreen> createState() => _RutinitasSehatScreenState();
@@ -29,15 +30,16 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
 
   final String _baseUrl = "http://10.0.2.2:8080/api/pasien";
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
-    });
-    _loadPasienSession();
-  }
+@override
+void initState() {
+  super.initState();
+  // Gunakan widget.initialIndex supaya otomatis pindah tab
+  _tabController = TabController(
+    length: 2, 
+    vsync: this, 
+    initialIndex: widget.initialIndex
+  );
+}
 
   @override
   void dispose() {
