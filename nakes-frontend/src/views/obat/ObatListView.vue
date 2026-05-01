@@ -1,9 +1,8 @@
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 pb-32">
-    <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+  <div class="p-2 md:p-2">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
       <div>
-        <h2 class="text-lg font-bold text-slate-800">Daftar Informasi Obat</h2>
-        <p class="text-xs text-slate-500">Kelola database obat untuk sistem reminder.</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Daftar Informasi Obat</h1>
       </div>
       <button 
         @click="$emit('add-obat')"
@@ -15,7 +14,19 @@
 
     <div class="p-4 border-b border-slate-100">
       <div class="relative max-w-sm">
-        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">🔍</span>
+        <svg 
+          class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            stroke-linecap="round" 
+            stroke-linejoin="round" 
+            stroke-width="2" 
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
         <input 
           type="text" 
           v-model="search"
@@ -25,14 +36,14 @@
       </div>
     </div>
 
-    <div>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
       <table class="w-full text-left">
-        <thead class="bg-slate-50 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
-          <tr>
-            <th class="px-6 py-4">No</th>
-            <th class="px-6 py-4">Nama Obat</th>
-            <th class="px-6 py-4">Fungsi</th>
-            <th class="px-6 py-4 text-center">Aksi</th>
+        <thead class="bg-slate-50">
+          <tr class="text-xs text-slate-500 uppercase tracking-wider">
+            <th class="px-6 py-4 text-left border-b border-slate-200">No</th>
+            <th class="px-6 py-4 text-left border-b border-slate-200">Nama Obat</th>
+            <th class="px-6 py-4 text-left border-b border-slate-200">Fungsi</th>
+            <th class="px-6 py-4 text-center border-b border-slate-200">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -54,7 +65,10 @@
                   </svg>
                 </button>
                 
-                <div v-if="openDropdownId === obat.obat_id" class="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                <div 
+                  v-if="openDropdownId === obat.obat_id"
+                  class="absolute right-0 top-10 w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-2"
+                >
                   <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     Lihat Detail

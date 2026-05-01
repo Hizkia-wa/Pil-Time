@@ -4,14 +4,6 @@
       <!-- Header -->
       <div class="bg-white border-b border-gray-200 px-4 md:px-8 py-4">
         <div class="flex items-center gap-2 md:gap-4">
-          <button 
-            @click="goBack"
-            class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-xs md:text-sm font-medium">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Kembali
-          </button>
           <div>
             <h2 class="text-base md:text-lg font-bold text-slate-900">Detail Jadwal Obat</h2>
             <p class="text-xs text-gray-500">Informasi lengkap jadwal minum obat</p>
@@ -20,7 +12,7 @@
       </div>
 
       <!-- Main Content -->
-      <div class="p-4 md:p-8">
+      <div class="p-4 md:p-8 max-w-4xl mx-auto">
         <div v-if="!loading && jadwal" class="space-y-6">
           <!-- Patient Info Card -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -83,9 +75,9 @@
             </div>
           </div>
 
-          <!-- Duration & Status Card -->
+          <!-- Duration Card -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Durasi & Status</h3>
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Durasi & Jadwal</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p class="text-xs text-gray-500 mb-1">Tipe Durasi</p>
@@ -95,15 +87,6 @@
                   </span>
                   <span v-else class="inline-block bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium">
                     Rutin
-                  </span>
-                </p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-1">Status</p>
-                <p class="text-sm font-semibold text-slate-900">
-                  <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
-                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                    Aktif
                   </span>
                 </p>
               </div>
@@ -121,20 +104,11 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex gap-3">
+          <div class="flex justify-end">
             <button 
               @click="goBack"
-              class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium text-sm">
+              class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium text-sm">
               ← Kembali
-            </button>
-            <button 
-              @click="goToEdit"
-              class="flex-1 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium text-sm flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-              Edit
             </button>
           </div>
         </div>

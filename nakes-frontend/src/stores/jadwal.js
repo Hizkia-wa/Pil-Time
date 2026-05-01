@@ -206,6 +206,16 @@ const submitJadwal = async () => {
     }
   }
 
+  const updateJadwal = async (id, data) => {
+  try {
+    await jadwalApiClient.put(`/jadwal/${id}`, data)
+    await fetchJadwals()
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+}
+
   // =========================
   // RETURN
   // =========================
@@ -258,6 +268,7 @@ const submitJadwal = async () => {
     },
 
     submitJadwal,
-    deleteJadwal
+    deleteJadwal,
+    updateJadwal
   }
 })

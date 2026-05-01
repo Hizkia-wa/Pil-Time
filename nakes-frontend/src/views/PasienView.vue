@@ -7,9 +7,9 @@
       </div>
 
       <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 gap-6" :class="selectedPasien ? 'lg:grid-cols-3' : 'lg:grid-cols-1'">
         <!-- Left: Table -->
-        <div class="lg:col-span-2">
+        <div :class="selectedPasien ? 'lg:col-span-2' : 'lg:col-span-3'">
           <!-- Search Bar -->
           <div class="mb-6">
             <div class="relative">
@@ -126,7 +126,7 @@
         </div>
 
         <!-- Right: Detail Panel -->
-        <div class="lg:col-span-1">
+        <div v-if="selectedPasien" class="lg:col-span-1">
           <div v-if="selectedPasien" class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden sticky top-4">
             <!-- Header -->
             <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4">
@@ -197,14 +197,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Empty State for Detail Panel -->
-          <div v-else class="bg-white rounded-lg shadow border border-gray-200 p-6 text-center">
-            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p class="text-gray-500 text-sm">Pilih pasien untuk melihat detail</p>
-          </div>
         </div>
       </div>
     </div>
@@ -271,4 +263,3 @@ export default {
   }
 }
 </script>
-

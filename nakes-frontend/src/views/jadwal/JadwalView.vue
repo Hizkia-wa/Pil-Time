@@ -6,7 +6,6 @@
       <div v-if="jadwal.currentStep === 0" class="flex justify-between items-end mb-8">
         <div>
           <h1 class="text-[28px] font-bold text-slate-800">Jadwal Obat</h1>
-          <p class="text-slate-500 mt-1">Selamat datang di Portal Tenaga Kesehatan</p>
         </div>
         <div class="flex gap-4 items-center">
           <div class="relative">
@@ -28,12 +27,6 @@
       <!-- STEP PROGRESS INDICATOR (Muncul saat tambah data) -->
       <div v-if="jadwal.currentStep > 0 && jadwal.currentStep < 3" class="mb-8">
         <div class="flex items-center gap-4 mb-6">
-          <button @click="jadwal.cancelAdd" class="text-slate-500 hover:text-teal-600 transition-colors flex items-center gap-1 text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Kembali
-          </button>
         </div>
         
         <div class="flex items-center justify-center gap-8">
@@ -60,7 +53,6 @@
                 <th class="table-th">Frekuensi</th>
                 <th class="table-th">Waktu</th>
                 <th class="table-th">Durasi</th>
-                <th class="table-th">Status</th>
                 <th class="table-th text-center">Aksi</th>
               </tr>
             </thead>
@@ -77,47 +69,30 @@
                     {{ j.durasi || 'Rutin' }}
                   </span>
                 </td>
-                <td class="table-td">
-                  <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span class="text-sm font-semibold text-green-600">Aktif</span>
+                <td class="table-td text-center relative">
+                  <div class="relative inline-block text-left">
+                    <button @click="toggleDropdown(j.id)" class="action-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                    
+                    <div v-if="openDropdownId === j.id" class="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                      <button @click="viewDetail(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Lihat Detail
+                      </button>
+                      <button @click="editJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        Edit
+                      </button>
+                      <button @click="deleteJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Hapus
+                      </button>
+                    </div>
                   </div>
                 </td>
-                <td class="table-td text-center relative">
-  <div class="relative inline-block text-left">
-
-    <!-- BUTTON TOOLS -->
-    <button @click="toggleDropdown(j.id)" class="tools-btn">
-      <!-- ikon titik 3 -->
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M12 5v.01M12 12v.01M12 19v.01" />
-      </svg>
-    </button>
-
-    <!-- DROPDOWN -->
-    <div v-if="openDropdownId === j.id"
-      class="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
-
-      <button @click="viewDetail(j.id); closeDropdown()"
-        class="dropdown-item">
-        👁 Lihat Detail
-      </button>
-
-      <button @click="editJadwal(j.id); closeDropdown()"
-        class="dropdown-item">
-        ✏️ Edit
-      </button>
-
-      <button @click="deleteJadwal(j.id); closeDropdown()"
-        class="dropdown-item text-red-500 hover:bg-red-50">
-        🗑 Hapus
-      </button>
-
-    </div>
-
-  </div>
-</td>
               </tr>
             </tbody>
           </table>
@@ -130,161 +105,285 @@
         <div v-if="jadwal.currentStep === 1" class="grid md:grid-cols-2 gap-8 animate-in fade-in duration-500">
           <div class="card">
             <h3 class="title">Pilih Pasien</h3>
+            <p class="text-sm text-slate-400 mb-3">Cari dan pilih pasien yang akan dijadwalkan</p>
+
             <input v-model="jadwal.searchPasien" class="input mb-4" placeholder="Cari nama pasien..." />
+
             <div class="list-container">
               <div v-for="p in jadwal.filteredPasien" :key="p.pasien_id"
                 @click="jadwal.selectPasien(p)"
-                :class="['list-item', jadwal.form.patientId === p.pasien_id ? 'active' : '']">
-                {{ p.nama }}
+                :class="['list-item flex items-center justify-between', jadwal.form.patientId === p.pasien_id ? 'active' : '']">
+
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-sm font-bold text-teal-600">
+                    {{ p.nama.charAt(0) }}
+                  </div>
+                  <span>{{ p.nama }}</span>
+                </div>
+
+                <span v-if="jadwal.form.patientId === p.pasien_id" class="text-teal-500">✔</span>
               </div>
+            </div>
+
+            <!-- PASIEN TERPILIH -->
+            <div v-if="jadwal.getSelectedPasienName()" class="mt-4 bg-teal-50 p-3 rounded-xl text-sm text-teal-700">
+              ✔ Pasien Terpilih: <b>{{ jadwal.getSelectedPasienName() }}</b>
             </div>
           </div>
 
           <div class="card">
-            <h3 class="title">Pilih Obat</h3>
-            <input v-model="jadwal.searchObat" class="input mb-4" placeholder="Cari jenis obat..." />
-            <div class="list-container">
-              <div v-for="o in jadwal.filteredObat" :key="o.obat_id"
-                @click="jadwal.selectObat(o)"
-                :class="['list-item', jadwal.form.obatId === o.obat_id ? 'active' : '']">
-                {{ o.nama_obat }}
+            <h3 class="title">Informasi Obat</h3>
+            <p class="text-sm text-slate-400 mb-4">Masukkan detail obat yang akan diberikan</p>
+
+            <div class="space-y-4">
+
+              <div>
+                <label class="label">Nama Obat</label>
+                <input v-model="jadwal.form.nama_obat" class="input" />
               </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="label">Jumlah Dosis</label>
+                  <input type="number" v-model="jadwal.form.jumlah_dosis" class="input" />
+                </div>
+
+                <div>
+                  <label class="label">Satuan</label>
+                  <select v-model="jadwal.form.satuan" class="input">
+                    <option>Tablet</option>
+                    <option>Kapsul</option>
+                    <option>Sirup</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="label">Info Obat</label>
+                <select v-model="jadwal.form.obatId" class="input">
+                  <option value="">Pilih obat...</option>
+                  <option 
+                    v-for="o in obat.obatList" 
+                    :key="o.obat_id" 
+                    :value="o.obat_id"
+                  >
+                    {{ o.nama_obat }}
+                  </option>
+                </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="label">Kategori Obat</label>
+                <input v-model="jadwal.form.kategori" class="input" />
+              </div>
+
+              <div>
+                <label class="label">Takaran Obat</label>
+                <input v-model="jadwal.form.takaran" class="input" />
+              </div>
+
             </div>
           </div>
 
-          <button @click="jadwal.goToStep2()" class="btn-primary col-span-full py-4 text-lg">Lanjutkan Pengaturan</button>
         </div>
 
         <!-- STEP 2: DETAIL JADWAL -->
-<div v-if="jadwal.currentStep === 2" class="grid md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-500">
+<div v-if="jadwal.currentStep === 2" class="grid md:grid-cols-2 gap-8">
 
   <!-- KIRI -->
   <div class="card">
-    <h3 class="title">Frekuensi & Aturan</h3>
+    <h3 class="title">Frekuensi & Waktu Minum</h3>
+    <p class="text-sm text-slate-400 mb-4">Tentukan seberapa sering dan kapan obat diminum</p>
 
-    <div class="flex flex-wrap gap-3 mb-6">
-      <button v-for="w in jadwal.waktuMinumOptions" :key="w.value"
-        @click="jadwal.toggleWaktuMinum(w.value)"
-        :class="['chip', jadwal.selectedWaktuMinum.includes(w.value) ? 'active' : '']">
-        <span class="mr-1">{{ w.icon }}</span> {{ w.label }}
-      </button>
+    <!-- FREKUENSI -->
+    <div class="mb-4">
+      <label class="label">Frekuensi per Hari</label>
+      <input 
+        type="text" 
+        :value="jadwal.selectedWaktuMinum.length + 'x sehari'" 
+        class="input bg-slate-100" 
+        readonly
+      />
     </div>
 
-    <div class="space-y-4">
-      <div>
-        <label class="label">Aturan Konsumsi</label>
-        <select v-model="jadwal.form.aturan_konsumsi" class="input">
-          <option v-for="a in jadwal.aturanKonsumsi" :key="a">{{ a }}</option>
-        </select>
+    <!-- WAKTU MINUM -->
+    <div class="mb-4">
+      <label class="label">Waktu Minum</label>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <button 
+          v-for="w in jadwal.waktuMinumOptions" 
+          :key="w.value"
+          @click="jadwal.toggleWaktuMinum(w.value)"
+          :class="[
+            'px-3 py-1.5 rounded-lg text-sm border transition',
+            jadwal.selectedWaktuMinum.includes(w.value)
+              ? 'bg-teal-100 text-teal-700 border-teal-300'
+              : 'bg-white text-slate-500 border-slate-200'
+          ]"
+        >
+          {{ w.icon }} {{ w.label }}
+        </button>
       </div>
+    </div>
 
-      <div>
-        <label class="label">Jumlah Dosis</label>
-        <input v-model="jadwal.form.jumlah_dosis" type="number" class="input" placeholder="Contoh: 1" />
+    <!-- ATURAN KONSUMSI -->
+    <div class="mb-4">
+      <label class="label">Aturan Konsumsi</label>
+      <div class="flex gap-2 mt-2 flex-wrap">
+        <button
+          v-for="a in jadwal.aturanKonsumsi"
+          :key="a"
+          @click="jadwal.form.aturan_konsumsi = a"
+          :class="[
+            'px-3 py-1.5 rounded-lg text-sm border',
+            jadwal.form.aturan_konsumsi === a
+              ? 'bg-teal-100 text-teal-700 border-teal-300'
+              : 'bg-white text-slate-500 border-slate-200'
+          ]"
+        >
+          {{ a }}
+        </button>
       </div>
+    </div>
 
-      <div>
-        <label class="label">Catatan Tambahan</label>
-        <textarea v-model="jadwal.form.catatan" class="input h-24" placeholder="Opsional..."></textarea>
-      </div>
+    <!-- CATATAN -->
+    <div>
+      <label class="label">Catatan untuk Pasien</label>
+      <textarea 
+        v-model="jadwal.form.catatan" 
+        class="input h-24"
+        placeholder="Contoh: Minum dengan segelas air..."
+      ></textarea>
     </div>
   </div>
 
   <!-- KANAN -->
   <div class="card">
-    <h3 class="title">Durasi & Pengingat</h3>
+    <h3 class="title">Durasi & Jadwal</h3>
+    <p class="text-sm text-slate-400 mb-4">Tentukan lama pengobatan dan tanggal mulai</p>
 
-    <!-- TAB SWITCH -->
-    <div class="flex mb-4 border border-slate-200 rounded-xl overflow-hidden">
-      <button 
-        @click="jadwal.durasiType = 'harian'"
-        :class="[
-          'flex-1 py-2 text-sm font-semibold transition',
-          jadwal.durasiType === 'harian'
-            ? 'bg-[#00a79d] text-white'
-            : 'bg-slate-100 text-slate-500'
-        ]">
-        📅 Jumlah Hari
-      </button>
+    <!-- TIPE DURASI -->
+    <div class="mb-4">
+      <label class="label">Tipe Durasi</label>
+      <div class="flex gap-2 mt-2">
 
-      <button 
-        @click="jadwal.durasiType = 'rutin'"
-        :class="[
-          'flex-1 py-2 text-sm font-semibold transition',
-          jadwal.durasiType === 'rutin'
-            ? 'bg-[#00a79d] text-white'
-            : 'bg-slate-100 text-slate-500'
-        ]">
-        🔁 Rutin
-      </button>
+        <!-- JUMLAH HARI -->
+        <button 
+          @click="jadwal.form.tipe_durasi = 'hari'"
+          :class="[
+            'flex-1 py-2 rounded-lg text-sm',
+            jadwal.form.tipe_durasi === 'hari'
+              ? 'bg-teal-500 text-white'
+              : 'bg-white border border-slate-200'
+          ]"
+        >
+          Jumlah Hari
+        </button>
+
+        <!-- RUTIN -->
+        <button 
+          @click="jadwal.form.tipe_durasi = 'rutin'"
+          :class="[
+            'flex-1 py-2 rounded-lg text-sm',
+            jadwal.form.tipe_durasi === 'rutin'
+              ? 'bg-teal-500 text-white'
+              : 'bg-white border border-slate-200'
+          ]"
+        >
+          Rutin
+        </button>
+
+      </div>
     </div>
 
-    <!-- INFO RUTIN -->
-    <div v-if="jadwal.durasiType === 'rutin'" 
-      class="bg-blue-50 border border-blue-100 text-blue-600 text-sm p-3 rounded-xl mb-4">
-      Obat rutin akan terus aktif dan tidak memiliki tanggal berakhir. 
-      Pasien perlu meminum obat ini setiap hari secara berkelanjutan.
+    <div v-if="jadwal.form.tipe_durasi === 'hari'" class="mb-4">
+      <label class="label">Jumlah Hari</label>
+
+      <!-- INPUT + BUTTON -->
+      <div class="flex items-center gap-2">
+        
+        <!-- MINUS -->
+        <button 
+          @click="jadwal.form.jumlah_hari = Math.max(1, (jadwal.form.jumlah_hari || 1) - 1)"
+          class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200"
+        >
+          -
+        </button>
+
+        <!-- INPUT -->
+        <input 
+          type="number"
+          v-model="jadwal.form.jumlah_hari"
+          class="input text-center"
+          min="1"
+        />
+
+        <!-- PLUS -->
+        <button 
+          @click="jadwal.form.jumlah_hari = (jadwal.form.jumlah_hari || 1) + 1"
+          class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200"
+        >
+          +
+        </button>
+
+        <span class="text-sm text-slate-500">hari</span>
+      </div>
+
+      <!-- QUICK SELECT -->
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button 
+          @click="jadwal.form.jumlah_hari = 3"
+          class="chip"
+        >3 hari</button>
+
+        <button 
+          @click="jadwal.form.jumlah_hari = 7"
+          class="chip"
+        >7 hari</button>
+
+        <button 
+          @click="jadwal.form.jumlah_hari = 14"
+          class="chip"
+        >2 minggu</button>
+
+        <button 
+          @click="jadwal.form.jumlah_hari = 30"
+          class="chip"
+        >1 bulan</button>
+      </div>
     </div>
 
     <!-- TANGGAL -->
-    <div class="grid grid-cols-2 gap-4 mb-6">
-      <div>
-        <label class="label">Tanggal Mulai</label>
-        <input type="date" v-model="jadwal.form.tanggal_mulai" class="input"/>
-      </div>
-
-      <!-- hanya muncul kalau harian -->
-      <div v-if="jadwal.durasiType === 'harian'">
-        <label class="label">Tanggal Selesai</label>
-        <input type="date" v-model="jadwal.form.tanggal_selesai" class="input"/>
-      </div>
+    <div class="mb-4">
+      <label class="label">Tanggal Mulai</label>
+      <input 
+        type="date" 
+        v-model="jadwal.form.tanggal_mulai" 
+        class="input"
+      />
     </div>
 
-    <!-- PENGINGAT OTOMATIS -->
-    <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl mb-4">
-      <div>
-        <p class="text-sm font-semibold text-slate-700">Pengingat Otomatis</p>
-        <p class="text-xs text-slate-400">Kirim notifikasi ke pasien</p>
-      </div>
-      <input type="checkbox" v-model="jadwal.form.pengingat" class="toggle"/>
-    </div>
+    <!-- REMINDER -->
+    <div class="bg-slate-50 p-4 rounded-xl">
+      <label class="label mb-2 block">Waktu Pengingat</label>
 
-    <!-- WAKTU REMINDER -->
-    <div class="bg-slate-50 p-4 rounded-xl space-y-4">
-      <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-        Waktu Reminder
-      </h4>
-
-      <div class="grid grid-cols-3 gap-3">
-
+      <div class="grid grid-cols-3 gap-2">
         <div v-if="jadwal.selectedWaktuMinum.includes('Pagi')">
-          <label class="text-[10px] font-bold text-slate-500 block mb-1">PAGI</label>
-          <input type="time" v-model="jadwal.form.waktu_reminder_pagi" class="input text-center py-1"/>
+          <input type="time" v-model="jadwal.form.waktu_reminder_pagi" class="input text-center"/>
         </div>
-
         <div v-if="jadwal.selectedWaktuMinum.includes('Siang')">
-          <label class="text-[10px] font-bold text-slate-500 block mb-1">SIANG</label>
-          <input type="time" v-model="jadwal.form.waktu_reminder_siang" class="input text-center py-1"/>
+          <input type="time" v-model="jadwal.form.waktu_reminder_siang" class="input text-center"/>
         </div>
-
         <div v-if="jadwal.selectedWaktuMinum.includes('Malam')">
-          <label class="text-[10px] font-bold text-slate-500 block mb-1">MALAM</label>
-          <input type="time" v-model="jadwal.form.waktu_reminder_malam" class="input text-center py-1"/>
+          <input type="time" v-model="jadwal.form.waktu_reminder_malam" class="input text-center"/>
         </div>
-
       </div>
     </div>
 
-  </div>
-
-  <!-- BUTTON -->
-  <div class="flex gap-4 col-span-full mt-4">
-    <button @click="jadwal.currentStep = 1" class="btn-secondary flex-1 py-4">
-      Kembali
-    </button>
-    <button @click="handleSubmit" class="btn-primary flex-[2] py-4">
-      Simpan Jadwal Obat
-    </button>
+    <!-- INFO BAWAH -->
+    <div class="bg-teal-50 text-teal-600 text-xs p-3 rounded-lg mt-4">
+      Pengingat akan dikirim 5 menit sebelum waktu minum
+    </div>
   </div>
 
 </div>
@@ -302,6 +401,38 @@
         </div>
       </main>
 
+      <!-- GLOBAL ACTION BUTTON -->
+      <div v-if="jadwal.currentStep === 1 || jadwal.currentStep === 2"
+          class="flex justify-between items-center mt-8">
+
+        <!-- KIRI -->
+        <button 
+          @click="jadwal.currentStep === 1 ? jadwal.cancelAdd() : jadwal.currentStep--"
+          class="px-5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium"
+        >
+          ← {{ jadwal.currentStep === 1 ? 'Batal' : 'Kembali' }}
+        </button>
+
+        <!-- KANAN STEP 1 -->
+        <button 
+          v-if="jadwal.currentStep === 1"
+          @click="jadwal.goToStep2()"
+          class="px-6 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold"
+        >
+          Lanjut Aturan Minum →
+        </button>
+
+        <!-- KANAN STEP 2 -->
+        <button 
+          v-if="jadwal.currentStep === 2"
+          @click="handleSubmit"
+          class="px-6 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold"
+        >
+          Lihat Konfirmasi →
+        </button>
+
+      </div>
+
       <!-- LOADING OVERLAY -->
       <div v-if="jadwal.loading" class="overlay">
         <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
@@ -315,7 +446,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../../stores/jadwal'
@@ -326,6 +457,22 @@ const router = useRouter()
 const jadwal = useJadwalStore()
 const pasien = usePasienStore()
 const obat = useObatStore()
+const reminderTimes = ref([])
+
+const frekuensiCount = computed(() => {
+  const f = jadwal.form.frekuensi || ''
+  const match = f.match(/\d+/)
+  return match ? parseInt(match[0]) : 0
+})
+
+const waktuLabels = ['Pagi', 'Siang', 'Malam']
+
+watch(frekuensiCount, (val) => {
+  reminderTimes.value = Array.from(
+    { length: val },
+    (_, i) => reminderTimes.value[i] || ''
+  )
+})
 
 const openDropdownId = ref(null)
 
@@ -365,6 +512,14 @@ onMounted(async () => {
     pasien.fetchPasiens(),
     obat.fetchObats()
   ])
+
+  if (!jadwal.form.jumlah_hari) {
+    jadwal.form.jumlah_hari = 7
+  }
+
+  if (!jadwal.form.tipe_durasi) {
+    jadwal.form.tipe_durasi = 'rutin'
+  }
 })
 
 const handleSubmit = () => {
@@ -376,6 +531,8 @@ const handleSubmit = () => {
     alert('Pilih minimal satu waktu minum (Pagi/Siang/Malam)')
     return
   }
+  jadwal.form.waktu_reminder = reminderTimes.value
+  jadwal.form.tipe_durasi = jadwal.form.tipe_durasi || 'rutin'
   jadwal.submitJadwal()
 }
 </script>

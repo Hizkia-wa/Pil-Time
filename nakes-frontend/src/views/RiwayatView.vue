@@ -1,50 +1,53 @@
 <template>
   <LayoutWrapper>
-    <div>
+    <div class="p-4 md:p-8">
       <!-- Header -->
       <div class="mb-6 md:mb-8">
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Riwayat Kepatuhan</h1>
-        <p class="text-sm md:text-base text-gray-600">Selamat datang. Ayo, Lihat Riwayat Kepatuhan Minum Obat</p>
       </div>
 
       <!-- Statistics Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 lg:gap-6 mb-6 md:mb-8">
         <!-- Diminum -->
-        <div class="bg-white rounded-lg md:rounded-2xl border-2 border-green-200 p-4 md:p-6 shadow-sm hover:shadow-md transition">
+        <div class="bg-white rounded-lg md:rounded-2xl border-2  p-4 md:p-6 shadow-sm hover:shadow-md transition">
           <div class="flex items-start justify-between mb-3 md:mb-4">
-            <div class="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex-shrink-0">
-              <svg class="w-6 h-6 md:w-8 md:h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="#0F9B76" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M5 13l4 4L19 7"/>
               </svg>
             </div>
           </div>
-          <p class="text-2xl md:text-4xl font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.diminum ?? 0 }}</p>
+          <p class="text-2xl font-bold text-slate-800 font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.diminum ?? 0 }}</p>
           <p class="text-xs md:text-sm text-gray-600">Diminum</p>
         </div>
 
         <!-- Terlambat -->
-        <div class="bg-white rounded-lg md:rounded-2xl border-2 border-orange-200 p-4 md:p-6 shadow-sm hover:shadow-md transition">
+        <div class="bg-white rounded-lg md:rounded-2xl border-2  p-4 md:p-6 shadow-sm hover:shadow-md transition">
           <div class="flex items-start justify-between mb-3 md:mb-4">
-            <div class="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-orange-100 rounded-full flex-shrink-0">
-              <svg class="w-6 h-6 md:w-8 md:h-8 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="#D97706" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M12 8v4l3 3"/>
+                <circle cx="12" cy="12" r="9" stroke-width="1.8"/>
               </svg>
             </div>
           </div>
-          <p class="text-2xl md:text-4xl font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.terlambat ?? 0 }}</p>
+          <p class="text-2xl font-bold text-slate-800 font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.terlambat ?? 0 }}</p>
           <p class="text-xs md:text-sm text-gray-600">Terlambat</p>
         </div>
 
         <!-- Terlewat -->
-        <div class="bg-white rounded-lg md:rounded-2xl border-2 border-red-200 p-4 md:p-6 shadow-sm hover:shadow-md transition">
+        <div class="bg-white rounded-lg md:rounded-2xl border-2  p-4 md:p-6 shadow-sm hover:shadow-md transition">
           <div class="flex items-start justify-between mb-3 md:mb-4">
-            <div class="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-red-100 rounded-full flex-shrink-0">
-              <svg class="w-6 h-6 md:w-8 md:h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="#DC2626" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M6 6l12 12M6 18L18 6"/>
               </svg>
             </div>
           </div>
-          <p class="text-2xl md:text-4xl font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.terlewat ?? 0 }}</p>
+          <p class="text-2xl font-bold text-slate-800 font-bold text-slate-900 mb-1">{{ riwayatStore.statistics?.terlewat ?? 0 }}</p>
           <p class="text-xs md:text-sm text-gray-600">Terlewat</p>
         </div>
       </div>

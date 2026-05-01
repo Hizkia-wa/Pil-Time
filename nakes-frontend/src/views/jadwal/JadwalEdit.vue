@@ -4,17 +4,8 @@
       <!-- Header -->
       <div class="bg-white border-b border-gray-200 px-4 md:px-8 py-4">
         <div class="flex items-center gap-2 md:gap-4">
-          <button 
-            @click="goBack"
-            class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-xs md:text-sm font-medium">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Kembali
-          </button>
           <div>
             <h2 class="text-base md:text-lg font-bold text-slate-900">Edit Jadwal Obat</h2>
-            <p class="text-xs text-gray-500">Ubah informasi jadwal minum obat</p>
           </div>
         </div>
       </div>
@@ -25,9 +16,6 @@
           <!-- Info bar -->
           <div class="flex flex-col md:flex-row md:items-center md:gap-6 mb-6 bg-white rounded-xl px-4 md:px-6 py-4 shadow-sm border border-gray-100">
             <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center w-8 h-8 rounded-full bg-teal-100 text-white text-xs font-bold">
-                {{ getInitials(jadwal?.pasien_nama) }}
-              </div>
               <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Pasien</p>
                 <p class="text-sm font-semibold text-slate-900">{{ jadwal?.pasien_nama }}</p>
@@ -40,15 +28,8 @@
             <!-- Left: Adjustable Fields -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
               <div class="flex items-center gap-3 mb-5">
-                <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                    <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/>
-                  </svg>
-                </div>
                 <div>
-                  <h3 class="text-sm font-semibold text-slate-900">Informasi Obat</h3>
-                  <p class="text-xs text-gray-500">Detail obat yang diberikan</p>
+                  <h1 class="title font-bold text-slate-900">Informasi Obat</h1>
                 </div>
               </div>
 
@@ -79,11 +60,21 @@
                 </div>
 
                 <div>
-                  <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                  <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
                     Frekuensi per Hari <span class="text-red-500">*</span>
                   </label>
-                  <input v-model="editForm.frekuensi_per_hari" type="text" placeholder="Contoh: 2x sehari"
-                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"/>
+
+                  <div class="space-y-3">
+                    <div v-for="waktu in selectedWaktuMinum" :key="waktu" class="flex items-center gap-3">
+                      <span class="w-16 text-sm font-medium text-gray-700">{{ waktu }}</span>
+
+                      <input
+                        v-model="waktuReminder[waktu]"
+                        type="time"
+                        class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -141,14 +132,8 @@
             <!-- Right: Durasi Info -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
               <div class="flex items-center gap-3 mb-5">
-                <div class="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v2a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
                 <div>
-                  <h3 class="text-sm font-semibold text-slate-900">Durasi & Status</h3>
-                  <p class="text-xs text-gray-500">Informasi pengobatan</p>
+                  <h2 class="totle font-bold text-slate-900">Durasi & Jadwal</h2>
                 </div>
               </div>
 
@@ -163,8 +148,8 @@
                       :class="[
                         'flex-1 px-3 py-2 rounded-lg text-xs md:text-sm font-medium border transition',
                         editForm.tipe_durasi === 'hari'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                          ? 'bg-teal-500 text-white border-teal-300'
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-teal-600'
                       ]">
                       Hari
                     </button>
@@ -172,8 +157,8 @@
                       :class="[
                         'flex-1 px-3 py-2 rounded-lg text-xs md:text-sm font-medium border transition',
                         editForm.tipe_durasi === 'rutin'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                          ? 'bg-teal-500 text-white border-teal-300'
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-teal-600'
                       ]">
                       Rutin
                     </button>
@@ -186,7 +171,21 @@
                     Jumlah Hari <span class="text-red-500">*</span>
                   </label>
                   <input v-model="editForm.jumlah_hari" type="number" placeholder="Contoh: 7"
-                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"/>
+                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:border-transparent outline-none"/>
+                </div>
+                <!-- Jika Rutin -->
+                <div v-if="editForm.tipe_durasi === 'rutin'" class="space-y-3">
+                  <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500">
+                      Jadwal akan berjalan setiap hari sesuai waktu yang dipilih.
+                    </p>
+                  </div>
+
+                  <div class="p-3 bg-teal-50 rounded-lg border border-teal-100">
+                    <p class="text-xs text-teal-600">
+                      Pengingat akan dikirim 5 menit sebelum waktu minum
+                    </p>
+                  </div>
                 </div>
 
                 <!-- Display Dates -->
@@ -198,33 +197,6 @@
                   <div v-if="editForm.tanggal_selesai" class="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <p class="text-xs text-gray-500 uppercase font-medium mb-1">Tanggal Selesai</p>
                     <p class="text-sm font-semibold text-slate-900">{{ formatDate(editForm.tanggal_selesai) }}</p>
-                  </div>
-                </div>
-
-                <!-- Edit Status -->
-                <div>
-                  <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
-                    Status <span class="text-red-500">*</span>
-                  </label>
-                  <div class="flex gap-2">
-                    <button type="button" @click="editForm.status = 'Aktif'"
-                      :class="[
-                        'flex-1 px-3 py-2 rounded-lg text-xs md:text-sm font-medium border transition',
-                        editForm.status === 'Aktif'
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-green-300'
-                      ]">
-                      Aktif
-                    </button>
-                    <button type="button" @click="editForm.status = 'Tidak Aktif'"
-                      :class="[
-                        'flex-1 px-3 py-2 rounded-lg text-xs md:text-sm font-medium border transition',
-                        editForm.status === 'Tidak Aktif'
-                          ? 'bg-red-600 text-white border-red-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-red-300'
-                      ]">
-                      Tidak Aktif
-                    </button>
                   </div>
                 </div>
               </div>
@@ -293,12 +265,17 @@ export default {
     const editForm = ref(null)
     const selectedWaktuMinum = ref([])
 
+    const waktuReminder = ref({
+      Pagi: '',
+      Siang: '',
+      Malam: ''
+    })
+
     const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan', 'Bebas']
     const wakteMinum = [
       { value: 'Pagi', label: 'Pagi', icon: '☀️' },
       { value: 'Siang', label: 'Siang', icon: '🌤️' },
       { value: 'Malam', label: 'Malam', icon: '🌙' },
-      { value: 'Saat gejala', label: 'Saat gejala', icon: '⏰' },
     ]
 
     const jadwal = computed(() => {
@@ -314,8 +291,8 @@ export default {
         selectedWaktuMinum.value.push(val)
       }
       
-      // Sort waktu in canonical order: Pagi, Siang, Malam, Saat gejala
-      const order = { 'Pagi': 0, 'Siang': 1, 'Malam': 2, 'Saat gejala': 3 }
+      // Sort waktu in canonical order: Pagi, Siang, Malam
+      const order = { 'Pagi': 0, 'Siang': 1, 'Malam': 2 }
       selectedWaktuMinum.value.sort((a, b) => order[a] - order[b])
       
       editForm.value.waktu_minum = selectedWaktuMinum.value.join(', ')
@@ -352,9 +329,11 @@ export default {
         alert('Satuan harus diisi')
         return
       }
-      if (!editForm.value.frekuensi_per_hari) {
-        alert('Frekuensi harus diisi')
-        return
+      for (const waktu of selectedWaktuMinum.value) {
+        if (!waktuReminder.value[waktu]) {
+          alert(`Jam untuk ${waktu} harus diisi`)
+          return
+        }
       }
       if (!editForm.value.waktu_minum) {
         alert('Waktu minum harus diisi')
@@ -366,10 +345,6 @@ export default {
       }
       if (editForm.value.tipe_durasi === 'hari' && !editForm.value.jumlah_hari) {
         alert('Jumlah hari harus diisi')
-        return
-      }
-      if (!editForm.value.status) {
-        alert('Status harus dipilih')
         return
       }
 
@@ -393,6 +368,9 @@ export default {
 
       isSaving.value = true
       try {
+        editForm.value.frekuensi_per_hari = selectedWaktuMinum.value
+        .map(w => `${w} (${waktuReminder.value[w]})`)
+        .join(', ')
         await jadwalStore.updateJadwal(editForm.value.id, {
           nama_obat: editForm.value.nama_obat,
           jumlah_dosis: editForm.value.jumlah_dosis,
@@ -424,6 +402,9 @@ export default {
             // Parse waktu_minum yang ada dan set selectedWaktuMinum
             if (editForm.value.waktu_minum) {
               selectedWaktuMinum.value = editForm.value.waktu_minum.split(',').map(w => w.trim())
+              selectedWaktuMinum.value.forEach(waktu => {
+                waktuReminder.value[waktu] = ''
+              })
             }
           }
         })
@@ -437,6 +418,7 @@ export default {
     })
 
     return {
+      waktuReminder,
       jadwal,
       editForm,
       loading,
