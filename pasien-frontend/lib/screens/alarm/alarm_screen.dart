@@ -52,12 +52,32 @@ class _AlarmScreenState extends State<AlarmScreen> {
     }
   }
 
+  /// Cek apakah waktu jadwal sudah lewat >75 menit (Terlewat).
+  /// Konsisten dengan threshold di dashboard dan backend.
+  bool _isExpired(String waktuMinum) {
+    try {
+      final parts = waktuMinum.split(':');
+      if (parts.length < 2) return false;
+      final now = DateTime.now();
+      final jadwalDt = DateTime(
+        now.year, now.month, now.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+      return now.difference(jadwalDt).inMinutes > 75;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Jalankan scheduling alarm di background — tidak memblokir UI.
+  /// Jadwal yang sudah expired (>75 menit) tidak di-schedule.
   void _scheduleAlarmsBackground(List<Jadwal> jadwals) {
     Future(() async {
       try {
         final notifModels = jadwals
-            .where((j) => j.status.toLowerCase() == 'aktif')
+            .where((j) =>
+                j.status.toLowerCase() == 'aktif' &&
+                !_isExpired(j.waktuMinum))
             .map((j) => JadwalNotifModel(
                   jadwalId: j.id,
                   namaObat: j.namaObat,
@@ -82,6 +102,9 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
     for (var jadwal in jadwals) {
       if (jadwal.status.toLowerCase() != 'aktif') continue;
+
+      // Sembunyikan jadwal yang sudah >75 menit (Terlewat)
+      if (_isExpired(jadwal.waktuMinum)) continue;
 
       if (jadwal.waktuMinum.isNotEmpty) {
         _addReminderToMap(reminderMap, jadwal.waktuMinum, jadwal);
@@ -124,107 +147,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-  // ── Toggle ON / OFF semua alarm ──────────────────────────────────
-  Future<void> _toggleAlarms() async {
-    if (_alarmsActive) {
-      // Matikan semua alarm
-      await NotificationService.instance.cancelAll();
-      setState(() => _alarmsActive = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔕 Semua alarm telah dimatikan'),
-            backgroundColor: Color(0xFFEF4444),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } else {
-      // Nyalakan kembali — reload & re-schedule
-      setState(() {
-        _alarmsActive = true;
-        _remindersFuture = _fetchAndScheduleReminders();
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔔 Alarm dijadwalkan ulang'),
-            backgroundColor: Color(0xFF2BB673),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
 
-  // ── TEST: Kirim notifikasi 5 detik dari sekarang ──────────────────
-  // Gunakan ini untuk verifikasi bahwa notifikasi berfungsi.
-  // Tombol ini aman untuk dihapus setelah testing selesai.
-  Future<void> _testNotifikasi(List<ReminderGroup> groups) async {
-    final namaObat = groups.isNotEmpty && groups.first.reminders.isNotEmpty
-        ? groups.first.reminders.first.namaObat
-        : 'Test Obat';
-
-    // Schedule 5 detik dari sekarang via zonedSchedule (bukan show langsung)
-    // sehingga path kode sama persis dengan alarm asli
-    await NotificationService.instance.scheduleTestNotification(
-      namaObat: namaObat,
-      delaySeconds: 5,
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.timer, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Notifikasi test akan muncul dalam 5 detik...'),
-            ],
-          ),
-          backgroundColor: Color(0xFF0B1F3A),
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  // ── TEST: Kirim ALARM 1 menit dari sekarang ─────────────────────────
-  // Menggunakan fungsi scheduleJadwalNotification yang persis sama
-  // dengan produksi untuk melihat integrasi alarm pada waktu nyata.
-  Future<void> _testAlarmSatuMenit(List<ReminderGroup> groups) async {
-    final namaObat = groups.isNotEmpty && groups.first.reminders.isNotEmpty
-        ? groups.first.reminders.first.namaObat
-        : 'Test Obat';
-
-    final now = DateTime.now().add(const Duration(minutes: 1));
-    final timeStr =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-    await NotificationService.instance.scheduleJadwalNotification(
-      notifId: 88888, // ID khusus untuk test
-      namaObat: '🧪 ALARM TEST: $namaObat',
-      dosis: '1 Dosis Uji Coba',
-      scheduledTime: timeStr,
-      jadwalId: 88888,
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.alarm, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text('Alarm test dijadwalkan pada $timeStr'),
-            ],
-          ),
-          backgroundColor: const Color(0xFF2BB673),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
 
   String _getNextReminderTime(List<ReminderGroup> groups) {
     if (groups.isEmpty) return '--:--';
@@ -414,79 +337,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                     ),
                   ),
 
-                // ── TOMBOL TEST NOTIFIKASI & ALARM (dev helper) ─────────────
-                if (groups.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Column(
-                      children: [
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF2BB673)),
-                            minimumSize: const Size(double.infinity, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () => _testNotifikasi(groups),
-                          icon: const Icon(Icons.notifications_active,
-                              color: Color(0xFF2BB673)),
-                          label: const Text(
-                            '🔔 Test Notifikasi (5 detik)',
-                            style: TextStyle(color: Color(0xFF2BB673)),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFF59E0B)),
-                            minimumSize: const Size(double.infinity, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () => _testAlarmSatuMenit(groups),
-                          icon: const Icon(Icons.alarm,
-                              color: Color(0xFFF59E0B)),
-                          label: const Text(
-                            '⏰ Test Alarm Nyata (1 menit)',
-                            style: TextStyle(color: Color(0xFFF59E0B)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
 
-                // ── TOMBOL TOGGLE ALARM ──────────────────────────────
-                if (groups.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _alarmsActive
-                            ? Colors.black
-                            : const Color(0xFF2BB673),
-                        minimumSize: const Size(double.infinity, 56),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _toggleAlarms,
-                      icon: Icon(
-                        _alarmsActive
-                            ? Icons.notifications_off
-                            : Icons.notifications_active,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        _alarmsActive
-                            ? 'Matikan Semua Alarm'
-                            : 'Aktifkan Kembali Alarm',
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.white),
-                      ),
-                    ),
-                  ),
               ],
             );
           },

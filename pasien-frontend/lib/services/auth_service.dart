@@ -2,12 +2,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-class AuthService {
-  // Main backend (port 8080) — untuk data aplikasi
-  static const String backendUrl = 'http://10.0.2.2:8080';
+import '../config/app_config.dart';
 
-  // Auth service (port 8081) — untuk login, register, reset password
-  static const String authUrl = 'http://10.0.2.2:8081';
+class AuthService {
+  // URL configuration dari AppConfig
+  static const String backendUrl = AppConfig.baseUrl;
+  static const String authUrl = AppConfig.authServiceUrl;
 
   // Shared Preferences keys
   static const String _pasienIdKey = 'pasien_id';
@@ -39,7 +39,10 @@ class AuthService {
     final pasienEmail = prefs.getString(_pasienEmailKey);
     final token = prefs.getString(_tokenKey);
 
-    if (pasienId == null || pasienName == null || pasienEmail == null || token == null) {
+    if (pasienId == null ||
+        pasienName == null ||
+        pasienEmail == null ||
+        token == null) {
       return null;
     }
 

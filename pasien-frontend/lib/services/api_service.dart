@@ -2,13 +2,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'auth_service.dart';
+import '../config/app_config.dart';
 
 class ApiService {
-  // Main backend (port 8080) — semua data aplikasi
-  static const String baseUrl = 'http://10.0.2.2:8080';
-
-  // Auth service (port 8081) — untuk forgot/reset password (public)
-  static const String authUrl = 'http://10.0.2.2:8081';
+  // URL configuration dari AppConfig
+  static const String baseUrl = AppConfig.baseUrl;
+  static const String authUrl = AppConfig.authServiceUrl;
 
   /// Helper: buat header dengan JWT token
   static Future<Map<String, String>> _authHeaders() async {
@@ -44,7 +43,11 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'statusCode': 0, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {
+        'success': false,
+        'statusCode': 0,
+        'error': 'Koneksi gagal: ${e.toString()}',
+      };
     }
   }
 
@@ -125,6 +128,32 @@ class ApiService {
       final headers = await _authHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/api/admin/riwayat/pasien/$pasienId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        return {'success': true, 'data': responseBody['data'] ?? []};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error':
+              errorBody['message'] ??
+              errorBody['error'] ??
+              'Gagal mengambil riwayat',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getPasienRiwayat() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/pasien/riwayat'),
         headers: headers,
       );
 

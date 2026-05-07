@@ -69,7 +69,7 @@
           </router-link>
 
           <router-link 
-            to="/pasien"
+            to="/jadwal"
             class="block p-4 bg-white rounded-[16px] border border-slate-100 hover:shadow-md transition"
           >
             <div class="flex items-center gap-3">
@@ -88,7 +88,7 @@
           </router-link>
 
           <router-link 
-            to="/pasien"
+            to="/obat"
             class="block p-4 bg-white rounded-[16px] border border-slate-100 hover:shadow-md transition"
           >
             <div class="flex items-center gap-3">

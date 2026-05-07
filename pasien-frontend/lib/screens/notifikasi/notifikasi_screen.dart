@@ -11,12 +11,18 @@ class NotificationItem {
   final String desc;
   final String time;
   final NotificationType type;
+  final int? jadwalId;
+  final String? aturan;
+  final bool isAdvanceReminder; // true jika notifikasi 15 menit sebelumnya
 
   NotificationItem({
     required this.title,
     required this.desc,
     required this.time,
     required this.type,
+    this.jadwalId,
+    this.aturan,
+    this.isAdvanceReminder = false,
   });
 }
 
@@ -34,6 +40,7 @@ class _NotificationScreenState extends State<NotificationScreen>
   bool _isLoading = true;
   String? _errorMsg;
   late TabController _tabController;
+  Set<int> _deferredNotifications = {}; // Track deferred notifications by index
 
   @override
   void initState() {
@@ -72,6 +79,23 @@ class _NotificationScreenState extends State<NotificationScreen>
     }
   }
 
+  /// Cek apakah waktu jadwal (format "HH:MM") sudah lewat >75 menit.
+  /// Konsisten dengan threshold di dashboard, alarm screen, dan backend.
+  bool _isTimeExpired(String waktu) {
+    try {
+      final parts = waktu.split(':');
+      if (parts.length < 2) return false;
+      final now = DateTime.now();
+      final jadwalDt = DateTime(
+        now.year, now.month, now.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+      return now.difference(jadwalDt).inMinutes > 75;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _fetchNotifications(int pasienId) async {
     try {
       // Fetch dashboard data (upcoming medications)
@@ -98,7 +122,12 @@ class _NotificationScreenState extends State<NotificationScreen>
           final namaObat = jadwal['nama_obat'] ?? 'Obat';
           final waktu = jadwal['waktu_minum'] ?? jadwal['jam'] ?? '00:00';
           final aturan = jadwal['aturan'] ?? '';
+          final jadwalId = jadwal['id'] ?? jadwal['jadwal_id'];
 
+          // Lewati jadwal yang sudah >75 menit (sudah Terlewat)
+          if (_isTimeExpired(waktu)) continue;
+
+          // Notifikasi pada jam jadwal
           notifications.add(
             NotificationItem(
               title: namaObat,
@@ -107,8 +136,46 @@ class _NotificationScreenState extends State<NotificationScreen>
                   : 'Segera diminum untuk kesehatan Anda.',
               time: waktu,
               type: NotificationType.mendatang,
+              jadwalId: jadwalId,
+              aturan: aturan,
+              isAdvanceReminder: false,
             ),
           );
+
+          // Notifikasi 15 menit sebelum (hanya tampil jika belum expired)
+          try {
+            final timeParts = waktu.split(':');
+            if (timeParts.length == 2) {
+              int hour = int.parse(timeParts[0]);
+              int minute = int.parse(timeParts[1]);
+
+              // Kurangi 15 menit
+              minute -= 15;
+              if (minute < 0) {
+                minute += 60;
+                hour -= 1;
+                if (hour < 0) hour = 23;
+              }
+
+              final advanceTime =
+                  '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+              // Tampilkan reminder 15 menit sebelum hanya jika belum expired
+              if (!_isTimeExpired(advanceTime)) {
+                notifications.add(
+                  NotificationItem(
+                    title: namaObat,
+                    desc: 'Siapkan obat ini. Waktu minum: $waktu',
+                    time: advanceTime,
+                    type: NotificationType.mendatang,
+                    jadwalId: jadwalId,
+                    aturan: aturan,
+                    isAdvanceReminder: true,
+                  ),
+                );
+              }
+            }
+          } catch (_) {}
         }
       }
 
@@ -122,6 +189,7 @@ class _NotificationScreenState extends State<NotificationScreen>
           final waktu =
               tracking['waktu_minum'] ?? tracking['jadwal'] ?? '00:00';
           final tanggal = tracking['tanggal'] as String? ?? '';
+          final jadwalId = tracking['jadwal_id'];
 
           // Check if it's today and terlewat
           if (status == 'Terlewat' || status == 'Terlambat') {
@@ -141,6 +209,8 @@ class _NotificationScreenState extends State<NotificationScreen>
                         'Anda melewatkan dosis ini. Catat alasan atau minum sekarang jika masih diperlukan.',
                     time: waktu,
                     type: NotificationType.terlewat,
+                    jadwalId: jadwalId,
+                    isAdvanceReminder: false,
                   ),
                 );
               }
@@ -264,15 +334,27 @@ class _NotificationScreenState extends State<NotificationScreen>
       controller: _tabController,
       children: [
         // Tab Semua
-        _buildNotificationList(_allNotifications),
+        _buildNotificationList(_getVisibleNotifications(_allNotifications)),
         // Tab Alarm
         _buildNotificationList(
-          _allNotifications
-              .where((n) => n.type == NotificationType.mendatang)
-              .toList(),
+          _getVisibleNotifications(
+            _allNotifications
+                .where((n) => n.type == NotificationType.mendatang)
+                .toList(),
+          ),
         ),
       ],
     );
+  }
+
+  // Filter notifikasi yang tidak tertunda
+  List<NotificationItem> _getVisibleNotifications(
+    List<NotificationItem> notifications,
+  ) {
+    return notifications.where((n) {
+      final idx = _allNotifications.indexOf(n);
+      return !_deferredNotifications.contains(idx);
+    }).toList();
   }
 
   Widget _buildNotificationList(List<NotificationItem> notifications) {
@@ -401,11 +483,35 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   Widget buildButton(NotificationItem item, Color color) {
     if (item.type == NotificationType.mendatang) {
+      // Untuk advance reminder (15 menit sebelum), hanya tampilkan reminder
+      if (item.isAdvanceReminder) {
+        return Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: color, size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Bersiaplah untuk minum obat ini',
+                  style: TextStyle(color: color, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Notifikasi jadwal normal
       return Row(
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => _markAsTaken(item),
               icon: Icon(Icons.check, size: 16),
               label: Text("Siap!"),
               style: ElevatedButton.styleFrom(
@@ -419,7 +525,7 @@ class _NotificationScreenState extends State<NotificationScreen>
           SizedBox(width: 10),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => _deferNotification(item),
               icon: Icon(Icons.access_time, size: 16),
               label: Text("Tunda 15m"),
               style: ElevatedButton.styleFrom(
@@ -440,7 +546,7 @@ class _NotificationScreenState extends State<NotificationScreen>
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => _showReasonDialog(item),
               icon: Icon(Icons.edit),
               label: Text("Catat Alasan"),
               style: ElevatedButton.styleFrom(
@@ -454,7 +560,7 @@ class _NotificationScreenState extends State<NotificationScreen>
           SizedBox(width: 10),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _markAsTaken(item),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[200],
                 foregroundColor: Colors.black,
@@ -484,5 +590,156 @@ class _NotificationScreenState extends State<NotificationScreen>
         ),
       ),
     );
+  }
+
+  // Fungsi untuk menandai obat sudah diminum
+  Future<void> _markAsTaken(NotificationItem item) async {
+    if (item.jadwalId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ID jadwal tidak ditemukan')),
+      );
+      return;
+    }
+
+    try {
+      final now = DateTime.now();
+      final waktuMinum =
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+      final response = await ApiService.postRiwayat(
+        jadwalId: item.jadwalId!,
+        status: 'Diminum',
+        waktuMinum: waktuMinum,
+      );
+
+      if (response['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ Obat berhasil dicatat'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh notifikasi
+        await Future.delayed(Duration(milliseconds: 500));
+        _loadNotifications();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${response['error']}')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  // Fungsi untuk menunda notifikasi 15 menit
+  void _deferNotification(NotificationItem item) {
+    final index = _allNotifications.indexOf(item);
+    if (index != -1) {
+      setState(() {
+        _deferredNotifications.add(index);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Notifikasi ditunda 15 menit'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Auto-undur setelah 15 menit
+      Future.delayed(Duration(minutes: 15), () {
+        setState(() {
+          _deferredNotifications.remove(index);
+        });
+      });
+    }
+  }
+
+  // Fungsi untuk menampilkan dialog catat alasan
+  void _showReasonDialog(NotificationItem item) {
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Catat Alasan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Obat: ${item.title}',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Jelaskan alasan Anda melewatkan obat ini...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _submitMissedReason(item, reasonController.text);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Fungsi untuk menyimpan alasan terlewat
+  Future<void> _submitMissedReason(NotificationItem item, String reason) async {
+    if (item.jadwalId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ID jadwal tidak ditemukan')),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.postRiwayat(
+        jadwalId: item.jadwalId!,
+        status: 'Terlewat',
+        waktuMinum: item.time,
+      );
+
+      if (response['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ Alasan telah dicatat'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh notifikasi
+        await Future.delayed(Duration(milliseconds: 500));
+        _loadNotifications();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${response['error']}')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 }

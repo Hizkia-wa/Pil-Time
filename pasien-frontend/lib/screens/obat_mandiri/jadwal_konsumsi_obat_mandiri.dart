@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import './tambah_jadwal_konsumsi_obat_mandiri.dart';
+import '../../services/api_service.dart';
 
 class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
   final int streakHari;
@@ -18,8 +19,7 @@ class _JadwalKonsumsiObatMandiriStyledState
   List<dynamic> jadwalList = [];
   bool isLoading = true;
 
-  // Sesuaikan IP jika pakai emulator (10.0.2.2) atau device asli
-  final String baseUrl = "http://10.0.2.2:8080/api/admin/jadwal";
+  String get baseUrl => "${ApiService.baseUrl}/api/admin/jadwal";
 
   @override
   void initState() {

@@ -21,13 +21,15 @@ type ResepJadwalUsecase struct {
 	resepRepo      outbound.ResepObatRepository
 	jadwalObatRepo outbound.JadwalObatRepository
 	jadwalRepo     outbound.JadwalRepository
+	obatRepo       outbound.ObatRepository
 }
 
-func NewResepJadwalUsecase(r outbound.ResepObatRepository, j outbound.JadwalObatRepository, jr outbound.JadwalRepository) *ResepJadwalUsecase {
+func NewResepJadwalUsecase(r outbound.ResepObatRepository, j outbound.JadwalObatRepository, jr outbound.JadwalRepository, o outbound.ObatRepository) *ResepJadwalUsecase {
 	return &ResepJadwalUsecase{
 		resepRepo:      r,
 		jadwalObatRepo: j,
 		jadwalRepo:     jr,
+		obatRepo:       o,
 	}
 }
 
@@ -60,15 +62,19 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		return err
 	}
 
-	// Handle tanggal_selesai yang mungkin kosong
+	// Handle tanggal_selesai
 	var tanggalSelesai time.Time
-	if req.TanggalSelesai != "" && req.TanggalSelesai != "null" {
+	if req.TipeDurasi == "hari" && req.JumlahHari > 0 {
+		tanggalSelesai = tanggalMulai.AddDate(0, 0, req.JumlahHari)
+	} else if req.TanggalSelesai != "" && req.TanggalSelesai != "null" {
 		tanggalSelesai, err = parseDate(req.TanggalSelesai)
 		if err != nil {
 			return err
 		}
+	} else if req.TipeDurasi == "rutin" {
+		// Kosongkan tanggal selesai untuk rutin
 	} else {
-		// Jika kosong, set ke 30 hari setelah tanggal mulai
+		// Jika kosong dan bukan rutin, set default ke 30 hari
 		tanggalSelesai = tanggalMulai.AddDate(0, 0, 30)
 	}
 
@@ -123,9 +129,14 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 
 	// BUAT JADWAL DI TABEL JADWAL (UNTUK JADWAL-SERVICE)
 	// Hitung jumlah hari
-	jumlahHari := 0
-	if !tanggalSelesai.IsZero() && !tanggalMulai.IsZero() {
+	jumlahHari := req.JumlahHari
+	if jumlahHari == 0 && !tanggalSelesai.IsZero() && !tanggalMulai.IsZero() {
 		jumlahHari = int(tanggalSelesai.Sub(tanggalMulai).Hours() / 24)
+	}
+
+	tipeDurasi := req.TipeDurasi
+	if tipeDurasi == "" {
+		tipeDurasi = "hari"
 	}
 
 	// Format tanggal ke string format yang diharapkan tabel jadwal
@@ -135,10 +146,16 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		tglSelesaiStr = tanggalSelesai.Format("2006-01-02")
 	}
 
+	// AMBIL DATA OBAT DARI MASTER OBAT
+	obat, err := u.obatRepo.GetByID(req.ObatID)
+	if err != nil {
+		return err
+	}
+
 	// Buat jadwal entry di tabel jadwal dengan waktu reminder dari jadwal obat
 	jadwalForService := &domain.Jadwal{
 		PasienID:           req.PasienID,
-		NamaObat:           "Obat #" + strconv.Itoa(req.ObatID),
+		NamaObat:           obat.NamaObat,
 		JumlahDosis:        parseInt(req.Dosis),
 		Satuan:             "tablet", // default
 		KategoriObat:       "-",
@@ -147,7 +164,7 @@ func (u *ResepJadwalUsecase) Create(req *dto.CreateResepWithJadwalDTO) error {
 		WaktuMinum:         strings.Join(jamList, ", "),
 		AturanKonsumsi:     req.AturanKonsumsi,
 		Catatan:            req.Catatan,
-		TipeDurasi:         "hari",
+		TipeDurasi:         tipeDurasi,
 		JumlahHari:         jumlahHari,
 		TanggalMulai:       tglMulaiStr,
 		TanggalSelesai:     tglSelesaiStr,

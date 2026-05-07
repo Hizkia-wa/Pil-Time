@@ -74,7 +74,16 @@ export const useRiwayatStore = defineStore('riwayat', () => {
     try {
       const response = await riwayatService.getAllRiwayat()
       const data = response?.data?.data || response?.data || []
-      riwayatList.value = Array.isArray(data) ? data : []
+      riwayatList.value = Array.isArray(data) ? data.map(item => ({
+        ...item,
+        namaPasien: item?.namaPasien || item?.nama_pasien || '-',
+        namaObat: item?.namaObat || item?.nama_obat || '-',
+        waktuMinum: item?.waktuMinum || item?.waktu_minum || '-',
+        jadwal: item?.jadwal || '-',
+        pasienId: item?.pasienId || item?.pasien_id,
+        jadwalId: item?.jadwalId || item?.jadwal_id,
+        buktiFoto: item?.buktiFoto || item?.bukti_foto
+      })) : []
     } catch (err) {
       console.error('Error fetching riwayat:', err)
       error.value = err?.message || 'Gagal mengambil data riwayat'

@@ -44,9 +44,9 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
         throw Exception(response['error'] ?? 'Gagal mengambil data obat');
       }
 
-      // Backend returns PasienJadwalResponse with structure: {PasienID, Nama, Jadwals: [...]}
+      // Backend returns PasienJadwalResponse with structure: {PasienID, Nama, jadwals: [...]}
       final responseData = response['data'] as Map<String, dynamic>;
-      final List<dynamic> jadwalsList = responseData['Jadwals'] ?? [];
+      final List<dynamic> jadwalsList = responseData['jadwals'] ?? [];
       final obats = jadwalsList
           .map((item) => ObatDetail.fromJson(item as Map<String, dynamic>))
           .toList();

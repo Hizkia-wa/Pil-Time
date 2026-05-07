@@ -15,4 +15,7 @@ type CreateResepWithJadwalDTO struct {
     FrekuensiPerHari int      `json:"frekuensi_per_hari"`
     AturanKonsumsi   string   `json:"aturan_konsumsi"`
     JamMinum         []string `json:"jam_minum"`
+    
+    TipeDurasi       string   `json:"tipe_durasi"`
+    JumlahHari       int      `json:"jumlah_hari"`
 }

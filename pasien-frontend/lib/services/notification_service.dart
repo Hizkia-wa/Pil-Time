@@ -453,6 +453,17 @@ class NotificationService {
     }
   }
 
+  Future<bool> checkPermissionStatus() async {
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      return await android?.areNotificationsEnabled() ?? false;
+    } else if (Platform.isIOS) {
+      return true;
+    }
+    return true;
+  }
+
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('[PilTime] Notification tapped: ${response.payload}');
     

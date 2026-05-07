@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 
 // ─── MODEL ───────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,6 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   int _selectedFilter = 0;
   final List<String> _filters = ['Semua', '7 Hari', '30 Hari', '3 Bulan'];
 
-  int? _pasienId;
   List<DayLog> _allData = [];
   bool _isLoading = true;
   String? _errorMsg;
@@ -117,8 +117,8 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       }
 
       final pasienId = session['pasien_id'] as int;
-      setState(() => _pasienId = pasienId);
 
+      // Fetch riwayat
       await _fetchRiwayat(pasienId);
     } catch (e) {
       debugPrint("Error loading data: $e");
@@ -139,17 +139,13 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
       final response = await http
           .get(
-            Uri.parse(
-              "http://10.0.2.2:8080/api/pasien/riwayat",
-            ),
+            Uri.parse("${ApiService.baseUrl}/api/pasien/riwayat"),
             headers: headers,
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
-
-        // Backend returns { "data": [...] }
         final List<dynamic> data = responseBody['data'] ?? [];
 
         if (data.isEmpty) {

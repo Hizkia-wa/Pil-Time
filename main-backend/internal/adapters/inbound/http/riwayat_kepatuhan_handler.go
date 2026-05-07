@@ -176,6 +176,14 @@ func (h *TrackingJadwalHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if req.PasienID == 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: "Key: 'CreateTrackingJadwalDTO.PasienID' Error:Field validation for 'PasienID' failed on the 'required' tag",
+		})
+		return
+	}
+
 	result, err := h.usecase.Create(&req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{

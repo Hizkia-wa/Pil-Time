@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/jadwal.dart';
 import 'auth_service.dart';
+import 'api_service.dart';
 import 'jadwal_cache_service.dart';
 import 'notification_service.dart';
 
@@ -74,7 +75,7 @@ class FcmService {
   static final FcmService instance = FcmService._();
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static const String _backendUrl = 'http://10.0.2.2:8080';
+  static String get _backendUrl => ApiService.baseUrl;
 
   // ==========================================================
   // INISIALISASI — panggil setelah Firebase.initializeApp()

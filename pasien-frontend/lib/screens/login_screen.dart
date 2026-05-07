@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return 'Email tidak boleh kosong';
                   }
                   if (!value.contains('@')) {
-                    return 'Email tidak valid';
+                    return 'Email harus menggunakan tanda "@"';
                   }
                   return null;
                 },

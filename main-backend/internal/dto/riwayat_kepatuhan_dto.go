@@ -21,7 +21,7 @@ type TrackingJadwalDTO struct {
 // CreateTrackingJadwalDTO - Request untuk membuat tracking jadwal
 type CreateTrackingJadwalDTO struct {
 	JadwalID   int    `json:"jadwal_id" binding:"required"`
-	PasienID   int    `json:"pasien_id" binding:"required"`
+	PasienID   int    `json:"pasien_id"`
 	Tanggal    string `json:"tanggal" binding:"required"` // YYYY-MM-DD format
 	Status     string `json:"status" binding:"required"`
 	WaktuMinum string `json:"waktu_minum"`

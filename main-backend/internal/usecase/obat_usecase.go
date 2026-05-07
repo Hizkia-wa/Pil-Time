@@ -6,14 +6,19 @@ import (
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
 	"errors"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type ObatUsecase struct {
-	repo outbound.ObatRepository
+	repo       outbound.ObatRepository
+	jadwalRepo outbound.JadwalRepository
 }
 
-func NewObatUsecase(r outbound.ObatRepository) *ObatUsecase {
-	return &ObatUsecase{repo: r}
+func NewObatUsecase(r outbound.ObatRepository, j outbound.JadwalRepository) *ObatUsecase {
+	return &ObatUsecase{repo: r, jadwalRepo: j}
 }
 
 // GetAll mendapatkan semua obat sesuai kolom DB
@@ -130,6 +135,18 @@ func (u *ObatUsecase) Delete(id int) error {
 		return errors.New("obat tidak ditemukan")
 	}
 
+	// Hapus jadwal terkait jika ini obat mandiri
+	if existing.IsMandiri && existing.PasienID != nil {
+		jadwals, err := u.jadwalRepo.GetByPasienID(*existing.PasienID)
+		if err == nil {
+			for _, j := range jadwals {
+				if j.NamaObat == existing.NamaObat && j.KategoriObat == "Mandiri" {
+					_ = u.jadwalRepo.Delete(j.JadwalID)
+				}
+			}
+		}
+	}
+
 	return u.repo.Delete(id)
 }
 
@@ -178,6 +195,43 @@ func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatRes
 	result, err := u.repo.Create(obat)
 	if err != nil {
 		return nil, errors.New("gagal menyimpan data obat mandiri: " + err.Error())
+	}
+
+	// 4. Buat Jadwal otomatis di tabel jadwal
+	// Urutkan pengingat secara kronologis
+	sort.Strings(req.Pengingat)
+	waktuMinum := strings.Join(req.Pengingat, ", ")
+
+	todayStr := time.Now().Format("2006-01-02")
+	tanggalSelesaiStr := ""
+	if req.DurasiHari > 0 {
+		selesai := time.Now().AddDate(0, 0, req.DurasiHari)
+		tanggalSelesaiStr = selesai.Format("2006-01-02")
+	}
+
+	jadwal := &domain.Jadwal{
+		PasienID:           req.PasienID,
+		NamaObat:           req.NamaObat,
+		JumlahDosis:        1,
+		Satuan:             "dosis",
+		KategoriObat:       "Mandiri",
+		TakaranObat:        req.Dosis,
+		FrekuensiPerHari:   strconv.Itoa(len(req.Pengingat)),
+		WaktuMinum:         waktuMinum,
+		AturanKonsumsi:     req.Catatan,
+		Catatan:            req.Catatan,
+		TipeDurasi:         "hari",
+		JumlahHari:         req.DurasiHari,
+		TanggalMulai:       todayStr,
+		TanggalSelesai:     tanggalSelesaiStr,
+		WaktuReminderPagi:  "",
+		WaktuReminderMalam: "",
+		Status:             "aktif",
+	}
+
+	_, err = u.jadwalRepo.Create(jadwal)
+	if err != nil {
+		return nil, errors.New("gagal menyimpan jadwal otomatis untuk obat mandiri: " + err.Error())
 	}
 
 	return persistence.ObatToResponseDTO(result), nil

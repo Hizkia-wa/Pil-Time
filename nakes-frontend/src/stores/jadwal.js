@@ -44,6 +44,9 @@ export const useJadwalStore = defineStore('jadwal', () => {
   tanggal_mulai: '',
   tanggal_selesai: '',
 
+  tipe_durasi: 'hari',
+  jumlah_hari: 1,
+
   waktu_reminder_pagi: '07:00',
   waktu_reminder_siang: '13:00',
   waktu_reminder_malam: '19:00'
@@ -74,7 +77,42 @@ export const useJadwalStore = defineStore('jadwal', () => {
   })
 
   const filteredJadwalList = computed(() => {
-    const list = jadwalList.value || []
+    const now = new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const list = (jadwalList.value || []).filter(j => {
+      // Jadwal 'rutin' tidak pernah expired — selalu tampil
+      if (j.tipe_durasi === 'rutin') return true
+
+      if (j.tipe_durasi === 'hari' && j.tanggal_selesai) {
+        const selesai = new Date(j.tanggal_selesai)
+        selesai.setHours(0, 0, 0, 0)
+
+        // Tanggal selesai sudah lampau (sebelum hari ini) → sembunyikan
+        if (selesai < today) return false
+
+        // Tanggal selesai = hari ini → cek apakah waktu minum terakhir sudah >75 menit
+        if (selesai.getTime() === today.getTime() && j.waktu_minum) {
+          const waktuList = j.waktu_minum.split(',').map(w => w.trim()).filter(Boolean)
+          // Ambil waktu terlambat hari ini (sort descending, ambil yang terakhir)
+          const lastWaktu = [...waktuList].sort().pop()
+          if (lastWaktu) {
+            const parts = lastWaktu.split(':')
+            if (parts.length === 2) {
+              const jadwalDt = new Date()
+              jadwalDt.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0)
+              const diffMinutes = (now - jadwalDt) / 60000
+              // Sembunyikan jika sudah >75 menit (konsisten dengan threshold backend & mobile)
+              if (diffMinutes > 75) return false
+            }
+          }
+        }
+      }
+
+      return true
+    })
+
     if (!searchQuery.value) return list
 
     return list.filter(j =>
@@ -159,6 +197,9 @@ const submitJadwal = async () => {
 
       frekuensi_per_hari: jamMinumList.length,
       aturan_konsumsi: form.value.aturan_konsumsi,
+      
+      tipe_durasi: form.value.tipe_durasi || 'hari',
+      jumlah_hari: form.value.jumlah_hari || 1,
 
       // Backend menggunakan 'jam_minum' bukan 'jadwal_obats'
       jam_minum: jamMinumList
@@ -264,6 +305,14 @@ const submitJadwal = async () => {
     },
 
     goToStep2: () => {
+      if (!form.value.patientId) {
+        alert('Silakan pilih pasien terlebih dahulu')
+        return
+      }
+      if (!form.value.obatId) {
+        alert('Silakan pilih obat terlebih dahulu')
+        return
+      }
       currentStep.value = 2
     },
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 
 class TambahJadwalKonsumsi extends StatefulWidget {
   const TambahJadwalKonsumsi({super.key});
@@ -21,7 +22,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   static const Color _textSecondary = Color(0xFF64748B);
   static const Color _cardBorder = Color(0xFFE2E8F0);
 
-  final String baseUrl = "http://10.0.2.2:8080/api";
+  String get baseUrl => "${ApiService.baseUrl}/api";
 
   final _formKey = GlobalKey<FormState>();
   final _namaObatCtrl = TextEditingController();
@@ -29,20 +30,18 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   final _frekuensiCtrl = TextEditingController();
   final _durasiHariCtrl = TextEditingController();
   final _catatanCtrl = TextEditingController();
-  
+
   int? _pasienId;
   bool _isSaving = false;
   File? _pickedImage;
-  Set<String> _selectedPengingat = {}; // Multiple selection
+  final List<String?> _selectedCustomTimes = [null, null, null, null];
 
-  final List<Map<String, String>> _pengingaatOptions = [
-    {'label': 'Pagi', 'value': 'pagi', 'icon': '🌅'},
-    {'label': 'Siang', 'value': 'siang', 'icon': '☀️'},
-    {'label': 'Sore', 'value': 'sore', 'icon': '🌅'},
-    {'label': 'Malam', 'value': 'malam', 'icon': '🌙'},
+  final List<String> _frekuensiOptions = [
+    '1x sehari',
+    '2x sehari',
+    '3x sehari',
+    '4x sehari',
   ];
-
-  final List<String> _frekuensiOptions = ['1x sehari', '2x sehari', '3x sehari', '4x sehari'];
 
   @override
   void initState() {
@@ -100,6 +99,30 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     return 1;
   }
 
+  Future<void> _selectTime(int index) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: const Color(0xFF15BE77),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF15BE77)),
+            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final String formattedTime =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      setState(() {
+        _selectedCustomTimes[index] = formattedTime;
+      });
+    }
+  }
+
   // --- LOGIKA SIMPAN KE BACKEND ---
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
@@ -111,10 +134,19 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     }
 
     final requiredPengingat = _getRequiredPengingat();
-    if (_selectedPengingat.length != requiredPengingat) {
+    final List<String> filledTimes = [];
+    for (int i = 0; i < requiredPengingat; i++) {
+      if (_selectedCustomTimes[i] != null) {
+        filledTimes.add(_selectedCustomTimes[i]!);
+      }
+    }
+
+    if (filledTimes.length != requiredPengingat) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pilih $requiredPengingat waktu pengingat untuk ${_frekuensiCtrl.text}'),
+          content: Text(
+            'Tentukan semua $requiredPengingat waktu pengingat untuk ${_frekuensiCtrl.text}',
+          ),
         ),
       );
       return;
@@ -134,11 +166,13 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     final Map<String, dynamic> data = {
       "nama_obat": _namaObatCtrl.text.trim(),
       "dosis": _dosisCtrl.text.trim(),
-      "pengingat": _selectedPengingat.toList(), // Convert Set to List
+      "pengingat": filledTimes,
       "frekuensi": _frekuensiCtrl.text.trim(),
       "durasi_hari": int.parse(_durasiHariCtrl.text),
       "catatan": _catatanCtrl.text.trim(),
-      "gambar": _pickedImage != null ? _convertImageToBase64(_pickedImage!) : "",
+      "gambar": _pickedImage != null
+          ? _convertImageToBase64(_pickedImage!)
+          : "",
       "pasien_id": _pasienId,
     };
 
@@ -148,7 +182,8 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
         Uri.parse('$baseUrl/pasien/obat-mandiri'),
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
         body: jsonEncode(data),
       );
@@ -370,86 +405,81 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
 
   Widget _buildPengingaatSelector() {
     final requiredCount = _getRequiredPengingat();
-    final selectedCount = _selectedPengingat.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Requirement label
         Text(
-          'Pilih $requiredCount waktu pengingat',
-          style: TextStyle(
+          'Tentukan $requiredCount waktu pengingat',
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: selectedCount == requiredCount ? _green : _textSecondary,
+            color: _textSecondary,
           ),
         ),
         const SizedBox(height: 12),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: requiredCount,
+          separatorBuilder: (context, index) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final time = _selectedCustomTimes[index];
+            final hasSelected = time != null;
 
-        // Buttons
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _pengingaatOptions.map((option) {
-            final selected = _selectedPengingat.contains(option['value']);
-            final isDisabled = !selected && selectedCount >= requiredCount;
-
-            return GestureDetector(
-              onTap: isDisabled
-                  ? null
-                  : () => setState(() {
-                        if (selected) {
-                          _selectedPengingat.remove(option['value']);
-                        } else {
-                          _selectedPengingat.add(option['value']!);
-                        }
-                      }),
-              child: Opacity(
-                opacity: isDisabled ? 0.5 : 1.0,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: selected ? _green : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected ? _green : _cardBorder,
-                      width: 1.5,
+            return InkWell(
+              onTap: () => _selectTime(index),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasSelected ? const Color(0xFF15BE77) : _cardBorder,
+                    width: hasSelected ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      color: hasSelected ? const Color(0xFF15BE77) : _textSecondary,
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        option['icon']!,
-                        style: const TextStyle(fontSize: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Waktu Ke-${index + 1}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: hasSelected ? const Color(0xFF15BE77) : _textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasSelected ? time : 'Ketuk untuk pilih jam',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: hasSelected ? _textPrimary : _textSecondary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        option['label']!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: selected ? _textPrimary : _textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _textSecondary,
+                    ),
+                  ],
                 ),
               ),
             );
-          }).toList(),
-        ),
-
-        // Selected counter
-        const SizedBox(height: 8),
-        Text(
-          'Dipilih: $selectedCount/$requiredCount',
-          style: TextStyle(
-            fontSize: 11,
-            color: selectedCount == requiredCount ? _green : _textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
+          },
         ),
       ],
     );
@@ -478,16 +508,16 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
             underline: const SizedBox(),
             value: _frekuensiCtrl.text,
             items: _frekuensiOptions.map((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
+              return DropdownMenuItem<String>(value: value, child: Text(value));
             }).toList(),
             onChanged: (String? newValue) {
               if (newValue != null) {
                 setState(() {
                   _frekuensiCtrl.text = newValue;
-                  _selectedPengingat.clear(); // Clear saat frekuensi berubah
+                  // Reset all selected custom times when frequency changes
+                  for (int i = 0; i < _selectedCustomTimes.length; i++) {
+                    _selectedCustomTimes[i] = null;
+                  }
                 });
                 state.didChange(newValue);
               }

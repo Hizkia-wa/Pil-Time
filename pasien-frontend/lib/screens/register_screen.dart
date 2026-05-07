@@ -200,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return 'Email tidak boleh kosong';
                   }
                   if (!value.contains('@')) {
-                    return 'Email tidak valid';
+                    return 'Email harus menggunakan tanda "@"';
                   }
                   return null;
                 },
@@ -273,7 +273,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _nikController,
                 keyboardType: TextInputType.number,
+                maxLength: 16,
                 decoration: InputDecoration(
+                  counterText: "",
                   hintText: '3201xxxxxxxxxx',
                   hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
                   filled: true,
@@ -326,11 +328,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.location_city,
-                    color: Color(0xFF757575),
-                    size: 20,
                   ),
                 ),
                 validator: (value) {

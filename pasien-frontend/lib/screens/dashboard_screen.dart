@@ -35,9 +35,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isWeekView = true; // toggle Minggu/Bulan
 
+  // Track status riwayat per tanggal "YYYY-MM-DD"
+  Map<String, List<String>> _riwayatByDate = {};
+
   // Track jadwal yang sudah ditandai diminum di sesi ini
   final Set<int> _takenJadwalIds = {};
   bool _isMarkingTaken = false;
+  bool _notificationPermissionGranted = true;
 
   @override
   void initState() {
@@ -45,10 +49,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     dashboardFuture = _fetchDashboard();
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
+    _checkNotificationPermission();
+  }
+
+  Future<void> _checkNotificationPermission() async {
+    final granted = await NotificationService.instance.checkPermissionStatus();
+    if (mounted) {
+      setState(() {
+        _notificationPermissionGranted = granted;
+      });
+    }
   }
 
   Future<Dashboard?> _fetchDashboard() async {
     try {
+      // Ambil riwayat kepatuhan untuk mewarnai kalender
+      final riwayatResponse = await ApiService.getPasienRiwayat();
+      if (mounted && riwayatResponse['success']) {
+        final List<dynamic> data = riwayatResponse['data'] ?? [];
+        final Map<String, List<String>> tempRiwayat = {};
+        for (final item in data) {
+          final tanggal = item['tanggal'] as String?;
+          final status = item['status'] as String?;
+          if (tanggal != null && status != null) {
+            tempRiwayat.putIfAbsent(tanggal, () => []);
+            tempRiwayat[tanggal]!.add(status);
+          }
+        }
+        setState(() {
+          _riwayatByDate = tempRiwayat;
+        });
+      }
+
       final response = await ApiService.getDashboard(pasienId: widget.pasienId);
       if (!mounted) return null;
 
@@ -185,6 +217,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (result['success']) {
         setState(() => _takenJadwalIds.add(jadwal.id));
+        // Re-fetch dashboard & riwayat to update the calendar color instantly!
+        _fetchDashboard();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -251,7 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Container(
                   height: MediaQuery.of(context).size.height,
-                  decoration: BoxDecoration(color: Colors.white),
+                  decoration: const BoxDecoration(color: Colors.white),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -294,6 +328,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeader(dashboard),
+                          if (!_notificationPermissionGranted)
+                            _buildPermissionWarningBanner(),
                           _buildMenuUtama(),
                           _buildCalendarSection(dashboard.allJadwals),
                           _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
@@ -308,6 +344,191 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPermissionWarningBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED), // Subtle premium warm orange
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFEDD5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEA580C).withValues(alpha: 0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFEDD5),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_paused_rounded,
+              color: Color(0xFFEA580C),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Izin Alarm & Notifikasi Mati',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF7C2D12),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Aktifkan notifikasi agar alarm penting Anda tetap berdering.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: const Color(0xFF7C2D12).withValues(alpha: 0.8),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _showPermissionInstructionDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEA580C),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Aktifkan',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionInstructionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: const [
+              Icon(Icons.notifications_active_rounded, color: Color(0xFF15BE77), size: 26),
+              SizedBox(width: 10),
+              Text(
+                'Aktifkan Notifikasi',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pil-Time membutuhkan izin notifikasi agar alarm obat Anda dapat berdering tepat waktu di HP Anda.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Cara mengaktifkan:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 12),
+              _buildStepRow('1', 'Buka Pengaturan (Settings) di HP Anda.'),
+              _buildStepRow('2', 'Pilih Aplikasi > Pil-Time.'),
+              _buildStepRow('3', 'Pilih Notifikasi (Notifications).'),
+              _buildStepRow('4', 'Aktifkan semua izin notifikasi & suara.'),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Tutup',
+                style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                // Coba request permissions ulang
+                await NotificationService.instance.initialize();
+                _checkNotificationPermission();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF15BE77),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Beri Izin',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStepRow(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F8F2),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              number,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF15BE77),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF334155), height: 1.4),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -542,6 +763,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ── CALENDAR ──────────────────────────────────────────────────────────────
 
+  /// Menentukan warna dot kalender berdasarkan status kepatuhan dari riwayat
+  Color _getCalendarDotColor(DateTime date) {
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (_riwayatByDate.containsKey(dateStr)) {
+      final statuses = _riwayatByDate[dateStr] ?? [];
+      if (statuses.isEmpty) {
+        if (dateOnly.isBefore(today)) {
+          return const Color(0xFFE53935); // Merah - Terlewat
+        }
+        return Colors.grey[400]!; // Abu-abu default
+      }
+      if (statuses.contains('Terlewat')) {
+        return const Color(0xFFE53935); // Merah - Terlewat
+      }
+      if (statuses.contains('Terlambat')) {
+        return const Color(0xFFFFA726); // Kuning - Terlambat
+      }
+      if (statuses.contains('Diminum')) {
+        return const Color(0xFF15BE77); // Hijau - Selesai
+      }
+    } else {
+      if (dateOnly.isBefore(today)) {
+        return const Color(0xFFE53935); // Merah - Terlewat (masa lalu yang terlewat tanpa data tracking)
+      }
+    }
+    return Colors.grey[400]!; // Abu-abu default
+  }
+
+  Widget _buildCalendarLegend() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _legendItem(const Color(0xFF15BE77), 'Selesai'),
+          const SizedBox(width: 12),
+          _legendItem(const Color(0xFFFFA726), 'Terlambat'),
+          const SizedBox(width: 12),
+          _legendItem(const Color(0xFFE53935), 'Terlewat'),
+          const SizedBox(width: 12),
+          _legendItem(Colors.grey[400]!, 'Belum Diminum'),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Mengecek apakah [date] jatuh dalam rentang tanggal salah satu jadwal aktif.
   bool _hasJadwalOnDate(DateTime date, List<Jadwal> jadwals) {
     final dateOnly = DateTime(date.year, date.month, date.day);
@@ -608,6 +903,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _isWeekView
               ? _buildWeekCalendar(allJadwals)
               : _buildMonthCalendar(allJadwals),
+          const SizedBox(height: 16),
+          _buildCalendarLegend(),
         ],
       ),
     );
@@ -717,9 +1014,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: 5,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: isToday
-                            ? const Color(0xFF15BE77)
-                            : Colors.grey[400],
+                        color: _getCalendarDotColor(day),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -844,9 +1139,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 4,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isToday
-                          ? const Color(0xFF15BE77)
-                          : Colors.grey[400],
+                      color: _getCalendarDotColor(dateToCheck),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -872,11 +1165,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         int.parse(parts[0]), int.parse(parts[1]),
       );
       final diffMinutes = now.difference(jadwalDt).inMinutes;
+      if (diffMinutes > 75) return _JadwalStatus.expired;    // >75 menit → Terlewat
       if (diffMinutes < -5) return _JadwalStatus.upcoming;   // belum waktunya
       if (diffMinutes <= 30) return _JadwalStatus.onTime;    // dalam 30 menit
-      return _JadwalStatus.late;                             // sudah lewat
+      return _JadwalStatus.late;                             // sudah lewat (30–75 menit)
     } catch (_) {
       return _JadwalStatus.upcoming;
+    }
+  }
+
+  /// Kirim riwayat "Terlewat" ke backend untuk jadwal yang sudah expired.
+  /// Dipanggil saat dashboard dirender; idempotent karena backend hanya menyimpan
+  /// satu log per jadwal per tanggal.
+  Future<void> _autoLogExpiredJadwal(Jadwal jadwal, int pasienId) async {
+    try {
+      final now = DateTime.now();
+      final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
+          '${now.minute.toString().padLeft(2, '0')}';
+      await ApiService.postRiwayat(
+        jadwalId: jadwal.id,
+        status: 'Terlewat',
+        waktuMinum: waktuSekarang,
+      );
+      debugPrint('[Dashboard] Auto-logged Terlewat for jadwal #${jadwal.id} (${jadwal.namaObat})');
+    } catch (e) {
+      debugPrint('[Dashboard] Gagal auto-log Terlewat (non-fatal): $e');
     }
   }
 
@@ -889,6 +1202,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
     final dayName = dayNames[now.weekday - 1];
     final dateStr = '$dayName, ${now.day} ${monthNames[now.month - 1]} ${now.year}';
+
+    // ── Pisahkan jadwal aktif (tampil) vs expired (>75 menit, disembunyikan) ──
+    final activeJadwals = <Jadwal>[];
+    for (final j in jadwals) {
+      // Jadwal yang sudah ditandai diminum di sesi ini selalu tampil
+      if (_takenJadwalIds.contains(j.id)) {
+        activeJadwals.add(j);
+        continue;
+      }
+      final status = _getJadwalStatus(j.waktuMinum);
+      if (status == _JadwalStatus.expired) {
+        // Auto-log ke backend sebagai Terlewat (fire-and-forget, idempotent)
+        _autoLogExpiredJadwal(j, pasienId);
+      } else {
+        activeJadwals.add(j);
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -920,7 +1250,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
-                if (jadwals.isNotEmpty)
+                if (activeJadwals.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4,
@@ -930,7 +1260,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${jadwals.length} obat',
+                      '${activeJadwals.length} obat',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -943,7 +1273,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
 
           // ── Empty state ──────────────────────────────────────────────────
-          if (jadwals.isEmpty)
+          if (activeJadwals.isEmpty)
             Container(
               color: Colors.white,
               padding: const EdgeInsets.all(28),
@@ -983,8 +1313,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-          // ── Jadwal cards ─────────────────────────────────────────────────
-          ...jadwals.map(
+          // ── Jadwal cards (hanya yang aktif / belum expired) ───────────────
+          ...activeJadwals.map(
             (jadwal) => _buildJadwalCard(
               jadwal: jadwal,
               pasienId: pasienId,
@@ -1032,6 +1362,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           statusBg = const Color(0xFFF5F5F5);
           statusLabel = 'Akan Datang';
           statusIcon = Icons.schedule_rounded;
+          break;
+        case _JadwalStatus.expired:
+          // Tidak seharusnya tercapai — sudah difilter di _buildJadwalList
+          statusColor = const Color(0xFFE53935);
+          statusBg = const Color(0xFFFFF1F0);
+          statusLabel = 'Terlewat';
+          statusIcon = Icons.cancel_rounded;
           break;
       }
     }
@@ -1304,4 +1641,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 /// Status jadwal berdasarkan waktu sekarang
-enum _JadwalStatus { onTime, late, upcoming }
+/// - [onTime]   : 0 s/d 30 menit setelah jadwal
+/// - [late]     : 30 s/d 75 menit setelah jadwal (masih bisa dikonfirmasi)
+/// - [upcoming] : belum waktunya (>5 menit sebelum jadwal)
+/// - [expired]  : sudah >75 menit → otomatis Terlewat, tidak ditampilkan di dashboard
+enum _JadwalStatus { onTime, late, upcoming, expired }

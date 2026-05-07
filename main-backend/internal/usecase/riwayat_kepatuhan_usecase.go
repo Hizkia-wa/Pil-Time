@@ -7,6 +7,9 @@ import (
 	"backend/internal/ports/outbound"
 	"backend/internal/utils"
 	"errors"
+	"fmt"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -53,6 +56,36 @@ func (u *TrackingJadwalUsecase) GetAll() ([]dto.TrackingJadwalDTO, error) {
 		dto := persistence.TrackingJadwalToDTO(&tracking, namaObat, namaPasien)
 		responses = append(responses, *dto)
 	}
+
+	// ── GENERATE DYNAMIC MISSED TRACKINGS FOR ALL ACTIVE PATIENT SCHEDULES ──
+	jadwals, err := u.jadwalRepo.GetAll()
+	if err == nil {
+		trackingsByPasien := make(map[int][]domain.TrackingJadwal)
+		for _, t := range trackings {
+			trackingsByPasien[t.PasienID] = append(trackingsByPasien[t.PasienID], t)
+		}
+
+		jadwalsByPasien := make(map[int][]domain.Jadwal)
+		for _, j := range jadwals {
+			jadwalsByPasien[j.PasienID] = append(jadwalsByPasien[j.PasienID], j)
+		}
+
+		for pID, pJadwals := range jadwalsByPasien {
+			pasien, _ := u.pasienRepo.GetByID(uint(pID))
+			namaPasien := ""
+			if pasien != nil {
+				namaPasien = pasien.Nama
+			}
+			pTrackings := trackingsByPasien[pID]
+			missedResponses := u.generateDynamicMissedTrackings(pTrackings, pJadwals, namaPasien)
+			responses = append(responses, missedResponses...)
+		}
+	}
+
+	// Sort responses by Tanggal descending
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].Tanggal > responses[j].Tanggal
+	})
 
 	return responses, nil
 }
@@ -101,6 +134,18 @@ func (u *TrackingJadwalUsecase) GetByPasienID(pasienID int) ([]dto.TrackingJadwa
 		dto := persistence.TrackingJadwalToDTO(&tracking, namaObat, namaPasien)
 		responses = append(responses, *dto)
 	}
+
+	// ── GENERATE DYNAMIC MISSED TRACKINGS ──
+	jadwals, err := u.jadwalRepo.GetByPasienID(pasienID)
+	if err == nil {
+		missedResponses := u.generateDynamicMissedTrackings(trackings, jadwals, namaPasien)
+		responses = append(responses, missedResponses...)
+	}
+
+	// Sort responses by Tanggal descending
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].Tanggal > responses[j].Tanggal
+	})
 
 	return responses, nil
 }
@@ -242,14 +287,6 @@ func (u *TrackingJadwalUsecase) GetStatistics(pasienID int) (map[string]interfac
 		return nil, err
 	}
 
-	stats := map[string]interface{}{
-		"diminum":         0,
-		"terlambat":       0,
-		"terlewat":        0,
-		"total":           len(trackings),
-		"compliance_rate": 0.0,
-	}
-
 	diminum := 0
 	terlambat := 0
 	terlewat := 0
@@ -265,14 +302,146 @@ func (u *TrackingJadwalUsecase) GetStatistics(pasienID int) (map[string]interfac
 		}
 	}
 
-	stats["diminum"] = diminum
-	stats["terlambat"] = terlambat
-	stats["terlewat"] = terlewat
+	// Fetch schedules to generate dynamic "Terlewat" count
+	var jadwals []domain.Jadwal
+	if pasienID > 0 {
+		jadwals, _ = u.jadwalRepo.GetByPasienID(pasienID)
+		pasien, _ := u.pasienRepo.GetByID(uint(pasienID))
+		namaPasien := ""
+		if pasien != nil {
+			namaPasien = pasien.Nama
+		}
+		missed := u.generateDynamicMissedTrackings(trackings, jadwals, namaPasien)
+		terlewat += len(missed)
+	} else {
+		jadwals, _ = u.jadwalRepo.GetAll()
+		trackingsByPasien := make(map[int][]domain.TrackingJadwal)
+		for _, t := range trackings {
+			trackingsByPasien[t.PasienID] = append(trackingsByPasien[t.PasienID], t)
+		}
 
-	if len(trackings) > 0 {
-		complianceRate := float64(diminum) / float64(len(trackings)) * 100
+		jadwalsByPasien := make(map[int][]domain.Jadwal)
+		for _, j := range jadwals {
+			jadwalsByPasien[j.PasienID] = append(jadwalsByPasien[j.PasienID], j)
+		}
+
+		for pID, pJadwals := range jadwalsByPasien {
+			pasien, _ := u.pasienRepo.GetByID(uint(pID))
+			namaPasien := ""
+			if pasien != nil {
+				namaPasien = pasien.Nama
+			}
+			pTrackings := trackingsByPasien[pID]
+			missed := u.generateDynamicMissedTrackings(pTrackings, pJadwals, namaPasien)
+			terlewat += len(missed)
+		}
+	}
+
+	total := diminum + terlambat + terlewat
+
+	stats := map[string]interface{}{
+		"diminum":         diminum,
+		"terlambat":       terlambat,
+		"terlewat":        terlewat,
+		"total":           total,
+		"compliance_rate": 0.0,
+	}
+
+	if total > 0 {
+		complianceRate := float64(diminum) / float64(total) * 100
 		stats["compliance_rate"] = complianceRate
 	}
 
 	return stats, nil
+}
+
+func (u *TrackingJadwalUsecase) generateDynamicMissedTrackings(trackings []domain.TrackingJadwal, jadwals []domain.Jadwal, namaPasien string) []dto.TrackingJadwalDTO {
+	loc := time.FixedZone("WIB", 7*60*60)
+	now := time.Now().In(loc)
+
+	existingLogs := make(map[string]bool) // key: "jadwalID_YYYY-MM-DD"
+	var responses []dto.TrackingJadwalDTO
+
+	for _, tracking := range trackings {
+		tanggalStr := tracking.Tanggal.Format("2006-01-02")
+		key := fmt.Sprintf("%d_%s", tracking.JadwalID, tanggalStr)
+		existingLogs[key] = true
+	}
+
+	for _, j := range jadwals {
+		if j.WaktuMinum == "" {
+			continue
+		}
+
+		startDate, err := time.ParseInLocation("2006-01-02", j.TanggalMulai, loc)
+		if err != nil {
+			continue
+		}
+
+		endDate := now
+		if j.TanggalSelesai != "" {
+			parsedEnd, err := time.ParseInLocation("2006-01-02", j.TanggalSelesai, loc)
+			if err == nil {
+				endDate = parsedEnd
+			}
+		}
+
+		limitDate := endDate
+		if limitDate.After(now) {
+			limitDate = now
+		}
+
+		// Normalize limitDate and currentDate to midnight
+		limitDate = time.Date(limitDate.Year(), limitDate.Month(), limitDate.Day(), 0, 0, 0, 0, loc)
+		currentDate := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, loc)
+
+		waktuList := []string{j.WaktuMinum}
+		if strings.Contains(j.WaktuMinum, ",") {
+			parts := strings.Split(j.WaktuMinum, ",")
+			waktuList = []string{}
+			for _, part := range parts {
+				waktuList = append(waktuList, strings.TrimSpace(part))
+			}
+		}
+
+		for !currentDate.After(limitDate) {
+			dateStr := currentDate.Format("2006-01-02")
+
+			for _, wm := range waktuList {
+				if wm == "" {
+					continue
+				}
+
+				key := fmt.Sprintf("%d_%s", j.JadwalID, dateStr)
+				if existingLogs[key] {
+					continue
+				}
+
+				schedTimeFull, err := time.ParseInLocation("2006-01-02 15:04", dateStr+" "+wm, loc)
+				if err != nil {
+					continue
+				}
+
+				// If it's in the past by more than 75 minutes, generate dynamic "Terlewat" log
+				if now.Sub(schedTimeFull).Minutes() > 75 {
+					responses = append(responses, dto.TrackingJadwalDTO{
+						ID:         0,
+						JadwalID:   j.JadwalID,
+						PasienID:   j.PasienID,
+						Tanggal:    dateStr,
+						Jadwal:     wm,
+						Status:     "Terlewat",
+						WaktuMinum: "",
+						Catatan:    "Terlewat minum obat (sistem otomatis)",
+						NamaObat:   j.NamaObat,
+						NamaPasien: namaPasien,
+					})
+				}
+			}
+
+			currentDate = currentDate.AddDate(0, 0, 1)
+		}
+	}
+
+	return responses
 }

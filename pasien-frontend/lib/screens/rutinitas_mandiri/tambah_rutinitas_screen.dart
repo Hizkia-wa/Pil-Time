@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 
 class TambahRutinitasScreen extends StatefulWidget {
   const TambahRutinitasScreen({super.key});
@@ -162,7 +163,7 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
       };
 
       final response = await http.post(
-        Uri.parse("http://10.0.2.2:8080/api/pasien/rutinitas"),
+        Uri.parse("${ApiService.baseUrl}/api/pasien/rutinitas"),
         headers: headers,
         body: jsonEncode(payload),
       );

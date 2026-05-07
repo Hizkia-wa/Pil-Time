@@ -49,10 +49,10 @@ func main() {
 	pasienUC := usecase.NewPasienUsecase(pasienRepo, jadwalRepo)
 	jadwalUC := usecase.NewJadwalUsecase(jadwalRepo, pasienRepo, fcmTokenRepo)
 	dashboardUC := usecase.NewDashboardUsecase(pasienRepo, jadwalRepo)
-	obatUC := usecase.NewObatUsecase(obatRepo)
+	obatUC := usecase.NewObatUsecase(obatRepo, jadwalRepo)
 	trackingUC := usecase.NewTrackingJadwalUsecase(trackingRepo, jadwalRepo, pasienRepo)
 	rutinitasUC := usecase.NewRutinitasUsecase(rutinitasRepo)
-	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo, jadwalRepo)
+	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo, jadwalRepo, obatRepo)
 
 	// Handlers
 	adminHandler := inboundHttp.NewAdminHandler(adminUC)

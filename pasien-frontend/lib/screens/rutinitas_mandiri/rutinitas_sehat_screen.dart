@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import 'tambah_rutinitas_screen.dart';
 import '../obat_mandiri/tambah_jadwal_konsumsi_obat_mandiri.dart';
 
@@ -28,18 +29,24 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   int? _pasienId;
   late TabController _tabController;
 
-  final String _baseUrl = "http://10.0.2.2:8080/api/pasien";
+  String get _baseUrl => "${ApiService.baseUrl}/api/pasien";
 
-@override
-void initState() {
-  super.initState();
-  // Gunakan widget.initialIndex supaya otomatis pindah tab
-  _tabController = TabController(
-    length: 2, 
-    vsync: this, 
-    initialIndex: widget.initialIndex
-  );
-}
+  @override
+  void initState() {
+    super.initState();
+    // Gunakan widget.initialIndex supaya otomatis pindah tab
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialIndex,
+    );
+
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
+    _loadPasienSession();
+  }
 
   @override
   void dispose() {

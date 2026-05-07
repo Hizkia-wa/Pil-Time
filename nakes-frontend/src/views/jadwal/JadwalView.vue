@@ -1,41 +1,38 @@
 <template>
   <LayoutWrapper>
-    <div class="min-h-screen bg-[#f8fafc] p-8">
+    <div class="min-h-screen bg-[#f8fafc] p-4 md:p-8">
       
       <!-- HEADER SECTION (Hanya muncul di daftar utama) -->
-      <div v-if="jadwal.currentStep === 0" class="flex justify-between items-end mb-8">
+      <div v-if="jadwal.currentStep === 0" class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 class="text-[28px] font-bold text-slate-800">Jadwal Obat</h1>
+          <h1 class="text-2xl md:text-[28px] font-bold text-slate-800">Jadwal Obat</h1>
         </div>
-        <div class="flex gap-4 items-center">
-          <div class="relative">
+        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
+          <div class="relative w-full sm:w-72">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input v-model="jadwal.searchQuery" 
-              class="search-input" 
+              class="search-input !w-full" 
               placeholder="Cari pasien atau nama obat..." />
           </div>
-          <button @click="jadwal.openAddSchedule" class="btn-primary flex items-center gap-2">
+          <button @click="jadwal.openAddSchedule" class="btn-primary flex items-center justify-center gap-2 py-2.5">
             <span class="text-xl leading-none">+</span> Tambah Jadwal Obat
           </button>
         </div>
       </div>
 
       <!-- STEP PROGRESS INDICATOR (Muncul saat tambah data) -->
-      <div v-if="jadwal.currentStep > 0 && jadwal.currentStep < 3" class="mb-8">
-        <div class="flex items-center gap-4 mb-6">
-        </div>
-        
-        <div class="flex items-center justify-center gap-8">
-          <div v-for="(s, i) in jadwal.steps" :key="i" class="flex items-center gap-3">
+      <div v-if="jadwal.currentStep > 0 && jadwal.currentStep < 3" class="mb-8 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex items-center justify-center gap-2 sm:gap-6">
+          <div v-for="(s, i) in jadwal.steps" :key="i" class="flex items-center gap-2">
             <div :class="['step-circle', jadwal.currentStep >= i+1 ? 'active' : 'inactive']">
               {{ i+1 }}
             </div>
-            <span :class="['text-sm font-medium', jadwal.currentStep >= i+1 ? 'text-slate-800' : 'text-slate-400']">{{ s }}</span>
-            <div v-if="i < jadwal.steps.length - 1" class="w-12 h-[2px] bg-slate-200 ml-2"></div>
+            <span :class="['text-xs sm:text-sm font-semibold', jadwal.currentStep >= i+1 ? 'text-slate-800' : 'text-slate-400', 'hidden sm:inline-block']">{{ s }}</span>
+            <div v-if="i < jadwal.steps.length - 1" class="w-6 sm:w-12 h-[2px] bg-slate-200 ml-1"></div>
           </div>
         </div>
       </div>
@@ -43,60 +40,131 @@
       <!-- MAIN CONTENT AREA -->
       <main>
         <!-- TABLE VIEW (Step 0) -->
-        <div v-if="jadwal.currentStep === 0" class="card !p-0 border-none shadow-sm pb-32">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-50/50 border-b border-slate-100">
-                <th class="table-th">Pasien</th>
-                <th class="table-th">Nama Obat</th>
-                <th class="table-th">Dosis</th>
-                <th class="table-th">Frekuensi</th>
-                <th class="table-th">Waktu</th>
-                <th class="table-th">Durasi</th>
-                <th class="table-th text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr v-for="j in jadwal.filteredJadwalList" :key="j.id" class="hover:bg-slate-50/50 transition-colors">
-                <td class="table-td font-semibold text-slate-700">{{ j.pasien_nama }}</td>
-                <td class="table-td text-slate-600">{{ j.nama_obat || 'Paracetamol' }}</td>
-                <td class="table-td text-slate-600">{{ j.jumlah_dosis || '1' }} Tablet</td>
-                <td class="table-td text-slate-600">{{ j.frekuensi || '2x sehari' }}</td>
-                <td class="table-td text-slate-600 text-xs">{{ j.waktu_gabungan || 'Pagi, Malam' }}</td>
-                <td class="table-td">
-                  <span :class="['px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider', 
-                    j.durasi ? 'bg-blue-50 text-blue-500' : 'bg-teal-50 text-teal-600']">
-                    {{ j.durasi || 'Rutin' }}
+        <div v-if="jadwal.currentStep === 0" class="pb-32">
+          <!-- Desktop Table View -->
+          <div class="hidden md:block bg-white rounded-[20px] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50/50 border-b border-slate-100">
+                  <th class="table-th">Pasien</th>
+                  <th class="table-th">Nama Obat</th>
+                  <th class="table-th">Dosis</th>
+                  <th class="table-th">Frekuensi</th>
+                  <th class="table-th">Waktu</th>
+                  <th class="table-th">Durasi</th>
+                  <th class="table-th text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                <tr v-for="j in jadwal.filteredJadwalList" :key="j.id" class="hover:bg-slate-50/50 transition-colors">
+                  <td class="table-td font-semibold text-slate-700">{{ j.pasien_nama }}</td>
+                  <td class="table-td text-slate-600">{{ j.nama_obat || 'Paracetamol' }}</td>
+                  <td class="table-td text-slate-600">{{ j.jumlah_dosis || '1' }} {{ j.satuan || 'Tablet' }}</td>
+                  <td class="table-td text-slate-600">{{ j.frekuensi_per_hari ? j.frekuensi_per_hari + 'x sehari' : '1x sehari' }}</td>
+                  <td class="table-td text-slate-600 text-xs">{{ j.waktu_minum || '-' }}</td>
+                  <td class="table-td">
+                    <span :class="['px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider', 
+                      j.tipe_durasi === 'hari' ? 'bg-blue-50 text-blue-500' : 'bg-teal-50 text-teal-600']">
+                      {{ j.tipe_durasi === 'hari' ? j.jumlah_hari + ' Hari' : 'Rutin' }}
+                    </span>
+                  </td>
+                  <td class="table-td text-center relative">
+                    <div class="relative inline-block text-left" :ref="el => { if(el) menuRefs[j.id] = el }">
+                      <button @click.stop="toggleDropdown(j.id)" class="action-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </button>
+                      
+                      <Teleport to="body">
+                        <div v-if="openDropdownId === j.id" @click.stop :style="getDropdownStyle(j.id)" class="fixed w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                          <button @click="viewDetail(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            Lihat Detail
+                          </button>
+                          <button @click="editJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            Edit
+                          </button>
+                          <button @click="deleteJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Hapus
+                          </button>
+                        </div>
+                      </Teleport>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Card View -->
+          <div class="md:hidden space-y-4">
+            <div v-for="j in jadwal.filteredJadwalList" :key="j.id" 
+              class="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] space-y-4 relative text-left">
+              
+              <div class="flex justify-between items-start gap-4">
+                <div class="space-y-1">
+                  <span class="inline-flex items-center gap-1 bg-teal-50 text-teal-700 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
+                    👤 {{ j.pasien_nama }}
                   </span>
-                </td>
-                <td class="table-td text-center relative">
-                  <div class="relative inline-block text-left">
-                    <button @click="toggleDropdown(j.id)" class="action-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
-                    
-                    <div v-if="openDropdownId === j.id" class="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
-                      <button @click="viewDetail(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <h3 class="font-bold text-slate-800 text-base leading-snug">{{ j.nama_obat || 'Paracetamol' }}</h3>
+                </div>
+
+                <!-- Actions Dropdown -->
+                <div class="relative inline-block text-left" :ref="el => { if(el) menuRefs['m_' + j.id] = el }">
+                  <button @click.stop="toggleDropdown('m_' + j.id)" class="p-2 text-slate-400 hover:text-teal-600 border border-slate-100 rounded-lg hover:bg-white transition-all shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                  
+                  <Teleport to="body">
+                    <div v-if="openDropdownId === 'm_' + j.id" @click.stop :style="getDropdownStyle('m_' + j.id)" class="fixed w-40 bg-white rounded-xl shadow-lg border border-slate-100 z-50 py-1 overflow-hidden">
+                      <button @click="viewDetail(j.id); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                         Lihat Detail
                       </button>
-                      <button @click="editJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <button @click="editJadwal(j.id); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         Edit
                       </button>
-                      <button @click="deleteJadwal(j.id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <button @click="deleteJadwal(j.id); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         Hapus
                       </button>
                     </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="jadwal.filteredJadwalList.length === 0" class="p-12 text-center text-slate-400">
+                  </Teleport>
+                </div>
+              </div>
+
+              <!-- Metadata Grid -->
+              <div class="grid grid-cols-2 gap-y-3 gap-x-4 border-t border-slate-50 pt-3 text-xs">
+                <div>
+                  <span class="text-slate-400 font-medium block">Dosis</span>
+                  <span class="text-slate-700 font-semibold">{{ j.jumlah_dosis || '1' }} {{ j.satuan || 'Tablet' }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 font-medium block">Frekuensi</span>
+                  <span class="text-slate-700 font-semibold">{{ j.frekuensi_per_hari ? j.frekuensi_per_hari + 'x sehari' : '1x sehari' }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 font-medium block">Waktu Minum</span>
+                  <span class="text-teal-600 font-bold bg-teal-50 px-2 py-0.5 rounded inline-block">{{ j.waktu_minum || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 font-medium block">Durasi</span>
+                  <span :class="['inline-block px-2 py-0.5 rounded font-bold uppercase text-[10px] tracking-wider', 
+                    j.tipe_durasi === 'hari' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600']">
+                    {{ j.tipe_durasi === 'hari' ? j.jumlah_hari + ' Hari' : 'Rutin' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="jadwal.filteredJadwalList.length === 0" class="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
              Belum ada data jadwal obat.
           </div>
         </div>
@@ -132,56 +200,30 @@
           </div>
 
           <div class="card">
-            <h3 class="title">Informasi Obat</h3>
-            <p class="text-sm text-slate-400 mb-4">Masukkan detail obat yang akan diberikan</p>
+            <h3 class="title">Master Obat</h3>
+            <p class="text-sm text-slate-400 mb-3">Pilih obat dari data master obat</p>
 
-            <div class="space-y-4">
+            <input v-model="jadwal.searchObat" class="input mb-4" placeholder="Cari nama obat..." />
 
-              <div>
-                <label class="label">Nama Obat</label>
-                <input v-model="jadwal.form.nama_obat" class="input" />
-              </div>
+            <div class="list-container">
+              <div v-for="o in jadwal.filteredObat" :key="o.obat_id"
+                @click="jadwal.selectObat(o)"
+                :class="['list-item flex items-center justify-between', jadwal.form.obatId === o.obat_id ? 'active' : '']">
 
-              <div class="grid grid-cols-3 gap-3">
-                <div>
-                  <label class="label">Jumlah Dosis</label>
-                  <input type="number" v-model="jadwal.form.jumlah_dosis" class="input" />
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600">
+                    {{ o.nama_obat.charAt(0) }}
+                  </div>
+                  <span>{{ o.nama_obat }}</span>
                 </div>
 
-                <div>
-                  <label class="label">Satuan</label>
-                  <select v-model="jadwal.form.satuan" class="input">
-                    <option>Tablet</option>
-                    <option>Kapsul</option>
-                    <option>Sirup</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="label">Info Obat</label>
-                <select v-model="jadwal.form.obatId" class="input">
-                  <option value="">Pilih obat...</option>
-                  <option 
-                    v-for="o in obat.obatList" 
-                    :key="o.obat_id" 
-                    :value="o.obat_id"
-                  >
-                    {{ o.nama_obat }}
-                  </option>
-                </select>
-                </div>
+                <span v-if="jadwal.form.obatId === o.obat_id" class="text-teal-500">✔</span>
               </div>
+            </div>
 
-              <div>
-                <label class="label">Kategori Obat</label>
-                <input v-model="jadwal.form.kategori" class="input" />
-              </div>
-
-              <div>
-                <label class="label">Takaran Obat</label>
-                <input v-model="jadwal.form.takaran" class="input" />
-              </div>
-
+            <!-- OBAT TERPILIH -->
+            <div v-if="jadwal.form.obatId" class="mt-4 bg-teal-50 p-3 rounded-xl text-sm text-teal-700">
+              ✔ Obat Terpilih: <b>{{ jadwal.form.nama_obat }}</b>
             </div>
           </div>
 
@@ -367,14 +409,17 @@
     <div class="bg-slate-50 p-4 rounded-xl">
       <label class="label mb-2 block">Waktu Pengingat</label>
 
-      <div class="grid grid-cols-3 gap-2">
-        <div v-if="jadwal.selectedWaktuMinum.includes('Pagi')">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div v-if="jadwal.selectedWaktuMinum.includes('Pagi')" class="space-y-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center sm:text-left">🌅 Pagi</span>
           <input type="time" v-model="jadwal.form.waktu_reminder_pagi" class="input text-center"/>
         </div>
-        <div v-if="jadwal.selectedWaktuMinum.includes('Siang')">
+        <div v-if="jadwal.selectedWaktuMinum.includes('Siang')" class="space-y-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center sm:text-left">☀️ Siang</span>
           <input type="time" v-model="jadwal.form.waktu_reminder_siang" class="input text-center"/>
         </div>
-        <div v-if="jadwal.selectedWaktuMinum.includes('Malam')">
+        <div v-if="jadwal.selectedWaktuMinum.includes('Malam')" class="space-y-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center sm:text-left">🌙 Malam</span>
           <input type="time" v-model="jadwal.form.waktu_reminder_malam" class="input text-center"/>
         </div>
       </div>
@@ -446,7 +491,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../../stores/jadwal'
@@ -475,6 +520,7 @@ watch(frekuensiCount, (val) => {
 })
 
 const openDropdownId = ref(null)
+const menuRefs = ref({})
 
 const toggleDropdown = (id) => {
   if (openDropdownId.value === id) {
@@ -486,6 +532,16 @@ const toggleDropdown = (id) => {
 
 const closeDropdown = () => {
   openDropdownId.value = null
+}
+
+const getDropdownStyle = (id) => {
+  const el = menuRefs.value[id]
+  if (!el) return {}
+  const rect = el.getBoundingClientRect()
+  return {
+    top: rect.bottom + 4 + 'px',
+    left: rect.right - 160 + 'px', // 160px is w-40 dropdown width
+  }
 }
 
 const viewDetail = (id) => {
@@ -506,7 +562,18 @@ const deleteJadwal = async (id) => {
   }
 }
 
+const handleClickOutside = (e) => {
+  const isInsideAnyMenu = Object.values(menuRefs.value).some(
+    el => el && el.contains(e.target)
+  )
+  if (!isInsideAnyMenu) {
+    openDropdownId.value = null
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('click', handleClickOutside)
+  
   await Promise.all([
     jadwal.fetchJadwals(),
     pasien.fetchPasiens(),
@@ -520,6 +587,10 @@ onMounted(async () => {
   if (!jadwal.form.tipe_durasi) {
     jadwal.form.tipe_durasi = 'rutin'
   }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const handleSubmit = () => {
@@ -537,7 +608,7 @@ const handleSubmit = () => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="postcss">
 /* Layout & Cards */
 .card {
   @apply bg-white p-6 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100;
