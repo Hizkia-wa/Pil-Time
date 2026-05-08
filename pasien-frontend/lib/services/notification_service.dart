@@ -177,6 +177,67 @@ class NotificationService {
   }
 
   // ==========================================================
+  // SCHEDULE ADVANCE NOTIFICATION — 15 menit sebelum waktu minum
+  // (Hanya berupa notifikasi biasa, bukan alarm ringing screen)
+  // ==========================================================
+  Future<void> scheduleAdvanceNotification({
+    required int notifId,
+    required String namaObat,
+    required String dosis,
+    required String scheduledTime, // "HH:MM"
+    required String originalTime,  // "HH:MM"
+    required int jadwalId,
+  }) async {
+    if (!_initialized) await initialize();
+
+    final scheduledTZ = _buildScheduledDate(scheduledTime);
+    if (scheduledTZ == null) {
+      debugPrint('[PilTime] Invalid advance time format: $scheduledTime');
+      return;
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      styleInformation: const BigTextStyleInformation(''),
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final notifDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      notifId,
+      '🔔 Siapkan Obat: $namaObat',
+      'Siapkan obat ini ($dosis). Waktu minum: $originalTime',
+      scheduledTZ,
+      notifDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: '$jadwalId:$namaObat',
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+
+    debugPrint(
+        '[PilTime] Scheduled advance notification #$notifId for $namaObat at $scheduledTime (WIB)');
+  }
+
+
+  // ==========================================================
   // SCHEDULE BANYAK JADWAL SEKALIGUS
   // Dipanggil dari dashboard setelah fetch data jadwal hari ini
   // ==========================================================
@@ -194,6 +255,29 @@ class NotificationService {
           scheduledTime: jadwal.waktuMinum,
           jadwalId: jadwal.jadwalId,
         );
+
+        // Pengingat 15 menit sebelum (Hanya berupa notifikasi biasa, ID offset +30000)
+        final timeList = jadwal.waktuMinum
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
+        for (int i = 0; i < timeList.length; i++) {
+          final timeStr = timeList[i];
+          final advanceTimeStr = _subtract15Minutes(timeStr);
+          if (advanceTimeStr != null) {
+            final currentNotifId = jadwal.jadwalId + 30000 + (i * 1000);
+            await scheduleAdvanceNotification(
+              notifId: currentNotifId,
+              namaObat: jadwal.namaObat,
+              dosis: jadwal.dosis,
+              scheduledTime: advanceTimeStr,
+              originalTime: timeStr,
+              jadwalId: jadwal.jadwalId,
+            );
+          }
+        }
       }
 
       // Notif reminder pagi (ID offset +10000 agar tidak tabrakan)
@@ -235,6 +319,7 @@ class NotificationService {
       await _plugin.cancel(jadwalId + offset);         // waktu_minum
       await _plugin.cancel(jadwalId + 10000 + offset); // reminder_pagi
       await _plugin.cancel(jadwalId + 20000 + offset); // reminder_malam
+      await _plugin.cancel(jadwalId + 30000 + offset); // advance_reminder
     }
     debugPrint('[PilTime] Cancelled notifications for jadwal #$jadwalId');
   }
@@ -392,6 +477,27 @@ class NotificationService {
   // ==========================================================
   // PRIVATE HELPERS
   // ==========================================================
+
+  /// Kurangi waktu "HH:MM" sebanyak 15 menit
+  String? _subtract15Minutes(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length != 2) return null;
+      int hour = int.parse(parts[0]);
+      int minute = int.parse(parts[1]);
+
+      minute -= 15;
+      if (minute < 0) {
+        minute += 60;
+        hour -= 1;
+        if (hour < 0) hour = 23;
+      }
+
+      return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Bangun [TZDateTime] dari string "HH:MM" untuk hari ini (atau besok jika sudah lewat)
   tz.TZDateTime? _buildScheduledDate(String timeStr) {

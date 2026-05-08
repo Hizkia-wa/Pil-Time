@@ -21,7 +21,7 @@ func NewObatUsecase(r outbound.ObatRepository, j outbound.JadwalRepository) *Oba
 	return &ObatUsecase{repo: r, jadwalRepo: j}
 }
 
-// GetAll mendapatkan semua obat sesuai kolom DB
+// GetAll mendapatkan semua obat sesuai kolom DB (hanya obat milik admin, menyaring obat mandiri)
 func (u *ObatUsecase) GetAll() ([]dto.ObatResponseDTO, error) {
 	obats, err := u.repo.GetAll()
 	if err != nil {
@@ -30,7 +30,9 @@ func (u *ObatUsecase) GetAll() ([]dto.ObatResponseDTO, error) {
 
 	responses := []dto.ObatResponseDTO{}
 	for _, obat := range obats {
-		responses = append(responses, *persistence.ObatToResponseDTO(&obat))
+		if !obat.IsMandiri {
+			responses = append(responses, *persistence.ObatToResponseDTO(&obat))
+		}
 	}
 	return responses, nil
 }

@@ -18,7 +18,7 @@ class MedLog {
     required this.name,
     required this.instruction,
     required this.status,
-    this.color = const Color(0xFF4CAF82),
+    this.color = const Color(0xFF15BE77),
   });
 }
 
@@ -117,8 +117,6 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
       }
 
       final pasienId = session['pasien_id'] as int;
-
-      // Fetch riwayat
       await _fetchRiwayat(pasienId);
     } catch (e) {
       debugPrint("Error loading data: $e");
@@ -204,128 +202,194 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.black87, size: 28),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Riwayat',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+      backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ─── APP BAR (CUSTOM ERGONOMIC) ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 16, 24, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.chevron_left_rounded,
+                      color: Color(0xFF0F172A),
+                      size: 32,
+                ),
+                onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Riwayat Kepatuhan',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                      fontFamily: 'Roboto',
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody()),
+          ],
         ),
       ),
-      body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF15BE77),
+          strokeWidth: 3,
+        ),
+      );
     }
 
     if (_errorMsg != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Gagal Memuat Data',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _errorMsg!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() => _isLoading = true);
-                _loadData();
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded, 
+                size: 56, 
+                color: Color(0xFFFF4D4D),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Gagal Memuat Data',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Roboto',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _errorMsg!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13, 
+                  color: Color(0xFF64748B),
+                  fontFamily: 'Inter',
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _isLoading = true);
+                  _loadData();
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Coba Lagi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF15BE77),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView(
+      physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.zero,
       children: [
         _buildComplianceCard(),
         _buildFilterRow(),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         ..._buildDayLogs(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
       ],
     );
   }
 
   Widget _buildComplianceCard() {
+    final compPercent = (_compliancePercent * 100).toStringAsFixed(0);
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
           const Text(
-            'Rataan Tingkat Kepatuhan',
+            'RATA-RATA TINGKAT KEPATUHAN',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+              fontSize: 11,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              fontFamily: 'Inter',
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            '${(_compliancePercent * 100).toStringAsFixed(0)}%',
+            '$compPercent%',
             style: const TextStyle(
-              fontSize: 42,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2BB673),
+              fontSize: 54,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF15BE77),
+              fontFamily: 'Roboto',
+              letterSpacing: -1,
               height: 1.1,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            '$_takenDoses / $_totalDoses Dosis',
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F8F1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$_takenDoses / $_totalDoses Dosis Terkonsumsi',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF15BE77),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           ClipRRect(
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: _compliancePercent,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE8F5EE),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF2BB673)),
+              minHeight: 10,
+              backgroundColor: const Color(0xFFF1F5F9),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF15BE77)),
             ),
           ),
         ],
@@ -335,13 +399,18 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
   Widget _buildFilterRow() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 4),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -352,20 +421,30 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
               onTap: () => setState(() => _selectedFilter = i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: selected
-                      ? const Color(0xFF2BB673)
+                      ? const Color(0xFF15BE77)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF15BE77).withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
                 ),
                 child: Text(
                   _filters[i],
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : Colors.black54,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? Colors.white : const Color(0xFF64748B),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -379,12 +458,47 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   List<Widget> _buildDayLogs() {
     if (_filteredData.isEmpty) {
       return [
-        const Padding(
-          padding: EdgeInsets.all(32),
+        Padding(
+          padding: const EdgeInsets.all(48),
           child: Center(
-            child: Text(
-              'Tidak ada riwayat untuk periode ini',
-              style: TextStyle(color: Colors.black45, fontSize: 14),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.history_toggle_off_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Belum ada riwayat obat',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF475569),
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Riwayat konsumsi obat Anda akan terekam otomatis di sini.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    fontFamily: 'Inter',
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -410,30 +524,45 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
 
       widgets.add(
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-          child: RichText(
-            text: TextSpan(
-              children: [
-                if (dayLabel.isNotEmpty)
-                  TextSpan(
-                    text: '$dayLabel · ',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2BB673),
-                    ),
-                  ),
-                TextSpan(
-                  text: dayStr.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black45,
-                    letterSpacing: 0.5,
-                  ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          child: Row(
+            children: [
+              Container(
+                width: 6,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF15BE77),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    if (dayLabel.isNotEmpty)
+                      TextSpan(
+                        text: '$dayLabel · ',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF15BE77),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    TextSpan(
+                      text: dayStr.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.8,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -447,73 +576,79 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
   }
 
   Widget _buildMedCard(MedLog log) {
-    // ── Warna & icon berdasarkan status ──
     final Color barColor;
     final Color iconBg;
     final Color iconColor;
     final IconData iconData;
+    final String statusLabel;
 
     switch (log.status) {
       case MedStatus.taken:
-        barColor = const Color(0xFF2BB673);
-        iconBg = const Color(0xFFE6F7EF);
-        iconColor = const Color(0xFF2BB673);
-        iconData = Icons.check_box_rounded;
+        barColor = const Color(0xFF15BE77); // Emerald Green
+        iconBg = const Color(0xFFE8F8F1);
+        iconColor = const Color(0xFF15BE77);
+        iconData = Icons.check_circle_rounded;
+        statusLabel = 'Tepat Waktu';
         break;
       case MedStatus.late:
-        barColor = const Color(0xFFFFA726);
-        iconBg = const Color(0xFFFFF3E0);
-        iconColor = const Color(0xFFFFA726);
+        barColor = const Color(0xFFF59E0B); // Amber
+        iconBg = const Color(0xFFFEF3C7);
+        iconColor = const Color(0xFFD97706);
         iconData = Icons.watch_later_rounded;
+        statusLabel = 'Terlambat';
         break;
       case MedStatus.missed:
-        barColor = const Color(0xFFE53935);
-        iconBg = const Color(0xFFFFEBEE);
-        iconColor = const Color(0xFFE53935);
-        iconData = Icons.warning_rounded;
+        barColor = const Color(0xFFEF4444); // Crimson Red
+        iconBg = const Color(0xFFFEF2F2);
+        iconColor = const Color(0xFFEF4444);
+        iconData = Icons.cancel_rounded;
+        statusLabel = 'Terlewat';
         break;
     }
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Accent bar kiri
+          // Left bar accent
           Container(
-            width: 5,
-            height: 64,
+            width: 6,
+            height: 72,
             decoration: BoxDecoration(
               color: barColor,
               borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(14),
+                left: Radius.circular(20),
               ),
             ),
           ),
+          
           // Icon obat
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: iconBg,
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(Icons.medication_rounded, color: iconColor, size: 22),
+              child: Icon(Icons.medication_rounded, color: iconColor, size: 24),
             ),
           ),
-          // Nama & instruksi
+          
+          // Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,35 +657,55 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                 Text(
                   log.name,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Roboto',
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  log.status == MedStatus.missed
-                      ? 'Terlewat'
-                      : log.status == MedStatus.late
-                      ? 'Terlambat, ${log.instruction}'
-                      : 'Tepat waktu, ${log.instruction}',
-                  style: TextStyle(fontSize: 12, color: iconColor),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: iconBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: iconColor,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        log.instruction,
+                        style: const TextStyle(
+                          fontSize: 12, 
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          // Status icon
+          
+          // Check icon status
           Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(iconData, color: iconColor, size: 20),
-            ),
+            padding: const EdgeInsets.only(right: 16, left: 8),
+            child: Icon(iconData, color: iconColor, size: 24),
           ),
         ],
       ),

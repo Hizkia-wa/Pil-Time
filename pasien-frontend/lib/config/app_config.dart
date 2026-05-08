@@ -12,12 +12,12 @@ class AppConfig {
   /// Caranya: uncomment yang diinginkan, comment yang lain
 
   // PHYSICAL DEVICE CONFIG
-  static const String baseUrl = 'http://172.30.42.29:8080';
-  static const String authServiceUrl = 'http://172.30.42.29:8081';
+  // static const String baseUrl = 'http://172.30.42.29:8080';
+  // static const String authServiceUrl = 'http://172.30.42.29:8081';
 
   // EMULATOR CONFIG (Uncomment ini untuk emulator)
-  // static const String baseUrl = 'http://10.0.2.2:8080';
-  // static const String authServiceUrl = 'http://10.0.2.2:8081';
+  static const String baseUrl = 'http://10.0.2.2:8080';
+  static const String authServiceUrl = 'http://10.0.2.2:8081';
 
   // ========== API ENDPOINTS ==========
   static const String authLogin = '$authServiceUrl/auth/pasien/login';

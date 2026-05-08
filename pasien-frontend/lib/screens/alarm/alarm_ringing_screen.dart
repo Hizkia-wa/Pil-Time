@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../dashboard_screen.dart';
 
 class AlarmRingingScreen extends StatefulWidget {
   final String payload; // Format: "jadwalId:namaObat"
@@ -43,6 +44,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
       final parts = widget.payload.split(':');
       if (parts.isNotEmpty) _jadwalId = int.tryParse(parts[0]) ?? 0;
       if (parts.length > 1) _namaObat = parts.sublist(1).join(':');
+      debugPrint('[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat');
     } catch (e) {
       debugPrint('[AlarmRingingScreen] Error parse payload: $e');
     }
@@ -55,74 +57,26 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     super.dispose();
   }
 
-  bool _isLoading = false;
-
-  void _handleDiminum() async {
-    if (_isLoading || _jadwalId == 0) return;
-    setState(() => _isLoading = true);
-
-    final now = TimeOfDay.now();
-    final waktuMinum = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-    final result = await ApiService.postRiwayat(
-      jadwalId: _jadwalId,
-      status: 'Diminum',
-      waktuMinum: waktuMinum,
-    );
-
+  void _handleMatikanAlarm() {
+    FlutterRingtonePlayer().stop(); // Hentikan suara alarm
     if (mounted) {
-      setState(() => _isLoading = false);
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Obat ditandai telah diminum!'),
-            backgroundColor: Color(0xFF2BB673),
-            duration: Duration(seconds: 3),
-          ),
-        );
+      if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Gagal: ${result['error']}'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    }
-  }
-
-  void _handleLewati() async {
-    if (_isLoading || _jadwalId == 0) return;
-    setState(() => _isLoading = true);
-
-    final now = TimeOfDay.now();
-    final waktuMinum = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-    final result = await ApiService.postRiwayat(
-      jadwalId: _jadwalId,
-      status: 'Terlewat',
-      waktuMinum: waktuMinum,
-    );
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Anda melewati jadwal obat ini.'),
-            backgroundColor: Colors.redAccent,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        Navigator.of(context).pop();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Gagal: ${result['error']}'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        // Fallback: load session dan go to DashboardScreen jika dibuka langsung dari background/killed state
+        AuthService.getPasienSession().then((session) {
+          if (session != null && mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => DashboardScreen(
+                  pasienId: session['pasien_id'],
+                  pasienNama: session['pasien_name'],
+                ),
+              ),
+              (route) => false,
+            );
+          }
+        });
       }
     }
   }
@@ -183,7 +137,6 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
             Text(
               _namaObat,
               style: const TextStyle(
@@ -194,67 +147,51 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
               textAlign: TextAlign.center,
             ),
 
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: const Text(
+                'Halo! Yuk, minum obat dulu dan centang daftarnya di halaman utama.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white60,
+                  fontWeight: FontWeight.w400,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+
             const Spacer(flex: 3),
 
             // Tombol Aksi
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  // Tombol Diminum (Primary)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 60,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2BB673),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 8,
-                        shadowColor: const Color(0xFF2BB673).withValues(alpha: 0.5),
-                      ),
-                      onPressed: _isLoading ? null : _handleDiminum,
-                      icon: _isLoading 
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.check_circle, size: 28),
-                      label: Text(
-                        _isLoading ? 'MENYIMPAN...' : 'TANDAI DIMINUM',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF4D4D), // Merah mencolok khas mematikan alarm
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 8,
+                    shadowColor: const Color(0xFFFF4D4D).withValues(alpha: 0.5),
+                  ),
+                  onPressed: _handleMatikanAlarm,
+                  icon: const Icon(Icons.alarm_off, size: 28),
+                  label: const Text(
+                    'MATIKAN ALARM',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Tombol Lewati (Secondary/Danger)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 60,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent, width: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: _isLoading ? null : _handleLewati,
-                      icon: const Icon(Icons.close, size: 24),
-                      label: const Text(
-                        'LEWATI',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             const Spacer(),

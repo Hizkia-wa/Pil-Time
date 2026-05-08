@@ -44,7 +44,6 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
         throw Exception(response['error'] ?? 'Gagal mengambil data obat');
       }
 
-      // Backend returns PasienJadwalResponse with structure: {PasienID, Nama, jadwals: [...]}
       final responseData = response['data'] as Map<String, dynamic>;
       final List<dynamic> jadwalsList = responseData['jadwals'] ?? [];
       final obats = jadwalsList
@@ -70,7 +69,6 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
               final date = DateTime.parse(e.key);
               return ObatDay(tanggal: date, obatList: e.value);
             } catch (e) {
-              // Skip invalid dates
               return null;
             }
           })
@@ -125,131 +123,214 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.black87, size: 28),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Info Obat',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-      ),
-      body: FutureBuilder<List<ObatDay>>(
-        future: _obatFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2BB673)),
-            );
-          }
+      backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
+      body: SafeArea(
+        child: FutureBuilder<List<ObatDay>>(
+          future: _obatFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF15BE77),
+                  strokeWidth: 3,
+                ),
+              );
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Gagal mengambil data obat',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() => _obatFuture = _fetchObat()),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Coba Lagi'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2BB673),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.medication, color: Colors.grey[300], size: 64),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Belum ada data obat',
-                    style: TextStyle(color: Colors.black45, fontSize: 16),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final allData = snapshot.data!;
-          final displayData = _filterData(allData);
-
-          return Column(
-            children: [
-              _buildSearchBar(),
-              _buildFilterRow(),
-              const SizedBox(height: 8),
-              Expanded(
-                child: displayData.isEmpty
-                    ? Center(
-                        child: Text(
-                          _searchQuery.isNotEmpty
-                              ? 'Obat "${_searchQuery}" tidak ditemukan'
-                              : 'Tidak ada obat untuk periode ini',
-                          style: const TextStyle(
-                            color: Colors.black45,
-                            fontSize: 14,
-                          ),
-                        ),
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        children: _buildDayGroups(displayData),
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Color(0xFFFF4D4D),
+                        size: 56,
                       ),
-              ),
-            ],
-          );
-        },
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Gagal mengambil data obat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => setState(() => _obatFuture = _fetchObat()),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Coba Lagi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF15BE77),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final allData = snapshot.data ?? [];
+            final displayData = _filterData(allData);
+
+            return Column(
+              children: [
+                // ─── APP BAR (CUSTOM ERGONOMIC) ──────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 24, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.chevron_left_rounded,
+                          color: Color(0xFF0F172A),
+                          size: 32,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Info Obat',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                _buildSearchBar(),
+                _buildFilterRow(),
+                const SizedBox(height: 12),
+                
+                Expanded(
+                  child: displayData.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.search_off_rounded,
+                                    color: Color(0xFF94A3B8),
+                                    size: 36,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _searchQuery.isNotEmpty
+                                      ? 'Obat "${_searchQuery}" tidak ditemukan'
+                                      : 'Tidak ada obat untuk periode ini',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF475569),
+                                    fontFamily: 'Roboto',
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Coba cari dengan kata kunci lain atau pilih saringan periode yang berbeda.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF64748B),
+                                    fontFamily: 'Inter',
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 24),
+                          children: _buildDayGroups(displayData),
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildSearchBar() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: TextField(
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val),
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF0F172A),
+          fontFamily: 'Inter',
+        ),
         decoration: InputDecoration(
-          hintText: 'Cari Nama Obat...',
-          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 22),
+          hintText: 'Cari Nama Obat Anda...',
+          hintStyle: const TextStyle(
+            color: Color(0xFF94A3B8),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF94A3B8),
+            size: 24,
+          ),
           suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: Icon(Icons.close, color: Colors.grey[400], size: 20),
-                  onPressed: () => setState(() {
+              ? GestureDetector(
+                  onTap: () => setState(() {
                     _searchQuery = '';
                     _searchController.clear();
                   }),
+                  child: const Icon(
+                    Icons.cancel_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 20,
+                  ),
                 )
               : null,
           border: InputBorder.none,
@@ -261,13 +342,18 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
 
   Widget _buildFilterRow() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      margin: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -278,20 +364,30 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
               onTap: () => setState(() => _selectedFilter = i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: selected
-                      ? const Color(0xFF2BB673)
+                      ? const Color(0xFF15BE77) // Emerald Green resmi
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF15BE77).withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
                 ),
                 child: Text(
                   _filters[i],
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : Colors.black54,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? Colors.white : const Color(0xFF64748B),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -322,30 +418,45 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
 
       widgets.add(
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-          child: RichText(
-            text: TextSpan(
-              children: [
-                if (dayLabel.isNotEmpty)
-                  TextSpan(
-                    text: '$dayLabel · ',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2BB673),
-                    ),
-                  ),
-                TextSpan(
-                  text: dayStr.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black45,
-                    letterSpacing: 0.5,
-                  ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          child: Row(
+            children: [
+              Container(
+                width: 6,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF15BE77),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    if (dayLabel.isNotEmpty)
+                      TextSpan(
+                        text: '$dayLabel · ',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF15BE77),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    TextSpan(
+                      text: dayStr.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.8,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -359,76 +470,114 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   }
 
   Widget _buildObatCard(ObatDetail obat) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => DetailInfoObatScreen(obat: obat)),
+    final color = _getCategoryColor(obat.kategoriObat);
+    final bgColor = _getCategoryBgColor(obat.kategoriObat);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: _getCategoryColor(
-                  obat.kategoriObat,
-                ).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _getCategoryIcon(obat.kategoriObat),
-                color: _getCategoryColor(obat.kategoriObat),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    obat.namaObat,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => DetailInfoObatScreen(obat: obat)),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    obat.kategoriObat.isEmpty ? 'Obat' : obat.kategoriObat,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Icon(
+                    _getCategoryIcon(obat.kategoriObat),
+                    color: color,
+                    size: 26,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${obat.frekuensiPerHari} • ${obat.waktuMinum}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        obat.namaObat,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            obat.kategoriObat.isEmpty ? 'Umum' : obat.kategoriObat,
+                            style: TextStyle(
+                              fontSize: 12, 
+                              color: color,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Inter',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 3,
+                            height: 3,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFCBD5E1),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${obat.frekuensiPerHari} • ${obat.waktuMinum}',
+                              style: const TextStyle(
+                                fontSize: 12, 
+                                color: Color(0xFF475569),
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded, 
+                  color: Color(0xFF94A3B8), 
+                  size: 28,
+                ),
+              ],
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
-          ],
+          ),
         ),
       ),
     );
@@ -467,19 +616,31 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   ][month];
 
   Color _getCategoryColor(String category) {
-    if (category.contains('Antibiotik')) return const Color(0xFF4CAF50);
-    if (category.contains('Pereda')) return const Color(0xFFFFC107);
-    if (category.contains('Suplemen')) return const Color(0xFF2196F3);
-    if (category.contains('Flu')) return const Color(0xFF9C27B0);
-    if (category.contains('Darah')) return const Color(0xFFF44336);
-    return const Color(0xFF607D8B);
+    final lower = category.toLowerCase();
+    if (lower.contains('antibiotik')) return const Color(0xFF10B981); // Emerald
+    if (lower.contains('pereda') || lower.contains('nyeri')) return const Color(0xFFF97316); // Orange
+    if (lower.contains('suplemen') || lower.contains('vitamin')) return const Color(0xFF3B82F6); // Blue
+    if (lower.contains('flu') || lower.contains('batuk')) return const Color(0xFF8B5CF6); // Purple
+    if (lower.contains('darah') || lower.contains('tensi')) return const Color(0xFFEF4444); // Red
+    return const Color(0xFF64748B); // Slate
+  }
+
+  Color _getCategoryBgColor(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('antibiotik')) return const Color(0xFFE8F8F1); // Soft Emerald
+    if (lower.contains('pereda') || lower.contains('nyeri')) return const Color(0xFFFFF7ED); // Soft Orange
+    if (lower.contains('suplemen') || lower.contains('vitamin')) return const Color(0xFFEFF6FF); // Soft Blue
+    if (lower.contains('flu') || lower.contains('batuk')) return const Color(0xFFF5F3FF); // Soft Purple
+    if (lower.contains('darah') || lower.contains('tensi')) return const Color(0xFFFEF2F2); // Soft Red
+    return const Color(0xFFF1F5F9); // Soft Slate
   }
 
   IconData _getCategoryIcon(String category) {
-    if (category.contains('Antibiotik')) return Icons.shield;
-    if (category.contains('Pereda')) return Icons.healing;
-    if (category.contains('Suplemen')) return Icons.energy_savings_leaf;
-    if (category.contains('Flu')) return Icons.thermostat;
-    return Icons.medication;
+    final lower = category.toLowerCase();
+    if (lower.contains('antibiotik')) return Icons.shield_rounded;
+    if (lower.contains('pereda') || lower.contains('nyeri')) return Icons.healing_rounded;
+    if (lower.contains('suplemen') || lower.contains('vitamin')) return Icons.energy_savings_leaf_rounded;
+    if (lower.contains('flu') || lower.contains('batuk')) return Icons.thermostat_rounded;
+    return Icons.medication_rounded;
   }
 }

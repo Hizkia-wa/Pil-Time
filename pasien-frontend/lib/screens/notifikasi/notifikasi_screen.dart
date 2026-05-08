@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 
@@ -87,14 +85,38 @@ class _NotificationScreenState extends State<NotificationScreen>
       if (parts.length < 2) return false;
       final now = DateTime.now();
       final jadwalDt = DateTime(
-        now.year, now.month, now.day,
-        int.parse(parts[0]), int.parse(parts[1]),
+        now.year,
+        now.month,
+        now.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
       );
       return now.difference(jadwalDt).inMinutes > 75;
     } catch (_) {
       return false;
     }
   }
+
+  /// Cek apakah waktu jadwal (format "HH:MM") sudah tiba atau lewat saat ini.
+  bool _hasTimeArrived(String waktu) {
+    try {
+      final parts = waktu.split(':');
+      if (parts.length < 2) return false;
+      final now = DateTime.now();
+      final jadwalDt = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+      // Jika sekarang sudah sama atau melewati waktu jadwal, berarti sudah tiba
+      return now.isAfter(jadwalDt) || now.isAtSameMomentAs(jadwalDt);
+    } catch (_) {
+      return false;
+    }
+  }
+
 
   Future<void> _fetchNotifications(int pasienId) async {
     try {
@@ -112,6 +134,33 @@ class _NotificationScreenState extends State<NotificationScreen>
 
       final notifications = <NotificationItem>[];
 
+      // Ambil ID jadwal yang sudah diminum/terlambat hari ini agar tidak ditampilkan sebagai mendatang
+      final takenTodayJadwalIds = <int>{};
+      if (riwayatResponse['success']) {
+        final riwayatData = riwayatResponse['data'] as List<dynamic>? ?? [];
+        for (final tracking in riwayatData) {
+          final status = tracking['status'] as String? ?? '';
+          final tanggal = tracking['tanggal'] as String? ?? '';
+          final jadwalId = tracking['jadwal_id'];
+
+          final parsedJadwalId = int.tryParse(jadwalId.toString());
+          if (parsedJadwalId != null &&
+              (status == 'Diminum' || status == 'Terlambat')) {
+            try {
+              final trackingDate = DateTime.parse(tanggal);
+              final today = DateTime.now();
+              final isToday = trackingDate.year == today.year &&
+                  trackingDate.month == today.month &&
+                  trackingDate.day == today.day;
+
+              if (isToday) {
+                takenTodayJadwalIds.add(parsedJadwalId);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
       // Process dashboard data for upcoming medications
       final dashboardData = dashboardResponse['data'] as Map<String, dynamic>?;
       if (dashboardData != null && dashboardData['today_jadwals'] != null) {
@@ -120,62 +169,82 @@ class _NotificationScreenState extends State<NotificationScreen>
 
         for (final jadwal in todayJadwals) {
           final namaObat = jadwal['nama_obat'] ?? 'Obat';
-          final waktu = jadwal['waktu_minum'] ?? jadwal['jam'] ?? '00:00';
+          final String waktuStr = (jadwal['waktu_minum'] ?? jadwal['jam'] ?? '00:00').toString();
           final aturan = jadwal['aturan'] ?? '';
           final jadwalId = jadwal['id'] ?? jadwal['jadwal_id'];
 
-          // Lewati jadwal yang sudah >75 menit (sudah Terlewat)
-          if (_isTimeExpired(waktu)) continue;
+          final parsedJadwalId = int.tryParse(jadwalId.toString());
 
-          // Notifikasi pada jam jadwal
-          notifications.add(
-            NotificationItem(
-              title: namaObat,
-              desc: aturan.isNotEmpty
-                  ? 'Segera diminum sesuai aturan: $aturan'
-                  : 'Segera diminum untuk kesehatan Anda.',
-              time: waktu,
-              type: NotificationType.mendatang,
-              jadwalId: jadwalId,
-              aturan: aturan,
-              isAdvanceReminder: false,
-            ),
-          );
+          // Pisahkan waktu jika comma-separated
+          final List<String> times = waktuStr
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
 
-          // Notifikasi 15 menit sebelum (hanya tampil jika belum expired)
-          try {
-            final timeParts = waktu.split(':');
-            if (timeParts.length == 2) {
-              int hour = int.parse(timeParts[0]);
-              int minute = int.parse(timeParts[1]);
+          for (final waktu in times) {
+            // Lewati jadwal yang sudah >75 menit (sudah Terlewat)
+            if (_isTimeExpired(waktu)) continue;
 
-              // Kurangi 15 menit
-              minute -= 15;
-              if (minute < 0) {
-                minute += 60;
-                hour -= 1;
-                if (hour < 0) hour = 23;
-              }
-
-              final advanceTime =
-                  '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-
-              // Tampilkan reminder 15 menit sebelum hanya jika belum expired
-              if (!_isTimeExpired(advanceTime)) {
-                notifications.add(
-                  NotificationItem(
-                    title: namaObat,
-                    desc: 'Siapkan obat ini. Waktu minum: $waktu',
-                    time: advanceTime,
-                    type: NotificationType.mendatang,
-                    jadwalId: jadwalId,
-                    aturan: aturan,
-                    isAdvanceReminder: true,
-                  ),
-                );
-              }
+            // Lewati jika obat sudah diminum hari ini
+            if (parsedJadwalId != null &&
+                takenTodayJadwalIds.contains(parsedJadwalId)) {
+              continue;
             }
-          } catch (_) {}
+
+            // Notifikasi pada jam jadwal (hanya jika sudah tiba)
+            if (_hasTimeArrived(waktu)) {
+              notifications.add(
+                NotificationItem(
+                  title: namaObat,
+                  desc: aturan.isNotEmpty
+                      ? 'Segera diminum sesuai aturan: $aturan'
+                      : 'Segera diminum untuk kesehatan Anda.',
+                  time: waktu,
+                  type: NotificationType.mendatang,
+                  jadwalId: parsedJadwalId,
+                  aturan: aturan,
+                  isAdvanceReminder: false,
+                ),
+              );
+            }
+
+            // Notifikasi 15 menit sebelum (hanya tampil jika belum expired dan sudah tiba)
+            try {
+              final timeParts = waktu.split(':');
+              if (timeParts.length == 2) {
+                int hour = int.parse(timeParts[0]);
+                int minute = int.parse(timeParts[1]);
+
+                // Kurangi 15 menit
+                minute -= 15;
+                if (minute < 0) {
+                  minute += 60;
+                  hour -= 1;
+                  if (hour < 0) hour = 23;
+                }
+
+                final advanceTime =
+                    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+                // Tampilkan reminder 15 menit sebelum hanya jika belum expired dan sudah tiba
+                if (!_isTimeExpired(advanceTime) &&
+                    _hasTimeArrived(advanceTime)) {
+                  notifications.add(
+                    NotificationItem(
+                      title: namaObat,
+                      desc: 'Siapkan obat ini. Waktu minum: $waktu',
+                      time: advanceTime,
+                      type: NotificationType.mendatang,
+                      jadwalId: parsedJadwalId,
+                      aturan: aturan,
+                      isAdvanceReminder: true,
+                    ),
+                  );
+                }
+              }
+            } catch (_) {}
+          }
         }
       }
 
@@ -191,13 +260,14 @@ class _NotificationScreenState extends State<NotificationScreen>
           final tanggal = tracking['tanggal'] as String? ?? '';
           final jadwalId = tracking['jadwal_id'];
 
+          final parsedJadwalId = int.tryParse(jadwalId.toString());
+
           // Check if it's today and terlewat
           if (status == 'Terlewat' || status == 'Terlambat') {
             final today = DateTime.now();
             try {
               final trackingDate = DateTime.parse(tanggal);
-              final isToday =
-                  trackingDate.year == today.year &&
+              final isToday = trackingDate.year == today.year &&
                   trackingDate.month == today.month &&
                   trackingDate.day == today.day;
 
@@ -209,7 +279,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                         'Anda melewatkan dosis ini. Catat alasan atau minum sekarang jika masih diperlukan.',
                     time: waktu,
                     type: NotificationType.terlewat,
-                    jadwalId: jadwalId,
+                    jadwalId: parsedJadwalId,
                     isAdvanceReminder: false,
                   ),
                 );
@@ -219,8 +289,8 @@ class _NotificationScreenState extends State<NotificationScreen>
         }
       }
 
-      // TODO: Add routine notifications when routine API is implemented
-      // For now, we'll add a sample if needed
+      // Urutkan notifikasi secara kronologis descending (waktu terbaru paling atas)
+      notifications.sort((a, b) => b.time.compareTo(a.time));
 
       setState(() {
         _allNotifications = notifications;

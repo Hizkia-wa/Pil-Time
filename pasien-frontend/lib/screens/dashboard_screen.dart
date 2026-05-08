@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/dashboard.dart';
 import '../models/jadwal.dart';
 import 'package:frontend_pasien/screens/riwayat/riwayat_konsumsi_obat.dart';
 import "package:frontend_pasien/screens/rutinitas_mandiri/rutinitas_sehat_screen.dart";
-import 'package:frontend_pasien/screens/rutinitas_mandiri/tambah_rutinitas_screen.dart';
 import 'package:frontend_pasien/screens/info_obat/info_obat.dart';
 import 'package:frontend_pasien/screens/notifikasi/notifikasi_screen.dart';
 import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
@@ -68,16 +65,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted && riwayatResponse['success']) {
         final List<dynamic> data = riwayatResponse['data'] ?? [];
         final Map<String, List<String>> tempRiwayat = {};
+        final today = DateTime.now();
+        final todayDateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+        final tempTakenJadwalIds = <int>{};
+
         for (final item in data) {
           final tanggal = item['tanggal'] as String?;
           final status = item['status'] as String?;
+          final jadwalIdStr = item['jadwal_id'];
+          final parsedJadwalId = int.tryParse(jadwalIdStr.toString());
+
           if (tanggal != null && status != null) {
             tempRiwayat.putIfAbsent(tanggal, () => []);
             tempRiwayat[tanggal]!.add(status);
+
+            // Jika tanggal adalah hari ini dan status adalah 'Diminum' atau 'Terlambat', masukkan ke _takenJadwalIds
+            if (tanggal == todayDateStr &&
+                (status == 'Diminum' || status == 'Terlambat') &&
+                parsedJadwalId != null) {
+              tempTakenJadwalIds.add(parsedJadwalId);
+            }
           }
         }
         setState(() {
           _riwayatByDate = tempRiwayat;
+          _takenJadwalIds.addAll(tempTakenJadwalIds);
         });
       }
 
@@ -192,11 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isMarkingTaken = true);
 
     try {
-      final token = await AuthService.getToken();
       final now = DateTime.now();
-      final today = '${now.year.toString().padLeft(4, '0')}-'
-          '${now.month.toString().padLeft(2, '0')}-'
-          '${now.day.toString().padLeft(2, '0')}';
       final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
           '${now.minute.toString().padLeft(2, '0')}';
 
@@ -267,13 +275,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
       body: FutureBuilder<Dashboard?>(
         future: dashboardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF15BE77)),
+              child: CircularProgressIndicator(
+                color: Color(0xFF15BE77),
+                strokeWidth: 3,
+              ),
             );
           }
 
@@ -290,21 +301,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Gagal memuat dashboard'),
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFFF4D4D),
+                          size: 48,
+                        ),
                         const SizedBox(height: 16),
+                        const Text(
+                          'Gagal memuat dashboard',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () => setState(
                             () => dashboardFuture = _fetchDashboard(),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF15BE77),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
                           ),
-                          child: const Text('Coba Lagi'),
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Tarik ke bawah untuk refresh',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          'Tarik ke bawah untuk memuat ulang',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF64748B),
+                            fontFamily: 'Inter',
+                          ),
                         ),
                       ],
                     ),
@@ -328,12 +372,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeader(dashboard),
+                          _buildProgressCard(dashboard.todayJadwals),
                           if (!_notificationPermissionGranted)
                             _buildPermissionWarningBanner(),
                           _buildMenuUtama(),
                           _buildCalendarSection(dashboard.allJadwals),
                           _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
@@ -348,17 +393,130 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // --- PROGRESS TRACKER CARD (NEW & PREMIUM) ---
+  Widget _buildProgressCard(List<Jadwal> todayJadwals) {
+    // Saring jadwal yang aktif
+    final activeToday = todayJadwals.where((j) => j.status.toLowerCase() == 'aktif').toList();
+    final totalToday = activeToday.length;
+    final takenToday = activeToday.where((j) => _takenJadwalIds.contains(j.id)).length;
+    final progress = totalToday > 0 ? takenToday / totalToday : 0.0;
+
+    String quote;
+    if (totalToday == 0) {
+      quote = 'Tidak ada jadwal obat hari ini. Selalu jaga kesehatan Anda! 🌟';
+    } else if (progress == 0.0) {
+      quote = 'Ayo mulai hari sehat Anda dengan minum obat pertama tepat waktu!';
+    } else if (progress < 1.0) {
+      quote = 'Luar biasa! Tinggal sedikit lagi untuk menyelesaikan semua obat hari ini.';
+    } else {
+      quote = 'Hebat sekali! Semua obat untuk hari ini telah berhasil diminum. 🎉';
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF15BE77), Color(0xFF0D9488)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF15BE77).withOpacity(0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'KEPATUHAN HARI INI',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white70,
+                        letterSpacing: 1.2,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      totalToday > 0 
+                          ? '$takenToday dari $totalToday Selesai' 
+                          : 'Hari Bebas Obat!',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: totalToday > 0 ? progress : 1.0,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 10,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            quote,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              fontFamily: 'Inter',
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- PERMISSION WARNING BANNER ---
   Widget _buildPermissionWarningBanner() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED), // Subtle premium warm orange
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFFFFF7ED), // Warm subtle orange
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFEDD5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEA580C).withValues(alpha: 0.05),
+            color: const Color(0xFFEA580C).withOpacity(0.04),
             offset: const Offset(0, 4),
             blurRadius: 12,
           ),
@@ -367,7 +525,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: const BoxDecoration(
               color: Color(0xFFFFEDD5),
               shape: BoxShape.circle,
@@ -375,10 +533,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: const Icon(
               Icons.notifications_paused_rounded,
               color: Color(0xFFEA580C),
-              size: 20,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,18 +544,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const Text(
                   'Izin Alarm & Notifikasi Mati',
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                     color: Color(0xFF7C2D12),
+                    fontFamily: 'Inter',
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
-                  'Aktifkan notifikasi agar alarm penting Anda tetap berdering.',
+                  'Aktifkan notifikasi agar alarm penting Anda tetap berdering tepat waktu.',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: const Color(0xFF7C2D12).withValues(alpha: 0.8),
+                    fontSize: 12,
+                    color: const Color(0xFF7C2D12).withOpacity(0.8),
                     height: 1.3,
+                    fontFamily: 'Inter',
                   ),
                 ),
               ],
@@ -409,7 +569,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEA580C),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
@@ -419,7 +579,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: const Text(
               'Aktifkan',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 12, 
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
         ],
@@ -434,14 +598,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: const [
-              Icon(Icons.notifications_active_rounded, color: Color(0xFF15BE77), size: 26),
-              SizedBox(width: 10),
-              Text(
-                'Aktifkan Notifikasi',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              Icon(Icons.notifications_active_rounded, color: Color(0xFF15BE77), size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Aktifkan Notifikasi',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 18,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               ),
             ],
           ),
@@ -451,12 +621,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Text(
                 'Pil-Time membutuhkan izin notifikasi agar alarm obat Anda dapat berdering tepat waktu di HP Anda.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                style: TextStyle(
+                  fontSize: 14, 
+                  color: Color(0xFF475569), 
+                  height: 1.4,
+                  fontFamily: 'Inter',
+                ),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Cara mengaktifkan:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 14, 
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Inter',
+                ),
               ),
               const SizedBox(height: 12),
               _buildStepRow('1', 'Buka Pengaturan (Settings) di HP Anda.'),
@@ -465,33 +645,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildStepRow('4', 'Aktifkan semua izin notifikasi & suara.'),
             ],
           ),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text(
                 'Tutup',
-                style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFF64748B), 
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(context);
-                // Coba request permissions ulang
                 await NotificationService.instance.initialize();
                 _checkNotificationPermission();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF15BE77),
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
               ),
               child: const Text(
                 'Beri Izin',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
           ],
@@ -502,30 +691,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildStepRow(String number, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(7),
             decoration: const BoxDecoration(
-              color: Color(0xFFE8F8F2),
+              color: Color(0xFFE8F8F1),
               shape: BoxShape.circle,
             ),
             child: Text(
               number,
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF15BE77),
+                fontFamily: 'Roboto',
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF334155), height: 1.4),
+              style: const TextStyle(
+                fontSize: 13, 
+                color: Color(0xFF334155), 
+                height: 1.4,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
         ],
@@ -533,11 +728,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // HEADER //
+  // --- HEADER ---
   Widget _buildHeader(Dashboard dashboard) {
+    final hour = DateTime.now().hour;
+    String greeting;
+    if (hour >= 4 && hour < 11) {
+      greeting = 'Selamat Pagi';
+    } else if (hour >= 11 && hour < 15) {
+      greeting = 'Selamat Siang';
+    } else if (hour >= 15 && hour < 18) {
+      greeting = 'Selamat Sore';
+    } else {
+      greeting = 'Selamat Malam';
+    }
+
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       child: Row(
         children: [
           Expanded(
@@ -547,20 +753,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   children: [
                     Text(
-                      'Selamat Pagi,',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      '$greeting,',
+                      style: const TextStyle(
+                        fontSize: 14, 
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    const Text('👋', style: TextStyle(fontSize: 14)),
+                    const Text('👋', style: TextStyle(fontSize: 15)),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   dashboard.nama,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A1A),
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Roboto',
+                    letterSpacing: -0.5,
                   ),
                 ),
               ],
@@ -575,14 +788,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             },
             child: Container(
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: const Color(0xFFFFECEC),
                 shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFFD1D1), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF6B6B).withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.notifications_outlined,
+                Icons.notifications_active_rounded,
                 color: Color(0xFFFF6B6B),
                 size: 22,
               ),
@@ -593,21 +814,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // MENU UTAMA //
+  // --- MENU UTAMA (SPACIOUS & ACCESSIBLE) ---
   Widget _buildMenuUtama() {
     return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Menu Utama',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
+              color: Color(0xFF0F172A),
+              fontFamily: 'Roboto',
             ),
           ),
           const SizedBox(height: 16),
@@ -615,12 +835,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.6,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 1.25, // Taller ratio for better readability and touch targets
             children: [
               _buildMenuCard(
-                icon: Icons.alarm,
+                icon: Icons.alarm_rounded,
                 iconBg: const Color(0xFFFFECEC),
                 iconColor: const Color(0xFFFF6B6B),
                 label: 'Reminder & Alarm',
@@ -630,14 +850,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          AlarmScreen(pasienId: widget.pasienId),
+                      builder: (context) => AlarmScreen(pasienId: widget.pasienId),
                     ),
                   );
                 },
               ),
               _buildMenuCard(
-                icon: Icons.local_pharmacy_outlined,
+                icon: Icons.local_pharmacy_rounded,
                 iconBg: const Color(0xFFFFF3E0),
                 iconColor: const Color(0xFFFF9800),
                 label: 'Info Obat',
@@ -647,19 +866,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          InfoObatScreen(pasienId: widget.pasienId),
+                      builder: (context) => InfoObatScreen(pasienId: widget.pasienId),
                     ),
                   );
                 },
               ),
               _buildMenuCard(
-                icon: Icons.bar_chart,
-                iconBg: const Color(0xFFE3F2FD),
-                iconColor: const Color(0xFF2196F3),
+                icon: Icons.bar_chart_rounded,
+                iconBg: const Color(0xFFEFF6FF),
+                iconColor: const Color(0xFF2F80ED), // Secondary Blue dari Style Guide
                 label: 'Riwayat',
                 subLabel: 'Kepatuhan Minum',
-                subLabelColor: const Color(0xFF2196F3),
+                subLabelColor: const Color(0xFF2F80ED),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -670,8 +888,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               _buildMenuCard(
-                icon: Icons.fitness_center,
-                iconBg: const Color(0xFFF3E5F5),
+                icon: Icons.fitness_center_rounded,
+                iconBg: const Color(0xFFFAF5FF),
                 iconColor: const Color(0xFF9C27B0),
                 label: 'Rutinitas Sehat',
                 subLabel: 'Jadwal Aktivitas',
@@ -680,7 +898,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // Tambahkan parameter streakHari di sini
                       builder: (context) => const RutinitasSehatScreen(),
                     ),
                   );
@@ -707,53 +924,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFEEEEEE)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              color: const Color(0xFF0F172A).withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: iconBg,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: Icon(icon, color: iconColor, size: 24),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A1A),
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Inter',
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subLabel,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: subLabelColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: subLabelColor,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -761,9 +978,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── CALENDAR ──────────────────────────────────────────────────────────────
-
-  /// Menentukan warna dot kalender berdasarkan status kepatuhan dari riwayat
+  // --- CALENDAR SECTION (ENLARGED & CONTRASTING) ---
   Color _getCalendarDotColor(DateTime date) {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     final now = DateTime.now();
@@ -774,12 +989,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final statuses = _riwayatByDate[dateStr] ?? [];
       if (statuses.isEmpty) {
         if (dateOnly.isBefore(today)) {
-          return const Color(0xFFE53935); // Merah - Terlewat
+          return const Color(0xFFFF4D4D); // Merah - Terlewat
         }
-        return Colors.grey[400]!; // Abu-abu default
+        return const Color(0xFF94A3B8); // Abu-abu default
       }
       if (statuses.contains('Terlewat')) {
-        return const Color(0xFFE53935); // Merah - Terlewat
+        return const Color(0xFFFF4D4D); // Merah - Terlewat
       }
       if (statuses.contains('Terlambat')) {
         return const Color(0xFFFFA726); // Kuning - Terlambat
@@ -789,10 +1004,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } else {
       if (dateOnly.isBefore(today)) {
-        return const Color(0xFFE53935); // Merah - Terlewat (masa lalu yang terlewat tanpa data tracking)
+        return const Color(0xFFFF4D4D); // Merah - Terlewat
       }
     }
-    return Colors.grey[400]!; // Abu-abu default
+    return const Color(0xFF94A3B8); // Abu-abu default
   }
 
   Widget _buildCalendarLegend() {
@@ -802,12 +1017,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _legendItem(const Color(0xFF15BE77), 'Selesai'),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           _legendItem(const Color(0xFFFFA726), 'Terlambat'),
-          const SizedBox(width: 12),
-          _legendItem(const Color(0xFFE53935), 'Terlewat'),
-          const SizedBox(width: 12),
-          _legendItem(Colors.grey[400]!, 'Belum Diminum'),
+          const SizedBox(width: 14),
+          _legendItem(const Color(0xFFFF4D4D), 'Terlewat'),
+          const SizedBox(width: 14),
+          _legendItem(const Color(0xFF94A3B8), 'Belum Diminum'),
         ],
       ),
     );
@@ -817,8 +1032,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 9,
+          height: 9,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
@@ -827,17 +1042,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF475569),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
           ),
         ),
       ],
     );
   }
 
-  /// Mengecek apakah [date] jatuh dalam rentang tanggal salah satu jadwal aktif.
   bool _hasJadwalOnDate(DateTime date, List<Jadwal> jadwals) {
     final dateOnly = DateTime(date.year, date.month, date.day);
     for (final j in jadwals) {
@@ -859,28 +1074,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCalendarSection(List<Jadwal> allJadwals) {
     return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(18),
       child: Column(
         children: [
-          // Header row: bulan & toggle
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 _getMonthYear(_selectedDate),
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Roboto',
                 ),
               ),
-              // Toggle Minggu / Bulan
               Container(
+                height: 40,
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0F0F0),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
@@ -899,11 +1126,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _isWeekView
               ? _buildWeekCalendar(allJadwals)
               : _buildMonthCalendar(allJadwals),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           _buildCalendarLegend(),
         ],
       ),
@@ -917,12 +1144,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withOpacity(0.06),
                     blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : [],
@@ -931,8 +1159,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: active ? const Color(0xFF1A1A1A) : Colors.grey,
+            fontWeight: FontWeight.bold,
+            color: active ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            fontFamily: 'Inter',
           ),
         ),
       ),
@@ -940,10 +1169,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildWeekCalendar(List<Jadwal> allJadwals) {
-    // Tampilkan 7 hari mulai dari Senin minggu ini
     final now = DateTime.now();
     final mondayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-
     final dayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
     return Column(
@@ -953,14 +1180,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: dayLabels
               .map(
                 (d) => SizedBox(
-                  width: 36,
+                  width: 38,
                   child: Center(
                     child: Text(
                       d,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w600,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Inter',
                       ),
                     ),
                   ),
@@ -968,7 +1196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
               .toList(),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(7, (i) {
@@ -977,47 +1205,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 day.day == now.day &&
                 day.month == now.month &&
                 day.year == now.year;
-            // Dot real: cek apakah tanggal ini masuk rentang jadwal pasien
             final hasDot = _hasJadwalOnDate(day, allJadwals);
 
             return SizedBox(
-              width: 36,
+              width: 38,
               child: Column(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: isToday
                           ? const Color(0xFF15BE77)
                           : Colors.transparent,
                       shape: BoxShape.circle,
+                      border: isToday 
+                          ? null 
+                          : Border.all(color: const Color(0xFFF1F5F9), width: 1),
                     ),
                     child: Center(
                       child: Text(
                         '${day.day}',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isToday
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isToday
-                              ? Colors.white
-                              : const Color(0xFF1A1A1A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isToday ? Colors.white : const Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   if (hasDot)
                     Container(
-                      width: 5,
-                      height: 5,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         color: _getCalendarDotColor(day),
                         shape: BoxShape.circle,
                       ),
-                    ),
+                    )
+                  else
+                    const SizedBox(height: 8),
                 ],
               ),
             );
@@ -1031,7 +1260,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final firstDay = DateTime(_selectedDate.year, _selectedDate.month, 1);
     final lastDay = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
     final daysInMonth = lastDay.day;
-    final weekdayOfFirst = firstDay.weekday; // 1=Mon
+    final weekdayOfFirst = firstDay.weekday;
     final now = DateTime.now();
     final isCurrentMonth =
         now.year == _selectedDate.year && now.month == _selectedDate.month;
@@ -1040,12 +1269,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Column(
       children: [
-        // Nav arrows
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, size: 20),
+              icon: const Icon(Icons.chevron_left_rounded, size: 24, color: Color(0xFF0F172A)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => setState(() {
@@ -1055,9 +1283,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               }),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             IconButton(
-              icon: const Icon(Icons.chevron_right, size: 20),
+              icon: const Icon(Icons.chevron_right_rounded, size: 24, color: Color(0xFF0F172A)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => setState(() {
@@ -1069,7 +1297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-        // Day headers
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: dayLabels
@@ -1079,10 +1307,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Center(
                     child: Text(
                       d,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w600,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Inter',
                       ),
                     ),
                   ),
@@ -1090,7 +1319,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
               .toList(),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
@@ -1103,7 +1332,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (index < weekdayOfFirst - 1) return const SizedBox();
             final day = index - (weekdayOfFirst - 1) + 1;
             final isToday = isCurrentMonth && day == now.day;
-            // Dot real: cek apakah tanggal ini masuk rentang jadwal pasien
             final dateToCheck =
                 DateTime(_selectedDate.year, _selectedDate.month, day);
             final hasDot = _hasJadwalOnDate(dateToCheck, allJadwals);
@@ -1112,8 +1340,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: isToday
                         ? const Color(0xFF15BE77)
@@ -1124,26 +1352,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Text(
                       '$day',
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isToday
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isToday ? Colors.white : const Color(0xFF1A1A1A),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isToday ? Colors.white : const Color(0xFF0F172A),
+                        fontFamily: 'Roboto',
                       ),
                     ),
                   ),
                 ),
-                if (hasDot) ...[
-                  const SizedBox(height: 2),
+                const SizedBox(height: 2),
+                if (hasDot)
                   Container(
-                    width: 4,
-                    height: 4,
+                    width: 6,
+                    height: 6,
                     decoration: BoxDecoration(
                       color: _getCalendarDotColor(dateToCheck),
                       shape: BoxShape.circle,
                     ),
-                  ),
-                ],
+                  )
+                else
+                  const SizedBox(height: 6),
               ],
             );
           },
@@ -1152,9 +1380,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── JADWAL LIST ───────────────────────────────────────────────────────────
-
-  /// Klasifikasi status jadwal berdasarkan waktu sekarang
+  // --- JADWAL LIST ---
   _JadwalStatus _getJadwalStatus(String waktuMinum) {
     try {
       final now = DateTime.now();
@@ -1165,18 +1391,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         int.parse(parts[0]), int.parse(parts[1]),
       );
       final diffMinutes = now.difference(jadwalDt).inMinutes;
-      if (diffMinutes > 75) return _JadwalStatus.expired;    // >75 menit → Terlewat
-      if (diffMinutes < -5) return _JadwalStatus.upcoming;   // belum waktunya
-      if (diffMinutes <= 30) return _JadwalStatus.onTime;    // dalam 30 menit
-      return _JadwalStatus.late;                             // sudah lewat (30–75 menit)
+      if (diffMinutes > 75) return _JadwalStatus.expired;
+      if (diffMinutes < -5) return _JadwalStatus.upcoming;
+      if (diffMinutes <= 30) return _JadwalStatus.onTime;
+      return _JadwalStatus.late;
     } catch (_) {
       return _JadwalStatus.upcoming;
     }
   }
 
-  /// Kirim riwayat "Terlewat" ke backend untuk jadwal yang sudah expired.
-  /// Dipanggil saat dashboard dirender; idempotent karena backend hanya menyimpan
-  /// satu log per jadwal per tanggal.
   Future<void> _autoLogExpiredJadwal(Jadwal jadwal, int pasienId) async {
     try {
       final now = DateTime.now();
@@ -1203,17 +1426,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final dayName = dayNames[now.weekday - 1];
     final dateStr = '$dayName, ${now.day} ${monthNames[now.month - 1]} ${now.year}';
 
-    // ── Pisahkan jadwal aktif (tampil) vs expired (>75 menit, disembunyikan) ──
+    // Pisahkan jadwal aktif vs expired
     final activeJadwals = <Jadwal>[];
     for (final j in jadwals) {
-      // Jadwal yang sudah ditandai diminum di sesi ini selalu tampil
       if (_takenJadwalIds.contains(j.id)) {
         activeJadwals.add(j);
         continue;
       }
       final status = _getJadwalStatus(j.waktuMinum);
       if (status == _JadwalStatus.expired) {
-        // Auto-log ke backend sebagai Terlewat (fire-and-forget, idempotent)
         _autoLogExpiredJadwal(j, pasienId);
       } else {
         activeJadwals.add(j);
@@ -1225,10 +1446,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
           Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1238,33 +1457,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const Text(
                       'Jadwal Hari Ini',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
+                        color: Color(0xFF0F172A),
+                        fontFamily: 'Roboto',
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       dateStr,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: const TextStyle(
+                        fontSize: 13, 
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
                     ),
                   ],
                 ),
                 if (activeJadwals.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F8F1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${activeJadwals.length} obat',
+                      '${activeJadwals.length} Obat',
                       style: const TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF15BE77),
+                        fontFamily: 'Inter',
                       ),
                     ),
                   ),
@@ -1272,48 +1496,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
-          // ── Empty state ──────────────────────────────────────────────────
           if (activeJadwals.isEmpty)
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(28),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              ),
               child: Center(
                 child: Column(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F8F1),
+                      width: 64,
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE8F8F1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.event_available_rounded,
+                        Icons.verified_rounded,
                         color: Color(0xFF15BE77),
-                        size: 28,
+                        size: 32,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     const Text(
                       'Tidak ada jadwal obat hari ini',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        fontFamily: 'Roboto',
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Selamat, tidak ada obat yang perlu diminum hari ini',
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Selamat! Tubuh Anda sehat. Semua jadwal hari ini kosong.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 13, 
+                        color: Color(0xFF64748B),
+                        fontFamily: 'Inter',
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
 
-          // ── Jadwal cards (hanya yang aktif / belum expired) ───────────────
           ...activeJadwals.map(
             (jadwal) => _buildJadwalCard(
               jadwal: jadwal,
@@ -1332,7 +1565,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isTaken = _takenJadwalIds.contains(jadwal.id);
     final status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(jadwal.waktuMinum);
 
-    // ── Warna & teks per status ──────────────────────────────────────────
     final Color statusColor;
     final Color statusBg;
     final String statusLabel;
@@ -1355,18 +1587,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           statusColor = const Color(0xFFFFA726);
           statusBg = const Color(0xFFFFF8E1);
           statusLabel = 'Segera Minum';
-          statusIcon = Icons.alarm_rounded;
+          statusIcon = Icons.error_outline_rounded;
           break;
         case _JadwalStatus.upcoming:
-          statusColor = const Color(0xFF78909C);
-          statusBg = const Color(0xFFF5F5F5);
+          statusColor = const Color(0xFF64748B);
+          statusBg = const Color(0xFFF1F5F9);
           statusLabel = 'Akan Datang';
           statusIcon = Icons.schedule_rounded;
           break;
         case _JadwalStatus.expired:
-          // Tidak seharusnya tercapai — sudah difilter di _buildJadwalList
-          statusColor = const Color(0xFFE53935);
-          statusBg = const Color(0xFFFFF1F0);
+          statusColor = const Color(0xFFFF4D4D);
+          statusBg = const Color(0xFFFFECEC);
           statusLabel = 'Terlewat';
           statusIcon = Icons.cancel_rounded;
           break;
@@ -1374,116 +1605,121 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 1),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isTaken ? const Color(0xFFE2E8F0) : const Color(0xFFF1F5F9), 
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isTaken
-              ? null
-              : () => _markAsTaken(jadwal, pasienId),
-          borderRadius: BorderRadius.zero,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          onTap: isTaken ? null : () => _markAsTaken(jadwal, pasienId),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // ── Ikon obat ──────────────────────────────────────────────
+                // EMOJI OBAT / ICON
                 Container(
-                  width: 46,
-                  height: 46,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
                     child: Text(
                       _getPillEmoji(jadwal.namaObat),
-                      style: const TextStyle(fontSize: 22),
+                      style: const TextStyle(fontSize: 24),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
 
-                // ── Info obat ─────────────────────────────────────────────
+                // INFO OBAT
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nama obat
                       Text(
                         jadwal.namaObat,
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isTaken
-                              ? Colors.grey[400]
-                              : const Color(0xFF1A1A1A),
-                          decoration: isTaken
-                              ? TextDecoration.lineThrough
-                              : null,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isTaken ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                          decoration: isTaken ? TextDecoration.lineThrough : null,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      // Dosis & aturan
+                      const SizedBox(height: 4),
                       Text(
                         '${jadwal.jumlahDosis} ${jadwal.satuan}  •  ${jadwal.aturanKonsumsi}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF475569),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      // Status badge
+                      const SizedBox(height: 8),
+                      // BADGES ROW
                       Row(
                         children: [
-                          // Waktu minum
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF0F0F0),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.access_time_rounded,
-                                  size: 11,
-                                  color: Colors.grey[600],
+                                  size: 12,
+                                  color: Color(0xFF475569),
                                 ),
-                                const SizedBox(width: 3),
+                                const SizedBox(width: 4),
                                 Text(
                                   jadwal.waktuMinum,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF475569),
+                                    fontFamily: 'Inter',
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          // Status pill
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: statusBg,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                Icon(statusIcon, size: 11, color: statusColor),
-                                const SizedBox(width: 3),
+                                Icon(statusIcon, size: 12, color: statusColor),
+                                const SizedBox(width: 4),
                                 Text(
                                   statusLabel,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
                                     color: statusColor,
+                                    fontFamily: 'Inter',
                                   ),
                                 ),
                               ],
@@ -1494,40 +1730,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
 
-                const SizedBox(width: 12),
-
-                // ── Checkbox interaktif ───────────────────────────────────
+                // INTERACTIVE LARGE ACTION BUTTON
                 GestureDetector(
-                  onTap: isTaken
-                      ? null
-                      : () => _markAsTaken(jadwal, pasienId),
+                  onTap: isTaken ? null : () => _markAsTaken(jadwal, pasienId),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                    width: 28,
-                    height: 28,
+                    curve: Curves.easeInOut,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: isTaken
-                          ? const Color(0xFF15BE77)
-                          : Colors.transparent,
+                      color: isTaken ? const Color(0xFF15BE77) : Colors.white,
                       border: Border.all(
-                        color: isTaken
-                            ? const Color(0xFF15BE77)
+                        color: isTaken 
+                            ? const Color(0xFF15BE77) 
                             : status == _JadwalStatus.upcoming
-                                ? Colors.grey[300]!
+                                ? const Color(0xFFCBD5E1)
                                 : statusColor,
-                        width: 2,
+                        width: 2.5,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      shape: BoxShape.circle,
                     ),
                     child: isTaken
                         ? const Icon(
                             Icons.check_rounded,
                             color: Colors.white,
-                            size: 18,
+                            size: 22,
                           )
-                        : null,
+                        : Icon(
+                            Icons.check_rounded,
+                            color: status == _JadwalStatus.upcoming
+                                ? const Color(0xFFCBD5E1)
+                                : statusColor.withOpacity(0.5),
+                            size: 20,
+                          ),
                   ),
                 ),
               ],
@@ -1547,72 +1784,121 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '💊';
   }
 
-  // ── BOTTOM NAV ────────────────────────────────────────────────────────────
+  // --- BOTTOM NAV (ACCESSIBLE LABELED BAR) ---
   Widget _buildBottomNav() {
     return Container(
-      height: 64,
+      height: 76,
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(
+          top: BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: const Color(0xFF0F172A).withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // Home
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.home_rounded,
-              color: Color(0xFF15BE77),
-              size: 28,
+          // HOME TAB
+          Expanded(
+            child: InkWell(
+              onTap: () {},
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(
+                    Icons.home_rounded,
+                    color: Color(0xFF15BE77),
+                    size: 28,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Beranda',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF15BE77),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          // FAB +
-          GestureDetector(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        // Pindah ke halaman list rutinitas, bukan ke form langsung
-        builder: (context) => const RutinitasSehatScreen(initialIndex: 1), 
-      ),
-    );
-  },
-  child: Container(
-    width: 52,
-    height: 52,
-    decoration: const BoxDecoration(
-      color: Color(0xFF15BE77),
-      shape: BoxShape.circle,
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x4015BE77),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: const Icon(Icons.add, color: Colors.white, size: 28),
-  ),
-),
-          // Profile
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-            icon: Icon(
-              Icons.person_outline_rounded,
-              color: Colors.grey[400],
-              size: 28,
+
+          // ADD ROUTINE TAB (CENTER PLUS)
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RutinitasSehatScreen(initialIndex: 1),
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF15BE77),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF15BE77).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // PROFILE TAB
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                );
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(
+                    Icons.person_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 28,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Profil',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF94A3B8),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1620,29 +1906,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── HELPERS ───────────────────────────────────────────────────────────────
+  // --- HELPERS ---
   String _getMonthYear(DateTime date) {
     const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
 }
 
-/// Status jadwal berdasarkan waktu sekarang
-/// - [onTime]   : 0 s/d 30 menit setelah jadwal
-/// - [late]     : 30 s/d 75 menit setelah jadwal (masih bisa dikonfirmasi)
-/// - [upcoming] : belum waktunya (>5 menit sebelum jadwal)
-/// - [expired]  : sudah >75 menit → otomatis Terlewat, tidak ditampilkan di dashboard
 enum _JadwalStatus { onTime, late, upcoming, expired }

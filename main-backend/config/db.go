@@ -34,7 +34,7 @@ func InitPostgres() *gorm.DB {
 
 	log.Println("Database connected!")
 
-	// Auto-migrate schema (Menambahkan Rutinitas dan Tracking ke daftar migrasi)
+	// Auto-migrate schema (Menambahkan Rutinitas, Tracking, dan Riwayat ke daftar migrasi)
 	if err := db.AutoMigrate(
 		&domain.Pasien{}, 
 		&domain.Nakes{}, 
@@ -42,6 +42,8 @@ func InitPostgres() *gorm.DB {
 		&domain.Obat{},
 		&domain.Rutinitas{},         // <--- Tambahan
 		&domain.TrackingRutinitas{}, // <--- Tambahan
+		&domain.TrackingJadwal{},    // <--- Tambahan
+		&domain.RiwayatObat{},       // <--- Tambahan
 	); err != nil {
 		panic("Gagal auto-migrate: " + err.Error())
 	}

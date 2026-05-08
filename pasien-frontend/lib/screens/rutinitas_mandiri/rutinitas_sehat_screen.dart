@@ -16,9 +16,8 @@ class RutinitasSehatScreen extends StatefulWidget {
 
 class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     with SingleTickerProviderStateMixin {
-  static const Color _bgPage = Color(0xFFF8FAF9);
-  static const Color _green = Color(0xFF13EC5B);
-  static const Color _streakDark = Color(0xFF10221C);
+  static const Color _bgPage = Color(0xFFF8FAFC); // Premium soft background
+  static const Color _green = Color(0xFF15BE77); // Style guide Emerald Green
   static const Color _textPrimary = Color(0xFF0F172A);
   static const Color _textSecondary = Color(0xFF64748B);
 
@@ -34,7 +33,6 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   @override
   void initState() {
     super.initState();
-    // Gunakan widget.initialIndex supaya otomatis pindah tab
     _tabController = TabController(
       length: 2,
       vsync: this,
@@ -76,26 +74,22 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     };
   }
 
-  // Mengambil data dari Backend
   Future<void> _initData() async {
     if (!mounted || _pasienId == null) return;
     setState(() => _isLoading = true);
     try {
       final headers = await _getAuthHeaders();
 
-      // Fetch obat mandiri pasien (obat yang ditambah pasien sendiri)
       final obatResponse = await http.get(
         Uri.parse("$_baseUrl/obat-mandiri"),
         headers: headers,
       );
 
-      // Fetch rutinitas pasien (rutinitas yang dibuat pasien sendiri)
       final rutinitasResponse = await http.get(
         Uri.parse("$_baseUrl/rutinitas"),
         headers: headers,
       );
 
-      // Fetch streak dari endpoint streak
       final streakResponse = await http.get(
         Uri.parse("$_baseUrl/rutinitas/streak/$_pasienId"),
         headers: headers,
@@ -106,22 +100,13 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         setState(() {
           _listObat = obatData['data'] ?? [];
         });
-      } else {
-        debugPrint(
-          "Gagal fetch obat mandiri: ${obatResponse.statusCode} ${obatResponse.body}",
-        );
       }
 
       if (rutinitasResponse.statusCode == 200) {
         final rutinitasData = jsonDecode(rutinitasResponse.body);
         setState(() {
-          // Backend mengembalikan { "data": [...] }
           _listRutinitas = rutinitasData['data'] ?? [];
         });
-      } else {
-        debugPrint(
-          "Gagal fetch rutinitas: ${rutinitasResponse.statusCode} ${rutinitasResponse.body}",
-        );
       }
 
       if (streakResponse.statusCode == 200) {
@@ -143,47 +128,102 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
       length: 2,
       child: Scaffold(
         backgroundColor: _bgPage,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: _textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            "Rutinitas Sehat",
-            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
-          bottom: TabBar(
-            controller: _tabController,
-            indicatorColor: _green,
-            labelColor: _textPrimary,
-            unselectedLabelColor: _textSecondary,
-            tabs: const [
-              Tab(text: "Obat"),
-              Tab(text: "Rutinitas"),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ─── APP BAR (CUSTOM ERGONOMIC) ──────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 24, 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.chevron_left_rounded,
+                        color: _textPrimary,
+                        size: 32,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Rutinitas Sehat',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _textPrimary,
+                        fontFamily: 'Roboto',
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildStreakCard(),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Custom styled TabBar inside white container
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _textPrimary.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorSize: TabBarIndicatorSize.tab, // Membagi rata tab indikator antara Obat dan Rutinitas
+                  indicatorColor: _green,
+                  indicatorWeight: 0,
+                  indicator: BoxDecoration(
+                    color: _green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: _textSecondary,
+                  labelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Inter',
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Inter',
+                  ),
+                  tabs: const [
+                    Tab(text: "Obat"),
+                    Tab(text: "Rutinitas"),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildObatSection(),
+                    _buildListSection(_listRutinitas, "rutinitas"),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        body: Column(
-          children: [
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildStreakCard(),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildObatSection(),
-                  _buildListSection(_listRutinitas, "rutinitas"),
-                ],
-              ),
-            ),
-          ],
         ),
         floatingActionButton: _buildTambahButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -196,32 +236,66 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _streakDark,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF064E3B), Color(0xFF10B981)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Text("🏆", style: TextStyle(fontSize: 16)),
-              SizedBox(width: 8),
-              Text(
-                "STREAK KAMU!",
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text("🏆", style: TextStyle(fontSize: 16)),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "STREAK KEPATUHAN KAMU",
                 style: TextStyle(
-                  color: Color(0xFF13ECA4),
-                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFA7F3D0),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  fontFamily: 'Inter',
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            "$_streakHari Hari",
+            "$_streakHari Hari Beruntun!",
             style: const TextStyle(
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: Colors.white,
+              fontFamily: 'Roboto',
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "Mantap sekali! Pertahankan terus kebiasaan minum obat sehatmu ini ya.",
+            style: TextStyle(
+              color: Color(0xFFECFDF5),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              height: 1.4,
             ),
           ),
         ],
@@ -229,23 +303,26 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     );
   }
 
-  // Section khusus untuk tab Obat (obat mandiri)
   Widget _buildObatSection() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-
-    if (_listObat.isEmpty) {
+    if (_isLoading) {
       return const Center(
-        child: Text(
-          "Belum ada jadwal obat. Tambah yuk!",
-          style: TextStyle(color: _textSecondary),
+        child: CircularProgressIndicator(
+          color: _green,
+          strokeWidth: 3,
         ),
       );
     }
 
+    if (_listObat.isEmpty) {
+      return _buildEmptyState("Belum Ada Jadwal Obat Mandiri", "Tambahkan obat mandiri pertama Anda sekarang.");
+    }
+
     return RefreshIndicator(
       onRefresh: _initData,
+      color: _green,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 84),
         itemCount: _listObat.length,
         itemBuilder: (context, index) {
           final item = _listObat[index];
@@ -256,45 +333,121 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   }
 
   Widget _buildListSection(List<dynamic> list, String type) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-
-    if (list.isEmpty) {
-      return Center(
-        child: Text(
-          "Belum ada jadwal $type. Tambah yuk!",
-          style: const TextStyle(color: _textSecondary),
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: _green,
+          strokeWidth: 3,
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final item = list[index];
-        return _buildCard(item);
-      },
+    if (list.isEmpty) {
+      return _buildEmptyState("Belum Ada Jadwal Rutinitas", "Mulai hidup sehat dengan menambahkan rutinitas baru.");
+    }
+
+    return RefreshIndicator(
+      onRefresh: _initData,
+      color: _green,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 84),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final item = list[index];
+          return _buildCard(item);
+        },
+      ),
     );
   }
 
-  // Card untuk obat mandiri (field dari ObatResponseDTO)
+  Widget _buildEmptyState(String title, String subtitle) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: 250,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add_task_rounded,
+                color: Color(0xFF94A3B8),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: _textPrimary,
+                fontFamily: 'Roboto',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: _textSecondary,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildObatCard(dynamic item) {
     final List<dynamic> pengingatRaw = item['pengingat'] ?? [];
     final pengingat = pengingatRaw.isNotEmpty ? pengingatRaw.join(', ') : '-';
     final frekuensi = item['frekuensi'] ?? '-';
-    // Dosis disimpan di field 'fungsi' karena CreateMandiri memakai: obat.Fungsi = req.Dosis
     final dosis = item['fungsi'] ?? '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: _textPrimary.withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEFF6FF), // Soft Blue
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.medication_rounded,
+              color: Color(0xFF3B82F6),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,28 +456,46 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                   item['nama_obat'] ?? '-',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 16,
+                    color: _textPrimary,
+                    fontFamily: 'Roboto',
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   "Dosis: $dosis",
-                  style: const TextStyle(color: _textSecondary, fontSize: 13),
+                  style: const TextStyle(
+                    color: _textPrimary, 
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   "$frekuensi • $pengingat",
-                  style: const TextStyle(color: _textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: _textSecondary, 
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.check_box_outline_blank, color: _green),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F8F1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_rounded, color: _green, size: 20),
+          ),
         ],
       ),
     );
   }
 
-  // Card untuk rutinitas yang dibuat pasien sendiri (field dari domain.Rutinitas)
   Widget _buildCard(dynamic item) {
     final namaRutinitas = item['nama_rutinitas'] ?? '-';
     final waktuReminder = item['waktu_reminder'] ?? '';
@@ -332,14 +503,35 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: _textPrimary.withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF5F3FF), // Soft Purple
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.fitness_center_rounded,
+              color: Color(0xFF8B5CF6),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,25 +540,53 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                   namaRutinitas,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 16,
+                    color: _textPrimary,
+                    fontFamily: 'Roboto',
                   ),
                 ),
-                if (waktuReminder.isNotEmpty)
-                  Text(
-                    '⏰ $waktuReminder',
-                    style: const TextStyle(color: _textSecondary, fontSize: 13),
+                if (waktuReminder.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.alarm_rounded, color: _textSecondary, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        waktuReminder,
+                        style: const TextStyle(
+                          color: _textSecondary, 
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
                   ),
-                if (deskripsi.isNotEmpty)
+                ],
+                if (deskripsi.isNotEmpty) ...[
+                  const SizedBox(height: 2),
                   Text(
                     deskripsi,
-                    style: const TextStyle(color: _textSecondary, fontSize: 12),
+                    style: const TextStyle(
+                      color: _textSecondary, 
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                ],
               ],
             ),
           ),
-          const Icon(Icons.check_box_outline_blank, color: _green),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F8F1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_rounded, color: _green, size: 20),
+          ),
         ],
       ),
     );
@@ -374,11 +594,12 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
 
   Widget _buildTambahButton() {
     final isObatTab = _tabController.index == 0;
-    final buttonLabel = isObatTab ? "Tambah Obat" : "Tambah Rutinitas";
+    final buttonLabel = isObatTab ? "Tambah Obat Mandiri" : "Tambah Rutinitas Sehat";
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 40,
-      height: 54,
+    return Container(
+      width: double.infinity,
+      height: 56,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       child: ElevatedButton.icon(
         onPressed: () async {
           if (_pasienId == null) return;
@@ -397,24 +618,27 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                   ),
                 );
 
-          // Refresh data jika result bernilai true
           if (result == true && mounted) {
             _initData();
           }
         },
-        icon: const Icon(Icons.add, color: _textPrimary),
+        icon: const Icon(Icons.add_circle_rounded, color: Colors.white, size: 22),
         label: Text(
           buttonLabel,
           style: const TextStyle(
-            color: _textPrimary,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 15,
+            fontFamily: 'Inter',
           ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: _green,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
           ),
+          elevation: 4,
+          shadowColor: _green.withOpacity(0.3),
         ),
       ),
     );

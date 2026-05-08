@@ -19,7 +19,7 @@ class AlarmScreen extends StatefulWidget {
 
 class _AlarmScreenState extends State<AlarmScreen> {
   late Future<List<ReminderGroup>> _remindersFuture;
-  bool _alarmsActive = true; // Track status alarm global
+  final bool _alarmsActive = true; // Track status alarm global
 
   @override
   void initState() {
@@ -39,8 +39,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
       final reminders = _extractReminders(dashboard.todayJadwals);
 
       // ── Scheduling alarm TERPISAH dari fetch data (fire-and-forget) ──
-      // Jika scheduling gagal (misal permission belum diberikan),
-      // data jadwal tetap tampil di UI — tidak ikut throw exception.
       if (_alarmsActive) {
         _scheduleAlarmsBackground(dashboard.todayJadwals);
       }
@@ -53,7 +51,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   /// Cek apakah waktu jadwal sudah lewat >75 menit (Terlewat).
-  /// Konsisten dengan threshold di dashboard dan backend.
   bool _isExpired(String waktuMinum) {
     try {
       final parts = waktuMinum.split(':');
@@ -70,7 +67,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   /// Jalankan scheduling alarm di background — tidak memblokir UI.
-  /// Jadwal yang sudah expired (>75 menit) tidak di-schedule.
   void _scheduleAlarmsBackground(List<Jadwal> jadwals) {
     Future(() async {
       try {
@@ -91,7 +87,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
         await NotificationService.instance.scheduleAllJadwals(notifModels);
         debugPrint('[AlarmScreen] ${notifModels.length} alarm dijadwalkan.');
       } catch (e) {
-        // Alarm gagal tidak boleh crash UI — cukup log
         debugPrint('[AlarmScreen] Gagal jadwalkan alarm (non-fatal): $e');
       }
     });
@@ -147,8 +142,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-
-
   String _getNextReminderTime(List<ReminderGroup> groups) {
     if (groups.isEmpty) return '--:--';
     final now = DateTime.now();
@@ -182,45 +175,96 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   Color _getCategoryColor(String category) {
-    if (category.contains('Antibiotik')) return const Color(0xFF4CAF50);
-    if (category.contains('Pereda')) return const Color(0xFFFFC107);
-    if (category.contains('Suplemen')) return const Color(0xFF2196F3);
-    if (category.contains('Flu')) return const Color(0xFF9C27B0);
-    if (category.contains('Darah')) return const Color(0xFFF44336);
-    return const Color(0xFF607D8B);
+    final lower = category.toLowerCase();
+    if (lower.contains('antibiotik')) return const Color(0xFF10B981); // Emerald
+    if (lower.contains('pereda') || lower.contains('nyeri')) return const Color(0xFFF97316); // Orange
+    if (lower.contains('suplemen') || lower.contains('vitamin')) return const Color(0xFF3B82F6); // Blue
+    if (lower.contains('flu') || lower.contains('batuk')) return const Color(0xFF8B5CF6); // Purple
+    if (lower.contains('darah') || lower.contains('tensi')) return const Color(0xFFEF4444); // Red
+    return const Color(0xFF64748B); // Slate
+  }
+
+  Color _getCategoryBgColor(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('antibiotik')) return const Color(0xFFE8F8F1); // Soft Emerald
+    if (lower.contains('pereda') || lower.contains('nyeri')) return const Color(0xFFFFF7ED); // Soft Orange
+    if (lower.contains('suplemen') || lower.contains('vitamin')) return const Color(0xFFEFF6FF); // Soft Blue
+    if (lower.contains('flu') || lower.contains('batuk')) return const Color(0xFFF5F3FF); // Soft Purple
+    if (lower.contains('darah') || lower.contains('tensi')) return const Color(0xFFFEF2F2); // Soft Red
+    return const Color(0xFFF1F5F9); // Soft Slate
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
       body: SafeArea(
         child: FutureBuilder<List<ReminderGroup>>(
           future: _remindersFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF15BE77),
+                  strokeWidth: 3,
+                ),
+              );
             }
 
             if (snapshot.hasError) {
               return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                    const SizedBox(height: 16),
-                    const Text('Gagal mengambil data jadwal'),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => setState(
-                          () => _remindersFuture = _fetchAndScheduleReminders()),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba Lagi'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2BB673),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 56,
+                        color: Color(0xFFFF4D4D),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Gagal Memuat Data Jadwal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        snapshot.error.toString(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => setState(
+                          () => _remindersFuture = _fetchAndScheduleReminders(),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Coba Lagi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF15BE77),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -228,21 +272,31 @@ class _AlarmScreenState extends State<AlarmScreen> {
             final groups = snapshot.data ?? [];
 
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── HEADER ──────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(12, 16, 24, 12),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back),
+                        icon: const Icon(
+                          Icons.chevron_left_rounded,
+                          color: Color(0xFF0F172A),
+                          size: 32,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 4),
                       const Text(
-                        'Reminder dan Alarm',
+                        'Reminder & Alarm',
                         style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ],
                   ),
@@ -251,49 +305,83 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 // ── CARD ALARM BERIKUTNYA ────────────────────────────
                 if (groups.isNotEmpty)
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: _alarmsActive
-                          ? const Color(0xFF0B1F3A)
-                          : Colors.grey[700],
-                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withOpacity(0.15),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _alarmsActive ? 'Alarm berikutnya' : 'Alarm dimatikan',
-                          style: const TextStyle(color: Colors.white70),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.alarm_rounded,
+                              color: Color(0xFF15BE77),
+                              size: 16,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'ALARM BERIKUTNYA HARI INI',
+                              style: TextStyle(
+                                color: Color(0xFF15BE77),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
-                          _alarmsActive ? _getNextReminderTime(groups) : '--:--',
+                          _getNextReminderTime(groups),
                           style: const TextStyle(
-                            fontSize: 40,
+                            fontSize: 48,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontFamily: 'Roboto',
+                            letterSpacing: -1,
                           ),
                         ),
+                        const SizedBox(height: 6),
                         Text(
-                          _alarmsActive
-                              ? _getNextReminderMedicine(groups)
-                              : 'Aktifkan kembali untuk menjadwalkan alarm',
-                          style: const TextStyle(color: Colors.white70),
+                          _getNextReminderMedicine(groups),
+                          style: const TextStyle(
+                            color: Color(0xFFE2E8F0),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Inter',
+                            height: 1.4,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 18),
                         Row(
                           children: [
                             _chip(
-                              _alarmsActive ? 'Notifikasi Aktif' : 'Notifikasi Mati',
-                              _alarmsActive ? Colors.greenAccent : Colors.redAccent,
+                              'Notifikasi Aktif',
+                              const Color(0xFF15BE77),
+                              const Color(0xFFE8F8F1),
                             ),
                             const SizedBox(width: 10),
                             _chip(
-                              _alarmsActive ? 'Alarm Aktif' : 'Alarm Mati',
-                              _alarmsActive ? Colors.greenAccent : Colors.redAccent,
+                              'Alarm Aktif',
+                              const Color(0xFF15BE77),
+                              const Color(0xFFE8F8F1),
                             ),
                           ],
                         ),
@@ -301,43 +389,101 @@ class _AlarmScreenState extends State<AlarmScreen> {
                     ),
                   ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // ── LIST REMINDERS ───────────────────────────────────
                 if (groups.isEmpty)
                   Expanded(
                     child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.access_time_outlined,
-                              size: 48, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Tidak ada jadwal hari ini',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE8F8F1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.verified_rounded,
+                                size: 40,
+                                color: Color(0xFF15BE77),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Tidak ada jadwal obat hari ini',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Semua jadwal Anda telah tuntas atau kosong. Jaga kesehatan Anda selalu!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                                fontFamily: 'Inter',
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   )
                 else
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       children: [
-                        Text(
-                          'Semua Alarm Hari ini (${groups.fold<int>(0, (sum, g) => sum + g.reminders.length)} obat)',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Semua Alarm Hari Ini',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF0F172A),
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${groups.fold<int>(0, (sum, g) => sum + g.reminders.length)} Obat',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF475569),
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         ...groups.map((g) => _buildReminderGroup(g)),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-
-
               ],
             );
           },
@@ -348,57 +494,112 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
   Widget _buildReminderGroup(ReminderGroup group) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              group.time,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black87),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF15BE77),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Pukul ${group.time}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 10),
           ...group.reminders.map((reminder) => _alarmItem(
                 reminder.time,
                 reminder.namaObat,
                 '${reminder.jumlahDosis} ${reminder.satuan}',
-                _getCategoryColor(reminder.kategoriObat),
+                reminder.kategoriObat,
               )),
         ],
       ),
     );
   }
 
-  Widget _chip(String text, Color borderColor) {
+  Widget _chip(String text, Color iconColor, Color bgColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        border: Border.all(color: borderColor),
+        color: iconColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        text,
-        style: TextStyle(color: borderColor, fontSize: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: iconColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: iconColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _alarmItem(String time, String title, String dosage, Color color) {
+  Widget _alarmItem(String time, String title, String dosage, String category) {
+    final color = _getCategoryColor(category);
+    final bgColor = _getCategoryBgColor(category);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(Icons.medication, color: color),
-          const SizedBox(width: 10),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.medication_rounded,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,23 +607,63 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Roboto',
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(dosage,
-                    style:
-                        const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                      dosage,
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    if (category.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFCBD5E1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        category,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: const Color(0xFFE8F8F1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.schedule, color: color, size: 18),
+            child: const Icon(
+              Icons.alarm_on_rounded,
+              color: Color(0xFF15BE77),
+              size: 20,
+            ),
           ),
         ],
       ),

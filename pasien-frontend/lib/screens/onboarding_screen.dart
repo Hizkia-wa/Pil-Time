@@ -49,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFDFF2EC),
+      backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
       body: SafeArea(
         child: Column(
           children: [
@@ -57,12 +57,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const Padding(
               padding: EdgeInsets.only(top: 32.0, bottom: 8.0),
               child: Text(
-                'P i l  T i m e',
+                'Pil Time',
                 style: TextStyle(
-                  fontSize: 30,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                  letterSpacing: 4.0,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.5,
+                  fontFamily: 'Roboto',
                 ),
               ),
             ),
@@ -94,9 +95,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           // Illustration image
           Expanded(
-            child: Image.asset(
-              data.imagePath,
-              fit: BoxFit.contain,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withOpacity(0.02),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  data.imagePath,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
 
@@ -107,8 +126,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             data.detail,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF444444),
+              fontSize: 15,
+              color: Color(0xFF475569),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
               height: 1.7,
             ),
           ),
@@ -121,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildDots() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(_pages.length, (index) {
@@ -129,13 +150,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: isActive ? 22 : 8,
-            height: 8,
+            width: isActive ? 28 : 10,
+            height: 10,
             decoration: BoxDecoration(
               color: isActive
-                  ? const Color(0xFF15BE77)
-                  : const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(4),
+                  ? const Color(0xFF15BE77) // Emerald Green resmi
+                  : const Color(0xFFCBD5E1), // Soft Slate
+              borderRadius: BorderRadius.circular(5),
             ),
           );
         }),
@@ -149,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.fromLTRB(32, 0, 32, 40),
       child: SizedBox(
         width: double.infinity,
-        height: 52,
+        height: 56,
         child: ElevatedButton(
           onPressed: () {
             if (_currentPage == _pages.length - 1) {
@@ -164,17 +185,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF15BE77),
             foregroundColor: Colors.white,
-            elevation: 0,
-            shadowColor: Colors.transparent,
+            elevation: 4,
+            shadowColor: const Color(0xFF15BE77).withOpacity(0.3),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
           child: Text(
             currentData.buttonLabel,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
               letterSpacing: 0.3,
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../../services/api_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
@@ -17,23 +18,61 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final otp6 = TextEditingController();
 
   bool isLoading = false;
+  int _secondsRemaining = 60;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    otp1.dispose();
+    otp2.dispose();
+    otp3.dispose();
+    otp4.dispose();
+    otp5.dispose();
+    otp6.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _secondsRemaining = 60;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
 
   void verifyOTP(String email) async {
-    // VALIDASI OTP
     if (otp1.text.isEmpty ||
         otp2.text.isEmpty ||
         otp3.text.isEmpty ||
         otp4.text.isEmpty ||
         otp5.text.isEmpty ||
         otp6.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("OTP belum lengkap")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            "OTP belum lengkap",
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
       return;
     }
 
-    String otp =
-        otp1.text + otp2.text + otp3.text + otp4.text + otp5.text + otp6.text;
+    String otp = otp1.text + otp2.text + otp3.text + otp4.text + otp5.text + otp6.text;
 
     setState(() => isLoading = true);
 
@@ -50,30 +89,102 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         arguments: {'email': email, 'code': otp},
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result['error'] ?? "OTP salah")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            result['error'] ?? "OTP salah",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _resendOtp(String email) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final result = await ApiService.sendOtp(email);
+
+    setState(() => isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF15BE77),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            "Kode OTP baru telah dikirim!",
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
+      _startTimer();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            result['error'] ?? "Gagal mengirim ulang OTP",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
     }
   }
 
   Widget otpBox(TextEditingController controller, {bool autoFocus = false}) {
+    const emerald = Color(0xFF15BE77);
+
     return SizedBox(
-      width: 50,
+      width: 48,
+      height: 56,
       child: TextField(
         controller: controller,
         autofocus: autoFocus,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF0F172A),
+          fontFamily: 'Inter',
+        ),
         onChanged: (value) {
           if (value.isNotEmpty) {
             FocusScope.of(context).nextFocus();
+          } else {
+            FocusScope.of(context).previousFocus();
           }
         },
         decoration: InputDecoration(
           counterText: "",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white,
           isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: emerald, width: 2),
+          ),
         ),
       ),
     );
@@ -82,29 +193,106 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final email = ModalRoute.of(context)!.settings.arguments as String;
+    const emerald = Color(0xFF15BE77);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC), // Premium background
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF0F172A), size: 32),
+          onPressed: () => Navigator.pop(context),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.lock, size: 80, color: Colors.green),
-              SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              Text(
-                "Verifikasi OTP",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              // Custom Keypad Illustration as in Mockup
+              Center(
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F8F1),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: emerald.withOpacity(0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.mark_email_unread_rounded,
+                      size: 72,
+                      color: emerald,
+                    ),
+                  ),
+                ),
               ),
+              const SizedBox(height: 32),
 
-              SizedBox(height: 10),
-              Text("Kode dikirim ke $email"),
+              // Title Masukkan Kode Verifikasi
+              const Text(
+                "Masukkan Kode Verifikasi",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Roboto',
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 10),
 
-              SizedBox(height: 30),
+              // Description
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                      fontFamily: 'Inter',
+                      height: 1.5,
+                    ),
+                    children: [
+                      const TextSpan(text: "Silakan masukkan 6 digit kode yang telah dikirimkan ke email Anda untuk melanjutkan di "),
+                      const TextSpan(
+                        text: "Pil-Time",
+                        style: TextStyle(
+                          color: emerald,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const TextSpan(text: ".\n\n"),
+                      TextSpan(
+                        text: email,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 36),
 
+              // Row 6 OTP fields
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   otpBox(otp1, autoFocus: true),
                   otpBox(otp2),
@@ -114,22 +302,85 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   otpBox(otp6),
                 ],
               ),
+              const SizedBox(height: 32),
 
-              SizedBox(height: 30),
+              // Countdown timer display
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.access_time_rounded,
+                    color: Color(0xFF64748B),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _secondsRemaining > 0
+                        ? "Kirim ulang dalam $_secondsRemaining detik"
+                        : "Waktu verifikasi telah habis",
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-              ElevatedButton(
-                onPressed: isLoading ? null : () => verifyOTP(email),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  minimumSize: Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Resend OTP Link
+              GestureDetector(
+                onTap: _secondsRemaining == 0 && !isLoading ? () => _resendOtp(email) : null,
+                child: Text(
+                  "Belum menerima kode? Kirim ulang",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: _secondsRemaining == 0 ? emerald : const Color(0xFF94A3B8),
+                    fontFamily: 'Inter',
+                    decoration: TextDecoration.underline,
                   ),
                 ),
-                child: isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text("Verifikasi"),
               ),
+              const SizedBox(height: 36),
+
+              // Verify button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : () => verifyOTP(email),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: emerald,
+                    disabledBackgroundColor: const Color(0xFFC0E5D8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: isLoading ? 0 : 4,
+                    shadowColor: emerald.withOpacity(0.3),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Text(
+                          "Verifikasi",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

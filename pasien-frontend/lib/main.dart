@@ -150,26 +150,27 @@ class _SplashScreenState extends State<_SplashScreen>
             children: [
               Image.asset(
                 'assets/images/logo.png',
-                width: 180,
-                height: 180,
+                width: 280,
+                height: 280,
                 fit: BoxFit.contain,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               const Text(
                 'Pil Time',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                  letterSpacing: 2.0,
+                  color: Color(0xFF0F172A),
+                  fontFamily: 'Roboto',
+                  letterSpacing: 1.5,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 36),
               const SizedBox(
-                width: 24,
-                height: 24,
+                width: 28,
+                height: 28,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
+                  strokeWidth: 3,
                   valueColor: AlwaysStoppedAnimation(Color(0xFF15BE77)),
                 ),
               ),
