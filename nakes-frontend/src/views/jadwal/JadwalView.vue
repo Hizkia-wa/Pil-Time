@@ -497,11 +497,15 @@ import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../../stores/jadwal'
 import { usePasienStore } from '../../stores/pasien'
 import { useObatStore } from '../../stores/obat'
+import { useNotificationStore } from '../../stores/notification'
+import { useConfirmStore } from '../../stores/confirm'
 
 const router = useRouter()
 const jadwal = useJadwalStore()
 const pasien = usePasienStore()
 const obat = useObatStore()
+const notificationStore = useNotificationStore()
+const confirmStore = useConfirmStore()
 const reminderTimes = ref([])
 
 const frekuensiCount = computed(() => {
@@ -553,11 +557,19 @@ const editJadwal = (id) => {
 }
 
 const deleteJadwal = async (id) => {
-  if (confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) {
+  const ok = await confirmStore.show({
+    title: 'Hapus Jadwal Obat?',
+    message: 'Apakah Anda yakin ingin menghapus jadwal obat ini? Tindakan ini tidak dapat dibatalkan.',
+    confirmText: 'Ya, Hapus',
+    cancelText: 'Batal',
+    type: 'danger'
+  })
+  if (ok) {
     try {
       await jadwal.deleteJadwal(id)
+      notificationStore.success('Jadwal berhasil dihapus.', 'Sukses')
     } catch (error) {
-      alert('Gagal menghapus jadwal.')
+      notificationStore.error('Gagal menghapus jadwal.', 'Error')
     }
   }
 }
@@ -595,11 +607,11 @@ onBeforeUnmount(() => {
 
 const handleSubmit = () => {
   if (!jadwal.form.tanggal_mulai) {
-    alert('Tanggal mulai wajib diisi')
+    notificationStore.error('Tanggal mulai wajib diisi', 'Gagal')
     return
   }
   if (jadwal.selectedWaktuMinum.length === 0) {
-    alert('Pilih minimal satu waktu minum (Pagi/Siang/Malam)')
+    notificationStore.warning('Pilih minimal satu waktu minum (Pagi/Siang/Malam)', 'Peringatan')
     return
   }
   jadwal.form.waktu_reminder = reminderTimes.value

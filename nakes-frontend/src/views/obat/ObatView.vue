@@ -106,6 +106,8 @@ import ObatFormStep1 from './ObatFormStep1.vue'
 import ObatFormStep2 from './ObatFormStep2.vue'
 import ObatSuccess from './ObatSuccess.vue'
 import { useObatStore } from '../../stores/obat'
+import { useNotificationStore } from '../../stores/notification'
+import { useConfirmStore } from '../../stores/confirm'
 
 export default {
   name: 'ObatView',
@@ -118,6 +120,8 @@ export default {
   },
   setup() {
     const obatStore = useObatStore()
+    const notificationStore = useNotificationStore()
+    const confirmStore = useConfirmStore()
 
     const pageMode = ref('list')
     const formStep = ref(1)
@@ -168,7 +172,7 @@ export default {
 
     const goToConfirmation = () => {
       if (form.value.frekuensi_min > form.value.frekuensi_max || form.value.durasi_min > form.value.durasi_max) {
-        alert('Rentang frekuensi atau durasi tidak valid.')
+        notificationStore.error('Rentang frekuensi atau durasi tidak valid.', 'Gagal')
         return
       }
       formStep.value = 2
@@ -200,13 +204,13 @@ export default {
 
         showSuccess.value = true
       } catch (error) {
-        alert('Gagal menyimpan data: ' + error.message)
+        notificationStore.error('Gagal menyimpan data: ' + error.message, 'Gagal')
       } finally {
         submitting.value = false
       }
     }
 
-    const backFromForm = () => {
+    const backFromForm = async () => {
       if (showSuccess.value) {
         finishToList()
         return
@@ -217,7 +221,14 @@ export default {
         return
       }
 
-      if (confirm('Batalkan pengisian info obat?')) {
+      const ok = await confirmStore.show({
+        title: 'Batalkan Pengisian?',
+        message: 'Apakah Anda yakin ingin membatalkan pengisian data obat ini? Data yang belum disimpan akan hilang.',
+        confirmText: 'Ya, Batal',
+        cancelText: 'Kembali',
+        type: 'warning'
+      })
+      if (ok) {
         pageMode.value = 'list'
       }
     }

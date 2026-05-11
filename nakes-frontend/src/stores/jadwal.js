@@ -4,6 +4,7 @@ import { jadwalApiClient } from '../services/api'
 import { usePasienStore } from './pasien'
 import { useObatStore } from './obat'
 import { useAuthStore } from './auth'
+import { useNotificationStore } from './notification'
 
 export const useJadwalStore = defineStore('jadwal', () => {
   const pasienStore = usePasienStore()
@@ -20,7 +21,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
   const searchObat = ref('')
   const selectedWaktuMinum = ref([])
 
-  const steps = ['Pasien & Obat', 'Aturan Minum', 'Konfirmasi']
+  const steps = ['Pasien & Obat', 'Aturan Minum', 'Selesai']
 
   const waktuMinumOptions = [
     { value: 'Pagi', label: 'Pagi', icon: '☀️' },
@@ -219,7 +220,8 @@ const submitJadwal = async () => {
 
   } catch (err) {
     console.error(err)
-    alert('Error: ' + (err.response?.data?.error || err.message))
+    const notificationStore = useNotificationStore()
+    notificationStore.error('Error: ' + (err.response?.data?.error || err.message), 'Gagal Menyimpan')
   } finally {
     loading.value = false
   }
@@ -305,12 +307,13 @@ const submitJadwal = async () => {
     },
 
     goToStep2: () => {
+      const notificationStore = useNotificationStore()
       if (!form.value.patientId) {
-        alert('Silakan pilih pasien terlebih dahulu')
+        notificationStore.warning('Silakan pilih pasien terlebih dahulu', 'Perhatian')
         return
       }
       if (!form.value.obatId) {
-        alert('Silakan pilih obat terlebih dahulu')
+        notificationStore.warning('Silakan pilih obat terlebih dahulu', 'Perhatian')
         return
       }
       currentStep.value = 2

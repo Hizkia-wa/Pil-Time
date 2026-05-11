@@ -10,6 +10,7 @@ import (
 	"backend/pkg/middleware"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -165,8 +166,12 @@ func main() {
 		api.POST("/upload/image-base64", fileHandler.UploadBase64Image)
 	}
 
-	fmt.Println("Pil Time Server running on :8080")
-	r.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	fmt.Printf("Pil Time Server running on :%s\n", port)
+	r.Run(":" + port)
 }
 
 // CORSConfig mengatur CORS untuk semua request

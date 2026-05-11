@@ -201,6 +201,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Log jadwal sebagai 'Diminum' ke backend tracking API
   Future<void> _markAsTaken(Jadwal jadwal, int pasienId) async {
     if (_isMarkingTaken) return;
+
+    final status = _getJadwalStatus(jadwal.waktuMinum);
+    if (status == _JadwalStatus.upcoming) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul ${jadwal.waktuMinum}.',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEA580C), // Orange warning color
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (status == _JadwalStatus.expired) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.cancel_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Jadwal minum obat ${jadwal.namaObat} sudah terlewat (>75 menit).',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444), // Red error color
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isMarkingTaken = true);
 
     try {
@@ -1390,9 +1448,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         now.year, now.month, now.day,
         int.parse(parts[0]), int.parse(parts[1]),
       );
+      if (now.isBefore(jadwalDt)) return _JadwalStatus.upcoming;
       final diffMinutes = now.difference(jadwalDt).inMinutes;
       if (diffMinutes > 75) return _JadwalStatus.expired;
-      if (diffMinutes < -5) return _JadwalStatus.upcoming;
       if (diffMinutes <= 30) return _JadwalStatus.onTime;
       return _JadwalStatus.late;
     } catch (_) {

@@ -151,10 +151,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useObatStore } from '../../stores/obat.js'
+import { useConfirmStore } from '../../stores/confirm.js'
 
 const props = defineProps(['obatList', 'selectedId'])
 const emit = defineEmits(['add-obat', 'edit-obat', 'select-obat'])
 const obatStore = useObatStore()
+const confirmStore = useConfirmStore()
 const search = ref('')
 const openDropdownId = ref(null)
 
@@ -176,7 +178,14 @@ const filteredList = computed(() => {
 })
 
 const deleteData = async (id) => {
-  if(confirm('Hapus data ini?')) {
+  const ok = await confirmStore.show({
+    title: 'Hapus Data Obat?',
+    message: 'Apakah Anda yakin ingin menghapus data obat ini? Tindakan ini tidak dapat dibatalkan.',
+    confirmText: 'Ya, Hapus',
+    cancelText: 'Batal',
+    type: 'danger'
+  })
+  if (ok) {
     await obatStore.deleteObat(id)
     await obatStore.fetchObats()
   }

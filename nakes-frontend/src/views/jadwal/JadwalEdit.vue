@@ -60,21 +60,15 @@
                 </div>
 
                 <div>
-                  <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                     Frekuensi per Hari <span class="text-red-500">*</span>
                   </label>
-
-                  <div class="space-y-3">
-                    <div v-for="waktu in selectedWaktuMinum" :key="waktu" class="flex items-center gap-3">
-                      <span class="w-16 text-sm font-medium text-gray-700">{{ waktu }}</span>
-
-                      <input
-                        v-model="waktuReminder[waktu]"
-                        type="time"
-                        class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                      />
-                    </div>
-                  </div>
+                  <input 
+                    type="text" 
+                    :value="selectedWaktuMinum.length + 'x sehari'" 
+                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500 outline-none" 
+                    readonly
+                  />
                 </div>
 
                 <div>
@@ -98,6 +92,25 @@
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                       </svg>
                     </button>
+                  </div>
+                </div>
+
+                <!-- Waktu Pengingat Section -->
+                <div v-if="selectedWaktuMinum.length > 0" class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <label class="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Waktu Pengingat</label>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div v-if="selectedWaktuMinum.includes('Pagi')" class="space-y-1 bg-white p-3 rounded-lg border border-gray-150 shadow-sm text-center">
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">🌅 Pagi</span>
+                      <input type="time" v-model="waktuReminder.Pagi" class="w-full text-center border-none focus:ring-0 outline-none text-sm font-semibold text-gray-700" />
+                    </div>
+                    <div v-if="selectedWaktuMinum.includes('Siang')" class="space-y-1 bg-white p-3 rounded-lg border border-gray-150 shadow-sm text-center">
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">☀️ Siang</span>
+                      <input type="time" v-model="waktuReminder.Siang" class="w-full text-center border-none focus:ring-0 outline-none text-sm font-semibold text-gray-700" />
+                    </div>
+                    <div v-if="selectedWaktuMinum.includes('Malam')" class="space-y-1 bg-white p-3 rounded-lg border border-gray-150 shadow-sm text-center">
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">🌙 Malam</span>
+                      <input type="time" v-model="waktuReminder.Malam" class="w-full text-center border-none focus:ring-0 outline-none text-sm font-semibold text-gray-700" />
+                    </div>
                   </div>
                 </div>
 
@@ -250,6 +263,7 @@ import { onMounted, ref, computed } from 'vue'
 import LayoutWrapper from '../../components/LayoutWrapper.vue'
 import { useJadwalStore } from '../../stores/jadwal'
 import { useRouter, useRoute } from 'vue-router'
+import { useNotificationStore } from '../../stores/notification'
 
 export default {
   name: 'JadwalEdit',
@@ -260,6 +274,7 @@ export default {
     const router = useRouter()
     const route = useRoute()
     const jadwalStore = useJadwalStore()
+    const notificationStore = useNotificationStore()
     const loading = ref(false)
     const isSaving = ref(false)
     const editForm = ref(null)
@@ -271,7 +286,7 @@ export default {
       Malam: ''
     })
 
-    const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan', 'Bebas']
+    const aturanKonsumsi = ['Sebelum makan', 'Sesudah makan', 'Bersama makan']
     const wakteMinum = [
       { value: 'Pagi', label: 'Pagi', icon: '☀️' },
       { value: 'Siang', label: 'Siang', icon: '🌤️' },
@@ -287,15 +302,25 @@ export default {
       const idx = selectedWaktuMinum.value.indexOf(val)
       if (idx > -1) {
         selectedWaktuMinum.value.splice(idx, 1)
+        waktuReminder.value[val] = ''
       } else {
         selectedWaktuMinum.value.push(val)
+        // Set defaults if empty
+        if (val === 'Pagi' && !waktuReminder.value.Pagi) waktuReminder.value.Pagi = '07:00'
+        if (val === 'Siang' && !waktuReminder.value.Siang) waktuReminder.value.Siang = '13:00'
+        if (val === 'Malam' && !waktuReminder.value.Malam) waktuReminder.value.Malam = '19:00'
       }
       
       // Sort waktu in canonical order: Pagi, Siang, Malam
       const order = { 'Pagi': 0, 'Siang': 1, 'Malam': 2 }
       selectedWaktuMinum.value.sort((a, b) => order[a] - order[b])
       
-      editForm.value.waktu_minum = selectedWaktuMinum.value.join(', ')
+      // Build waktu_minum string
+      const jamMinumList = []
+      if (selectedWaktuMinum.value.includes('Pagi')) jamMinumList.push(waktuReminder.value.Pagi)
+      if (selectedWaktuMinum.value.includes('Siang')) jamMinumList.push(waktuReminder.value.Siang)
+      if (selectedWaktuMinum.value.includes('Malam')) jamMinumList.push(waktuReminder.value.Malam)
+      editForm.value.waktu_minum = jamMinumList.join(', ')
     }
 
     const getInitials = (nama) => {
@@ -318,77 +343,133 @@ export default {
 
     const handleSave = async () => {
       if (!editForm.value.nama_obat) {
-        alert('Nama obat harus diisi')
+        notificationStore.error('Nama obat harus diisi', 'Gagal Menyimpan')
         return
       }
       if (!editForm.value.jumlah_dosis) {
-        alert('Dosis harus diisi')
+        notificationStore.error('Dosis harus diisi', 'Gagal Menyimpan')
         return
       }
       if (!editForm.value.satuan) {
-        alert('Satuan harus diisi')
+        notificationStore.error('Satuan harus diisi', 'Gagal Menyimpan')
+        return
+      }
+      if (selectedWaktuMinum.value.length === 0) {
+        notificationStore.warning('Pilih minimal satu waktu minum', 'Peringatan')
         return
       }
       for (const waktu of selectedWaktuMinum.value) {
         if (!waktuReminder.value[waktu]) {
-          alert(`Jam untuk ${waktu} harus diisi`)
+          notificationStore.error(`Jam untuk ${waktu} harus diisi`, 'Gagal Menyimpan')
           return
         }
       }
-      if (!editForm.value.waktu_minum) {
-        alert('Waktu minum harus diisi')
-        return
-      }
       if (!editForm.value.tipe_durasi) {
-        alert('Tipe durasi harus dipilih')
+        notificationStore.error('Tipe durasi harus dipilih', 'Gagal Menyimpan')
         return
       }
       if (editForm.value.tipe_durasi === 'hari' && !editForm.value.jumlah_hari) {
-        alert('Jumlah hari harus diisi')
+        notificationStore.error('Jumlah hari harus diisi', 'Gagal Menyimpan')
         return
       }
+
+      // Build waktu_minum list
+      const jamMinumList = []
+      if (selectedWaktuMinum.value.includes('Pagi')) jamMinumList.push(waktuReminder.value.Pagi)
+      if (selectedWaktuMinum.value.includes('Siang')) jamMinumList.push(waktuReminder.value.Siang)
+      if (selectedWaktuMinum.value.includes('Malam')) jamMinumList.push(waktuReminder.value.Malam)
+      editForm.value.waktu_minum = jamMinumList.join(', ')
+
+      const frekuensi_per_hari = String(selectedWaktuMinum.value.length)
+      const waktu_reminder_pagi = selectedWaktuMinum.value.includes('Pagi') ? waktuReminder.value.Pagi : ''
+      const waktu_reminder_malam = selectedWaktuMinum.value.includes('Malam') ? waktuReminder.value.Malam : ''
 
       // Check if there are any changes
       const hasChanges =
         editForm.value.nama_obat !== jadwal.value.nama_obat ||
-        editForm.value.jumlah_dosis !== jadwal.value.jumlah_dosis ||
+        parseInt(editForm.value.jumlah_dosis) !== parseInt(jadwal.value.jumlah_dosis) ||
         editForm.value.satuan !== jadwal.value.satuan ||
-        editForm.value.frekuensi_per_hari !== jadwal.value.frekuensi_per_hari ||
+        frekuensi_per_hari !== String(jadwal.value.frekuensi_per_hari) ||
         editForm.value.waktu_minum !== jadwal.value.waktu_minum ||
         editForm.value.aturan_konsumsi !== jadwal.value.aturan_konsumsi ||
         editForm.value.catatan !== jadwal.value.catatan ||
         editForm.value.tipe_durasi !== jadwal.value.tipe_durasi ||
-        editForm.value.jumlah_hari !== jadwal.value.jumlah_hari ||
-        editForm.value.status !== jadwal.value.status
+        (editForm.value.tipe_durasi === 'hari' ? parseInt(editForm.value.jumlah_hari) : 0) !== parseInt(jadwal.value.jumlah_hari) ||
+        editForm.value.status !== jadwal.value.status ||
+        waktu_reminder_pagi !== (jadwal.value.waktu_reminder_pagi || '') ||
+        waktu_reminder_malam !== (jadwal.value.waktu_reminder_malam || '')
 
       if (!hasChanges) {
-        alert('Tidak ada perubahan untuk disimpan')
+        notificationStore.info('Tidak ada perubahan untuk disimpan', 'Informasi')
         return
       }
 
       isSaving.value = true
       try {
-        editForm.value.frekuensi_per_hari = selectedWaktuMinum.value
-        .map(w => `${w} (${waktuReminder.value[w]})`)
-        .join(', ')
         await jadwalStore.updateJadwal(editForm.value.id, {
           nama_obat: editForm.value.nama_obat,
-          jumlah_dosis: editForm.value.jumlah_dosis,
+          jumlah_dosis: parseInt(editForm.value.jumlah_dosis),
           satuan: editForm.value.satuan,
-          frekuensi_per_hari: editForm.value.frekuensi_per_hari,
+          frekuensi_per_hari: frekuensi_per_hari,
           waktu_minum: editForm.value.waktu_minum,
           aturan_konsumsi: editForm.value.aturan_konsumsi,
           catatan: editForm.value.catatan,
           tipe_durasi: editForm.value.tipe_durasi,
-          jumlah_hari: editForm.value.jumlah_hari,
+          jumlah_hari: editForm.value.tipe_durasi === 'hari' ? parseInt(editForm.value.jumlah_hari) : 0,
           status: editForm.value.status,
+          waktu_reminder_pagi: waktu_reminder_pagi,
+          waktu_reminder_malam: waktu_reminder_malam,
         })
-        alert('Jadwal berhasil diperbarui')
+        notificationStore.success('Jadwal berhasil diperbarui', 'Sukses')
         router.push({ name: 'jadwal' })
       } catch (error) {
-        alert('Gagal memperbarui jadwal: ' + error.message)
+        notificationStore.error('Gagal memperbarui jadwal: ' + error.message, 'Gagal')
       } finally {
         isSaving.value = false
+      }
+    }
+
+    const initializeForm = (data) => {
+      editForm.value = { ...data }
+      
+      // Initialize waktuReminder
+      waktuReminder.value = {
+        Pagi: data.waktu_reminder_pagi || '',
+        Siang: '',
+        Malam: data.waktu_reminder_malam || ''
+      }
+      
+      selectedWaktuMinum.value = []
+      
+      if (data.waktu_minum) {
+        // waktu_minum contains actual hours, e.g. "08:00, 13:00, 20:00"
+        const times = data.waktu_minum.split(',').map(t => t.trim()).filter(Boolean)
+        
+        times.forEach(time => {
+          const parts = time.split(':')
+          if (parts.length === 2) {
+            const hour = parseInt(parts[0])
+            if (hour >= 4 && hour < 11) {
+              selectedWaktuMinum.value.push('Pagi')
+              waktuReminder.value.Pagi = time
+            } else if (hour >= 11 && hour < 15) {
+              selectedWaktuMinum.value.push('Siang')
+              waktuReminder.value.Siang = time
+            } else {
+              selectedWaktuMinum.value.push('Malam')
+              waktuReminder.value.Malam = time
+            }
+          } else {
+            // Fallback for non-time strings
+            if (['Pagi', 'Siang', 'Malam'].includes(time)) {
+              selectedWaktuMinum.value.push(time)
+            }
+          }
+        })
+        
+        // Sort in canonical order: Pagi, Siang, Malam
+        const order = { 'Pagi': 0, 'Siang': 1, 'Malam': 2 }
+        selectedWaktuMinum.value.sort((a, b) => order[a] - order[b])
       }
     }
 
@@ -398,22 +479,11 @@ export default {
         jadwalStore.fetchJadwals().finally(() => {
           loading.value = false
           if (jadwal.value) {
-            editForm.value = { ...jadwal.value }
-            // Parse waktu_minum yang ada dan set selectedWaktuMinum
-            if (editForm.value.waktu_minum) {
-              selectedWaktuMinum.value = editForm.value.waktu_minum.split(',').map(w => w.trim())
-              selectedWaktuMinum.value.forEach(waktu => {
-                waktuReminder.value[waktu] = ''
-              })
-            }
+            initializeForm(jadwal.value)
           }
         })
       } else if (jadwal.value) {
-        editForm.value = { ...jadwal.value }
-        // Parse waktu_minum yang ada dan set selectedWaktuMinum
-        if (editForm.value.waktu_minum) {
-          selectedWaktuMinum.value = editForm.value.waktu_minum.split(',').map(w => w.trim())
-        }
+        initializeForm(jadwal.value)
       }
     })
 
