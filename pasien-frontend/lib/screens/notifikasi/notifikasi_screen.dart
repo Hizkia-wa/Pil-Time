@@ -31,25 +31,21 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen>
-    with SingleTickerProviderStateMixin {
+class _NotificationScreenState extends State<NotificationScreen> {
   int? _pasienId;
   List<NotificationItem> _allNotifications = [];
   bool _isLoading = true;
   String? _errorMsg;
-  late TabController _tabController;
   Set<int> _deferredNotifications = {}; // Track deferred notifications by index
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadNotifications();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -308,38 +304,25 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: Color(0xFFF5F7FA),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-          centerTitle: true,
-          title: Text(
-            "Notifikasi",
-            style: TextStyle(
-              color: Color(0xFF1A1A2E),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          bottom: TabBar(
-            controller: _tabController,
-            indicatorColor: Colors.green,
-            labelColor: Colors.green,
-            unselectedLabelColor: Colors.grey,
-            tabs: [
-              Tab(text: "Semua"),
-              Tab(text: "Alarm"),
-            ],
+    return Scaffold(
+      backgroundColor: Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: Text(
+          "Notifikasi",
+          style: TextStyle(
+            color: Color(0xFF1A1A2E),
+            fontWeight: FontWeight.bold,
           ),
         ),
-        body: _buildBody(),
       ),
+      body: _buildBody(),
     );
   }
 
@@ -400,21 +383,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       );
     }
 
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        // Tab Semua
-        _buildNotificationList(_getVisibleNotifications(_allNotifications)),
-        // Tab Alarm
-        _buildNotificationList(
-          _getVisibleNotifications(
-            _allNotifications
-                .where((n) => n.type == NotificationType.mendatang)
-                .toList(),
-          ),
-        ),
-      ],
-    );
+    return _buildNotificationList(_getVisibleNotifications(_allNotifications));
   }
 
   // Filter notifikasi yang tidak tertunda

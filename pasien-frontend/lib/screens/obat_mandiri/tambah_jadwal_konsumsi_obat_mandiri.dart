@@ -74,14 +74,48 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(source: source);
     if (image != null) {
       setState(() {
         _pickedImage = File(image.path);
       });
     }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: _green),
+                title: const Text('Galeri', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: _green),
+                title: const Text('Kamera', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String _convertImageToBase64(File imageFile) {
@@ -373,7 +407,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
 
   Widget _buildImagePicker() {
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: _showImageSourceDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(

@@ -573,19 +573,56 @@ class NotificationService {
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('[PilTime] Notification tapped: ${response.payload}');
     
-    // Hentikan suara/getar yang sedang berlangsung
-    // (Sebenarnya otomatis mati jika user tap notifikasi, tapi ini untuk pencegahan ekstra)
     if (response.id != null) {
       _plugin.cancel(response.id!);
     }
 
     if (response.payload != null) {
-      // Navigasi ke AlarmRingingScreen melalui Global Navigator
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => AlarmRingingScreen(payload: response.payload!),
-        ),
-      );
+      showAlarmScreen(response.payload!);
+    }
+  }
+
+  // ==========================================================
+  // TAMPILKAN ALARM RINGING SCREEN SECARA LANGSUNG
+  // Dipanggil dari: _onNotificationTapped (tap notif),
+  //                 FCM foreground handler,
+  //                 atau main.dart saat app dibuka via notif.
+  // ==========================================================
+  void showAlarmScreen(String payload) {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint('[PilTime] Navigator belum siap, alarm screen tidak bisa ditampilkan.');
+      return;
+    }
+
+    // Pastikan tidak menduplikat AlarmRingingScreen yang sudah tampil
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => AlarmRingingScreen(payload: payload),
+        settings: const RouteSettings(name: '/alarm-ringing'),
+      ),
+      // Pertahankan semua route di bawahnya (bukan replace semuanya)
+      // Kita hanya ingin memastikan AlarmRingingScreen paling atas
+      (route) => route.settings.name != '/alarm-ringing',
+    );
+
+    debugPrint('[PilTime] AlarmRingingScreen ditampilkan untuk payload: $payload');
+  }
+
+  // ==========================================================
+  // CEK APAKAH APP DIBUKA DARI NOTIFIKASI (Terminated State)
+  // Panggil ini di main.dart setelah NotificationService.initialize()
+  // ==========================================================
+  Future<void> checkLaunchFromNotification() async {
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details != null &&
+        details.didNotificationLaunchApp &&
+        details.notificationResponse?.payload != null) {
+      final payload = details.notificationResponse!.payload!;
+      debugPrint('[PilTime] App diluncurkan dari notifikasi, payload: $payload');
+      // Delay singkat agar Navigator sudah siap
+      await Future.delayed(const Duration(milliseconds: 500));
+      showAlarmScreen(payload);
     }
   }
 }

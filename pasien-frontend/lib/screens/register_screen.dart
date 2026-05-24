@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,6 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _showPassword = false;
   String? _selectedGender;
+  bool _isLocationLoading = false;
 
   // Controllers
   final _namaController = TextEditingController();
@@ -62,6 +64,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _tanggalLahirController.text =
             "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       });
+    }
+  }
+
+  Future<void> _fillLocationAutomatically() async {
+    setState(() {
+      _isLocationLoading = true;
+    });
+
+    try {
+      final address = await LocationService.getCurrentAddress();
+      setState(() {
+        _alamatController.text = address;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF15BE77),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Lokasi berhasil ditambahkan!',
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            error.toString(),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocationLoading = false;
+        });
+      }
     }
   }
 
@@ -491,7 +537,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 18),
 
                 // Alamat
-                _buildFieldLabel('ALAMAT'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildFieldLabel('ALAMAT'),
+                    GestureDetector(
+                      onTap: _isLocationLoading ? null : _fillLocationAutomatically,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            _isLocationLoading
+                                ? const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      valueColor: AlwaysStoppedAnimation(Color(0xFF15BE77)),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.my_location_rounded,
+                                    size: 14,
+                                    color: Color(0xFF15BE77),
+                                  ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Gunakan Lokasi Saat Ini',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF15BE77),
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 TextFormField(
                   controller: _alamatController,
                   maxLines: 3,

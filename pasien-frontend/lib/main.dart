@@ -31,6 +31,10 @@ void main() async {
   // 3. Init local notification service
   await NotificationService.instance.initialize();
 
+  // 4. Cek apakah app dibuka dari tap notifikasi (terminated state)
+  //    Jika iya, alarm screen akan muncul otomatis
+  await NotificationService.instance.checkLaunchFromNotification();
+
   runApp(const MyApp());
 }
 
@@ -48,6 +52,16 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _homeFuture = _determineInitialScreen();
+
+    // Handle FCM ketika app di foreground:
+    // Jika ada pesan FCM masuk saat app terbuka, tampilkan alarm screen langsung
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final payload = message.data['payload'] as String?;
+      if (payload != null && payload.contains(':')) {
+        debugPrint('[PilTime] FCM foreground → tampilkan alarm: $payload');
+        NotificationService.instance.showAlarmScreen(payload);
+      }
+    });
   }
 
   Future<Widget> _determineInitialScreen() async {

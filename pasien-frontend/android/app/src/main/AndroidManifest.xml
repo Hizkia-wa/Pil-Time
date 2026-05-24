@@ -1,5 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ===== PERMISSIONS KAMERA & GALERI ===== -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA"/>
+
+    <!-- ===== PERMISSIONS LOKASI ===== -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- ===== PERMISSIONS NOTIFIKASI & ALARM ===== -->
     <!-- Izin notifikasi (wajib di Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -11,6 +19,8 @@
     <!-- Agar alarm bisa membangunkan layar dan berbunyi -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Izin Full Screen Intent — WAJIB Android 14+ (API 34+) untuk tampilkan alarm screen langsung -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <application
         android:label="Pil Time"

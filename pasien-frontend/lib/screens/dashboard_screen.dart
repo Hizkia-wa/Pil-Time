@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/dashboard.dart';
@@ -196,6 +197,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     // Wait for the future to complete
     await dashboardFuture;
+  }
+
+  // ==========================================================
+  // TEST ALARM — Hanya untuk development/debug
+  // Langsung tampilkan AlarmRingingScreen tanpa menunggu jadwal
+  // ==========================================================
+  void _testAlarm() {
+    // Gunakan payload dummy: "0:Test Obat Paracetamol"
+    NotificationService.instance.showAlarmScreen('0:Test Obat Paracetamol');
   }
 
   /// Log jadwal sebagai 'Diminum' ke backend tracking API
@@ -837,6 +847,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
+          // Tombol Test Alarm (hanya muncul di debug mode)
+          if (kDebugMode) ...[
+            GestureDetector(
+              onTap: _testAlarm,
+              child: Tooltip(
+                message: 'Test Alarm Screen',
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF15BE77),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF15BE77).withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.alarm_on_rounded,
+                    color: Color(0xFF15BE77),
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ],
           // Notification bell
           GestureDetector(
             onTap: () {

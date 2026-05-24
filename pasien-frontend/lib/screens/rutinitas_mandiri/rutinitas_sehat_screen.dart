@@ -265,7 +265,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
               ),
               const SizedBox(width: 10),
               const Text(
-                "STREAK KEPATUHAN KAMU",
+                "KEPATUHAN KAMU",
                 style: TextStyle(
                   color: Color(0xFFA7F3D0),
                   fontWeight: FontWeight.w800,

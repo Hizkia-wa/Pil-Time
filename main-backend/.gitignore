@@ -13,6 +13,8 @@
 dist/
 bin/
 build/
+tmp/
+*.exe
 
 # Dependencies
 vendor/

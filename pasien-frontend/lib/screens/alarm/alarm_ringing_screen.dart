@@ -44,7 +44,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
       final parts = widget.payload.split(':');
       if (parts.isNotEmpty) _jadwalId = int.tryParse(parts[0]) ?? 0;
       if (parts.length > 1) _namaObat = parts.sublist(1).join(':');
-      debugPrint('[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat');
+      debugPrint(
+        '[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat',
+      );
     } catch (e) {
       debugPrint('[AlarmRingingScreen] Error parse payload: $e');
     }
@@ -100,10 +102,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF2BB673).withValues(alpha: 0.2),
-                  border: Border.all(
-                    color: const Color(0xFF2BB673),
-                    width: 2,
-                  ),
+                  border: Border.all(color: const Color(0xFF2BB673), width: 2),
                 ),
                 child: const Icon(
                   Icons.alarm_on,
@@ -162,7 +161,6 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
               ),
             ),
 
-
             const Spacer(flex: 3),
 
             // Tombol Aksi
@@ -173,7 +171,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 height: 60,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4D4D), // Merah mencolok khas mematikan alarm
+                    backgroundColor: const Color(
+                      0xFFFF4D4D,
+                    ), // Merah mencolok khas mematikan alarm
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -201,3 +201,4 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     );
   }
 }
+  
