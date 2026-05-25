@@ -224,7 +224,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: emerald.withOpacity(0.1),
+                        color: emerald.withValues(alpha: 0.1),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -358,7 +358,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                     elevation: isLoading ? 0 : 4,
-                    shadowColor: emerald.withOpacity(0.3),
+                    shadowColor: emerald.withValues(alpha: 0.3),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -388,3 +388,4 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 }
+

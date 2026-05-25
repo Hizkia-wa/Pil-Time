@@ -439,7 +439,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             boxShadow: _selectedGender == 'Laki-laki'
                                 ? [
                                     BoxShadow(
-                                      color: emerald.withOpacity(0.1),
+                                      color: emerald.withValues(alpha: 0.1),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     )
@@ -498,7 +498,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             boxShadow: _selectedGender == 'Perempuan'
                                 ? [
                                     BoxShadow(
-                                      color: const Color(0xFFEC1C7C).withOpacity(0.1),
+                                      color: const Color(0xFFEC1C7C).withValues(alpha: 0.1),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     )
@@ -609,7 +609,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(28),
                       ),
                       elevation: _isLoading ? 0 : 4,
-                      shadowColor: emerald.withOpacity(0.3),
+                      shadowColor: emerald.withValues(alpha: 0.3),
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -745,3 +745,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+

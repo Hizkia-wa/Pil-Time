@@ -293,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(28),
                       ),
                       elevation: _isLoading ? 0 : 4,
-                      shadowColor: const Color(0xFF15BE77).withOpacity(0.3),
+                      shadowColor: const Color(0xFF15BE77).withValues(alpha: 0.3),
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -352,3 +352,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

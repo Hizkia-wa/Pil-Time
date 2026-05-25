@@ -124,7 +124,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: emerald.withOpacity(0.1),
+                        color: emerald.withValues(alpha: 0.1),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -309,7 +309,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                     elevation: _canSubmit() ? 4 : 0,
-                    shadowColor: emerald.withOpacity(0.3),
+                    shadowColor: emerald.withValues(alpha: 0.3),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -339,3 +339,4 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 }
+

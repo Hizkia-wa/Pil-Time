@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/dashboard.dart';
@@ -41,10 +43,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isMarkingTaken = false;
   bool _notificationPermissionGranted = true;
 
+  // Properti Rutinitas Sehat
+  List<dynamic> _listRutinitas = [];
+  bool _loadingRutinitas = true;
+
   @override
   void initState() {
     super.initState();
     dashboardFuture = _fetchDashboard();
+    _loadRutinitas();
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
     _checkNotificationPermission();
@@ -195,6 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       dashboardFuture = _fetchDashboard();
       _takenJadwalIds.clear();
     });
+    _loadRutinitas();
     // Wait for the future to complete
     await dashboardFuture;
   }
@@ -446,6 +454,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _buildMenuUtama(),
                           _buildCalendarSection(dashboard.allJadwals),
                           _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
+                          _buildRutinitasHariIniList(),
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -492,7 +501,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF15BE77).withOpacity(0.25),
+            color: const Color(0xFF15BE77).withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -536,7 +545,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -552,7 +561,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: totalToday > 0 ? progress : 1.0,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 10,
             ),
@@ -584,7 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         border: Border.all(color: const Color(0xFFFFEDD5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEA580C).withOpacity(0.04),
+            color: const Color(0xFFEA580C).withValues(alpha: 0.04),
             offset: const Offset(0, 4),
             blurRadius: 12,
           ),
@@ -623,7 +632,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'Aktifkan notifikasi agar alarm penting Anda tetap berdering tepat waktu.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: const Color(0xFF7C2D12).withOpacity(0.8),
+                    color: const Color(0xFF7C2D12).withValues(alpha: 0.8),
                     height: 1.3,
                     fontFamily: 'Inter',
                   ),
@@ -866,7 +875,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF15BE77).withOpacity(0.15),
+                        color: const Color(0xFF15BE77).withValues(alpha: 0.15),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -898,7 +907,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 border: Border.all(color: const Color(0xFFFFD1D1), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF6B6B).withOpacity(0.08),
+                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -1030,7 +1039,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F172A).withOpacity(0.03),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1182,7 +1191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.02),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1250,7 +1259,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -1717,7 +1726,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.02),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1737,7 +1746,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
@@ -1864,7 +1873,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Icons.check_rounded,
                             color: status == _JadwalStatus.upcoming
                                 ? const Color(0xFFCBD5E1)
-                                : statusColor.withOpacity(0.5),
+                                : statusColor.withValues(alpha: 0.5),
                             size: 20,
                           ),
                   ),
@@ -1897,7 +1906,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.05),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -1955,7 +1964,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF15BE77).withOpacity(0.3),
+                          color: const Color(0xFF15BE77).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -2016,6 +2025,263 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
+
+  Future<void> _loadRutinitas() async {
+    if (!mounted) return;
+    setState(() => _loadingRutinitas = true);
+    try {
+      final token = await AuthService.getToken();
+      final response = await http.get(
+        Uri.parse("${ApiService.baseUrl}/api/pasien/rutinitas"),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _listRutinitas = data['data'] ?? [];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error load rutinitas dashboard: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _loadingRutinitas = false);
+      }
+    }
+  }
+
+  Future<void> _toggleRutinitasTracking(dynamic item, bool isChecked) async {
+    try {
+      final token = await AuthService.getToken();
+      final newStatus = isChecked ? 'done' : 'none';
+      
+      final response = await http.post(
+        Uri.parse("${ApiService.baseUrl}/api/pasien/rutinitas/tracking"),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'rutinitas_id': item['id'],
+          'status': newStatus,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          item['today_status'] = newStatus;
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isChecked 
+                ? 'Rutinitas "${item['nama_rutinitas']}" selesai! 🏆' 
+                : 'Rutinitas dibatalkan.'),
+            backgroundColor: const Color(0xFF15BE77),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        final errorMsg = jsonDecode(response.body)['error'] ?? 'Gagal memperbarui status';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal: $errorMsg'),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error toggling routine tracking: $e");
+    }
+  }
+
+  Widget _buildRutinitasHariIniList() {
+    if (_loadingRutinitas) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF15BE77))),
+      );
+    }
+
+    if (_listRutinitas.isEmpty) {
+      return const SizedBox.shrink(); // Hide if empty to keep it compact
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Rutinitas Hari Ini',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Ceklis aktivitas sehat Anda hari ini',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F3FF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_listRutinitas.length} Rutinitas',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF8B5CF6),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ..._listRutinitas.map((item) {
+            final isDone = item['today_status'] == 'done';
+            
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDone ? const Color(0xFFE8F8F1) : const Color(0xFFF1F5F9),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.01),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _toggleRutinitasTracking(item, !isDone),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDone ? const Color(0xFFE8F8F1) : const Color(0xFFF5F3FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.fitness_center_rounded,
+                            color: isDone ? const Color(0xFF15BE77) : const Color(0xFF8B5CF6),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['nama_rutinitas'] ?? '-',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: isDone ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                  fontFamily: 'Roboto',
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 14),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    item['waktu_reminder'] ?? '00:00',
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _toggleRutinitasTracking(item, !isDone),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeInOut,
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isDone ? const Color(0xFF15BE77) : Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDone ? const Color(0xFF15BE77) : const Color(0xFFCBD5E1),
+                                width: 2.0,
+                              ),
+                            ),
+                            child: isDone
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                : const Icon(
+                                    Icons.check_rounded,
+                                    color: Color(0xFFCBD5E1),
+                                    size: 18,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
 }
 
 enum _JadwalStatus { onTime, late, upcoming, expired }
+

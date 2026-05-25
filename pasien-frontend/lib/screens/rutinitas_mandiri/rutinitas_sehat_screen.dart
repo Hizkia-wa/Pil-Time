@@ -178,7 +178,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                   border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: _textPrimary.withOpacity(0.02),
+                      color: _textPrimary.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -244,7 +244,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(0.2),
+            color: const Color(0xFF10B981).withValues(alpha: 0.2),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -258,7 +258,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Text("🏆", style: TextStyle(fontSize: 16)),
@@ -426,7 +426,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: _textPrimary.withOpacity(0.02),
+            color: _textPrimary.withValues(alpha: 0.02),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -483,13 +483,65 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8F8F1),
-              shape: BoxShape.circle,
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: _textSecondary,
+              size: 22,
             ),
-            child: const Icon(Icons.check_rounded, color: _green, size: 20),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 120),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            color: Colors.white,
+            elevation: 8,
+            shadowColor: _textPrimary.withValues(alpha: 0.1),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editObat(item);
+              } else if (value == 'hapus') {
+                _confirmHapusObat(item);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined, color: Colors.blue, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ubah',
+                      style: TextStyle(
+                        color: _textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'hapus',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Hapus',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -510,7 +562,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: _textPrimary.withOpacity(0.02),
+            color: _textPrimary.withValues(alpha: 0.02),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -579,13 +631,65 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8F8F1),
-              shape: BoxShape.circle,
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: _textSecondary,
+              size: 22,
             ),
-            child: const Icon(Icons.check_rounded, color: _green, size: 20),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 120),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            color: Colors.white,
+            elevation: 8,
+            shadowColor: _textPrimary.withValues(alpha: 0.1),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editRutinitas(item);
+              } else if (value == 'hapus') {
+                _confirmHapusRutinitas(item);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined, color: Colors.blue, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ubah',
+                      style: TextStyle(
+                        color: _textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'hapus',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Hapus',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -604,19 +708,23 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         onPressed: () async {
           if (_pasienId == null) return;
 
-          final result = isObatTab
-              ? await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const TambahJadwalKonsumsi(),
-                  ),
-                )
-              : await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const TambahRutinitasScreen(),
-                  ),
-                );
+          if (!mounted) return;
+          final dynamic result;
+          if (isObatTab) {
+            result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const TambahJadwalKonsumsi(),
+              ),
+            );
+          } else {
+            result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const TambahRutinitasScreen(),
+              ),
+            );
+          }
 
           if (result == true && mounted) {
             _initData();
@@ -638,9 +746,231 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
             borderRadius: BorderRadius.circular(28),
           ),
           elevation: 4,
-          shadowColor: _green.withOpacity(0.3),
+          shadowColor: _green.withValues(alpha: 0.3),
         ),
       ),
     );
+  }
+
+  Future<void> _editObat(dynamic item) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TambahJadwalKonsumsi(obat: item),
+      ),
+    );
+    if (result == true && mounted) {
+      _initData();
+    }
+  }
+
+  Future<void> _confirmHapusObat(dynamic item) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Hapus Obat?',
+              style: TextStyle(
+                color: _textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                fontFamily: 'Roboto',
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus jadwal obat "${item['nama_obat']}"? Tindakan ini tidak dapat dibatalkan.',
+          style: const TextStyle(
+            color: _textSecondary,
+            fontSize: 14,
+            fontFamily: 'Inter',
+            height: 1.4,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(
+                color: _textSecondary,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _isLoading = true);
+      try {
+        final token = await AuthService.getToken();
+        final response = await http.delete(
+          Uri.parse("$_baseUrl/obat-mandiri/${item['obat_id']}"),
+          headers: {
+            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+        );
+        if (!mounted) return;
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Jadwal obat berhasil dihapus')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus jadwal obat')),
+          );
+        }
+      } catch (e) {
+        debugPrint("Error delete obat: $e");
+      } finally {
+        _initData();
+      }
+    }
+  }
+
+  Future<void> _editRutinitas(dynamic item) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TambahRutinitasScreen(rutinitas: item),
+      ),
+    );
+    if (result == true && mounted) {
+      _initData();
+    }
+  }
+
+  Future<void> _confirmHapusRutinitas(dynamic item) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Hapus Rutinitas?',
+              style: TextStyle(
+                color: _textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                fontFamily: 'Roboto',
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus rutinitas "${item['nama_rutinitas']}"? Tindakan ini tidak dapat dibatalkan.',
+          style: const TextStyle(
+            color: _textSecondary,
+            fontSize: 14,
+            fontFamily: 'Inter',
+            height: 1.4,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(
+                color: _textSecondary,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _isLoading = true);
+      try {
+        final token = await AuthService.getToken();
+        final response = await http.delete(
+          Uri.parse("$_baseUrl/rutinitas/${item['id']}"),
+          headers: {
+            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+        );
+        if (!mounted) return;
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Rutinitas berhasil dihapus')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus rutinitas')),
+          );
+        }
+      } catch (e) {
+        debugPrint("Error delete rutinitas: $e");
+      } finally {
+        _initData();
+      }
+    }
   }
 }

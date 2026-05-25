@@ -27,7 +27,7 @@ class SuccessScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: emerald.withOpacity(0.2),
+                        color: emerald.withValues(alpha: 0.2),
                         blurRadius: 24,
                         offset: const Offset(0, 12),
                       ),
@@ -92,7 +92,7 @@ class SuccessScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(28),
                       ),
                       elevation: 4,
-                      shadowColor: emerald.withOpacity(0.3),
+                      shadowColor: emerald.withValues(alpha: 0.3),
                     ),
                     child: const Text(
                       "Konfirmasi",
@@ -114,3 +114,4 @@ class SuccessScreen extends StatelessWidget {
     );
   }
 }
+

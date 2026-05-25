@@ -34,6 +34,14 @@ func (r *rutinitasRepoImpl) GetByID(id int) (*domain.Rutinitas, error) {
 	return &rutinitas, err
 }
 
+func (r *rutinitasRepoImpl) Update(id int, rutinitas *domain.Rutinitas) (*domain.Rutinitas, error) {
+	err := r.db.Model(&domain.Rutinitas{}).Where("id = ?", id).Updates(rutinitas).Error
+	if err != nil {
+		return nil, err
+	}
+	return r.GetByID(id)
+}
+
 func (r *rutinitasRepoImpl) Delete(id int) error {
 	return r.db.Delete(&domain.Rutinitas{}, id).Error
 }
@@ -65,6 +73,7 @@ func (r *rutinitasRepoImpl) UpsertTracking(req dto.CreateTrackingRutunitasDTO) e
 		// 2. Jika tidak ada, buat data baru
 		return r.db.Create(&domain.TrackingRutinitas{
 			RutinitasID: req.RutinitasID,
+			PasienID:    req.PasienID,
 			Status:      req.Status, // Akan berisi 'done' atau 'none' dari Flutter
 			Tanggal:     today,      // Simpan sebagai string format YYYY-MM-DD sesuai domain
 		}).Error
@@ -72,4 +81,20 @@ func (r *rutinitasRepoImpl) UpsertTracking(req dto.CreateTrackingRutunitasDTO) e
 
 	// 3. Jika sudah ada, update statusnya saja (untuk toggle check/uncheck)
 	return r.db.Model(&tracking).Update("status", req.Status).Error
+}
+
+func (r *rutinitasRepoImpl) GetTodayTracking(pasienID int) (map[int]string, error) {
+	today := time.Now().Format("2006-01-02")
+	var trackings []domain.TrackingRutinitas
+
+	err := r.db.Where("tanggal = ?", today).Find(&trackings).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[int]string)
+	for _, t := range trackings {
+		result[t.RutinitasID] = t.Status
+	}
+	return result, nil
 }

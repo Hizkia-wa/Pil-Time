@@ -144,6 +144,7 @@ func main() {
 			pasienAuth.GET("/rutinitas/streak/:pasien_id", rutinitasHandler.GetStreak)
 			pasienAuth.POST("/rutinitas/tracking", rutinitasHandler.UpdateTracking)
 			pasienAuth.POST("/rutinitas", rutinitasHandler.Create)
+			pasienAuth.PUT("/rutinitas/:id", rutinitasHandler.Update)
 			pasienAuth.DELETE("/rutinitas/:id", rutinitasHandler.Delete)
 
 			// Pasien - Riwayat Kepatuhan (pasien melihat/mencatat riwayatnya sendiri)

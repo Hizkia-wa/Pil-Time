@@ -316,7 +316,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withOpacity(0.15),
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -536,7 +536,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.12),
+        color: iconColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -578,7 +578,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.02),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -670,3 +670,4 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 }
+

@@ -11,11 +11,16 @@ type CreateObatDTO struct {
 }
 
 type UpdateObatDTO struct {
-	NamaObat        string `json:"nama_obat" form:"nama_obat"`
-	Fungsi          string `json:"fungsi" form:"fungsi"`
-	AturanPemakaian string `json:"aturan_pemakaian" form:"aturan_pemakaian"`
-	Pantangan       string `json:"pantangan" form:"pantangan"`
-	Gambar          string `json:"gambar" form:"gambar"`
+	NamaObat        string   `json:"nama_obat" form:"nama_obat"`
+	Fungsi          string   `json:"fungsi" form:"fungsi"`
+	AturanPemakaian string   `json:"aturan_pemakaian" form:"aturan_pemakaian"`
+	Pantangan       string   `json:"pantangan" form:"pantangan"`
+	Gambar          string   `json:"gambar" form:"gambar"`
+	Dosis           string   `json:"dosis" form:"dosis"`
+	Pengingat       []string `json:"pengingat" form:"pengingat"`
+	Frekuensi       string   `json:"frekuensi" form:"frekuensi"`
+	DurasiHari      int      `json:"durasi_hari" form:"durasi_hari"`
+	Catatan         string   `json:"catatan" form:"catatan"`
 }
 
 type CreateObatMandiriDTO struct {

@@ -73,6 +73,13 @@ func (h *RutinitasHandler) UpdateTracking(c *gin.Context) {
 		return
 	}
 
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pasien_id tidak ditemukan di token"})
+		return
+	}
+	req.PasienID = pasienID
+
 	// Validasi apakah RutinitasID benar-benar ada di database
 	_, err := h.usecase.GetByID(req.RutinitasID)
 	if err != nil {
@@ -96,6 +103,28 @@ func (h *RutinitasHandler) UpdateTracking(c *gin.Context) {
 		"message": "success",
 		"status":  req.Status,
 	})
+}
+
+// Update - Mengubah jadwal rutinitas
+func (h *RutinitasHandler) Update(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
+		return
+	}
+
+	var req dto.UpdateRutinitasDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := h.usecase.Update(id, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // Delete - Menghapus jadwal rutinitas

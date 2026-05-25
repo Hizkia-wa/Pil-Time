@@ -102,6 +102,8 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 		return nil, errors.New("obat tidak ditemukan")
 	}
 
+	oldNamaObat := existing.NamaObat
+
 	// 2. Partial Update (Hanya kolom yang ada di SQL)
 	if req.NamaObat != "" {
 		existing.NamaObat = req.NamaObat
@@ -121,10 +123,66 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 		existing.Gambar = req.Gambar
 	}
 
+	// 3.5 Kolom Tambahan untuk Obat Mandiri Pasien
+	if existing.IsMandiri {
+		if req.Dosis != "" {
+			existing.Fungsi = req.Dosis
+		}
+		if req.Frekuensi != "" {
+			existing.Frekuensi = req.Frekuensi
+		}
+		if req.DurasiHari > 0 {
+			existing.DurasiHari = &req.DurasiHari
+		}
+		if req.Catatan != "" {
+			existing.Catatan = req.Catatan
+		}
+		if len(req.Pengingat) > 0 {
+			_ = existing.SetPengingat(req.Pengingat)
+		}
+	}
+
 	// 4. Eksekusi Update di Repo
 	result, err := u.repo.Update(id, existing)
 	if err != nil {
 		return nil, errors.New("gagal memperbarui data obat")
+	}
+
+	// 5. Update jadwal terkait jika ini obat mandiri
+	if existing.IsMandiri && existing.PasienID != nil {
+		jadwals, err := u.jadwalRepo.GetByPasienID(*existing.PasienID)
+		if err == nil {
+			for _, j := range jadwals {
+				if j.NamaObat == oldNamaObat && j.KategoriObat == "Mandiri" {
+					j.NamaObat = existing.NamaObat
+					j.TakaranObat = existing.Fungsi // Dosis
+					j.AturanKonsumsi = existing.Catatan
+					j.Catatan = existing.Catatan
+					if existing.DurasiHari != nil {
+						j.JumlahHari = *existing.DurasiHari
+					}
+					
+					var times []string
+					if len(req.Pengingat) > 0 {
+						times = req.Pengingat
+					} else {
+						times = existing.GetPengingat()
+					}
+					sort.Strings(times)
+					j.WaktuMinum = strings.Join(times, ", ")
+					j.FrekuensiPerHari = strconv.Itoa(len(times))
+					
+					if existing.DurasiHari != nil && *existing.DurasiHari > 0 {
+						if tMulai, err := time.Parse("2006-01-02", j.TanggalMulai); err == nil {
+							selesai := tMulai.AddDate(0, 0, *existing.DurasiHari)
+							j.TanggalSelesai = selesai.Format("2006-01-02")
+						}
+					}
+					
+					_, _ = u.jadwalRepo.Update(j.JadwalID, &j)
+				}
+			}
+		}
 	}
 
 	return persistence.ObatToResponseDTO(result), nil

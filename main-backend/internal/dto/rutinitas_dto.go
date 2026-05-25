@@ -12,6 +12,13 @@ type CreateRutunitasDTO struct {
 	WaktuReminder string `json:"waktu_reminder" binding:"required"` // Format: "HH:mm"
 }
 
+// UpdateRutinitasDTO digunakan saat mengedit jadwal rutinitas
+type UpdateRutinitasDTO struct {
+	NamaRutinitas string `json:"nama_rutinitas"`
+	Deskripsi     string `json:"deskripsi"`
+	WaktuReminder string `json:"waktu_reminder"` // Format: "HH:mm"
+}
+
 // CreateTrackingRutunitasDTO digunakan untuk mencatat status harian (ceklis)
 type CreateTrackingRutunitasDTO struct {
 	RutinitasID int    `json:"rutinitas_id" binding:"required"`

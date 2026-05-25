@@ -7,7 +7,8 @@ import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 
 class TambahJadwalKonsumsi extends StatefulWidget {
-  const TambahJadwalKonsumsi({super.key});
+  final dynamic obat;
+  const TambahJadwalKonsumsi({super.key, this.obat});
 
   @override
   State<TambahJadwalKonsumsi> createState() => _TambahJadwalKonsumsiState();
@@ -46,8 +47,23 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   @override
   void initState() {
     super.initState();
-    _frekuensiCtrl.text = '1x sehari';
-    _durasiHariCtrl.text = '7';
+    if (widget.obat != null) {
+      _namaObatCtrl.text = widget.obat['nama_obat'] ?? '';
+      _dosisCtrl.text = widget.obat['fungsi'] ?? '';
+      _frekuensiCtrl.text = widget.obat['frekuensi'] ?? '1x sehari';
+      _durasiHariCtrl.text = (widget.obat['durasi_hari'] ?? '7').toString();
+      _catatanCtrl.text = widget.obat['catatan'] ?? '';
+
+      final List<dynamic>? times = widget.obat['pengingat'];
+      if (times != null) {
+        for (int i = 0; i < times.length && i < _selectedCustomTimes.length; i++) {
+          _selectedCustomTimes[i] = times[i]?.toString();
+        }
+      }
+    } else {
+      _frekuensiCtrl.text = '1x sehari';
+      _durasiHariCtrl.text = '7';
+    }
     _loadPasienSession();
   }
 
@@ -210,23 +226,38 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
       "pasien_id": _pasienId,
     };
 
+    final isEdit = widget.obat != null;
+    final url = isEdit
+        ? '$baseUrl/pasien/obat-mandiri/${widget.obat['obat_id']}'
+        : '$baseUrl/pasien/obat-mandiri';
+
     try {
       final token = await AuthService.getToken();
-      final response = await http.post(
-        Uri.parse('$baseUrl/pasien/obat-mandiri'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(data),
-      );
+      final response = isEdit
+          ? await http.put(
+              Uri.parse(url),
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null && token.isNotEmpty)
+                  'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode(data),
+            )
+          : await http.post(
+              Uri.parse(url),
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null && token.isNotEmpty)
+                  'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode(data),
+            );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Obat berhasil ditambahkan')),
+            SnackBar(content: Text(isEdit ? 'Obat berhasil diperbarui' : 'Obat berhasil ditambahkan')),
           );
         }
       } else {
@@ -234,7 +265,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorBody['error'] ?? 'Gagal menambahkan obat'),
+              content: Text(errorBody['error'] ?? (isEdit ? 'Gagal memperbarui obat' : 'Gagal menambahkan obat')),
             ),
           );
         }
@@ -335,12 +366,12 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
               backgroundColor: const Color(0xFFF1F5F9),
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
-                'Tambah Obat',
+                widget.obat != null ? 'Edit Obat' : 'Tambah Obat',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary,
@@ -630,9 +661,9 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                   valueColor: AlwaysStoppedAnimation<Color>(_textPrimary),
                 ),
               )
-            : const Text(
-                'Simpan Obat',
-                style: TextStyle(
+            : Text(
+                widget.obat != null ? 'Simpan Perubahan' : 'Simpan Obat',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: _textPrimary,

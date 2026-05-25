@@ -32,11 +32,10 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  int? _pasienId;
   List<NotificationItem> _allNotifications = [];
   bool _isLoading = true;
   String? _errorMsg;
-  Set<int> _deferredNotifications = {}; // Track deferred notifications by index
+  final Set<int> _deferredNotifications = {}; // Track deferred notifications by index
 
   @override
   void initState() {
@@ -61,7 +60,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
 
       final pasienId = session['pasien_id'] as int;
-      setState(() => _pasienId = pasienId);
 
       await _fetchNotifications(pasienId);
     } catch (e) {
@@ -652,6 +650,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
 
       if (response['success']) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✓ Obat berhasil dicatat'),
@@ -662,11 +661,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
         await Future.delayed(Duration(milliseconds: 500));
         _loadNotifications();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${response['error']}')));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -761,6 +762,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
 
       if (response['success']) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✓ Alasan telah dicatat'),
@@ -771,11 +773,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
         await Future.delayed(Duration(milliseconds: 500));
         _loadNotifications();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${response['error']}')));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));

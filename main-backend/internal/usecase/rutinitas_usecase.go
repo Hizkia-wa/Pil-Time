@@ -4,6 +4,7 @@ import (
 	"backend/internal/domain"
 	"backend/internal/dto"
 	"backend/internal/ports/outbound"
+	"errors"
 	"time"
 )
 
@@ -19,9 +20,37 @@ func (u *RutinitasUsecase) GetByID(id int) (*domain.Rutinitas, error) {
 	return u.repo.GetByID(id)
 }
 
-// GetAllByPasien mengambil semua rutinitas yang dibuat oleh pasien sendiri
-func (u *RutinitasUsecase) GetAllByPasien(pasienID int) ([]domain.Rutinitas, error) {
-	return u.repo.GetByPasienID(pasienID)
+// GetAllByPasien mengambil semua rutinitas yang dibuat oleh pasien sendiri beserta status hari ini
+func (u *RutinitasUsecase) GetAllByPasien(pasienID int) ([]map[string]interface{}, error) {
+	list, err := u.repo.GetByPasienID(pasienID)
+	if err != nil {
+		return nil, err
+	}
+
+	todayStatus, err := u.repo.GetTodayTracking(pasienID)
+	if err != nil {
+		todayStatus = make(map[int]string)
+	}
+
+	result := []map[string]interface{}{}
+	for _, r := range list {
+		status := "none"
+		if s, ok := todayStatus[r.ID]; ok {
+			status = s
+		}
+
+		item := map[string]interface{}{
+			"id":             r.ID,
+			"pasien_id":      r.PasienID,
+			"nama_rutinitas": r.NamaRutinitas,
+			"deskripsi":      r.Deskripsi,
+			"waktu_reminder": r.WaktuReminder,
+			"status":         r.Status,
+			"today_status":   status,
+		}
+		result = append(result, item)
+	}
+	return result, nil
 }
 
 func (u *RutinitasUsecase) Delete(id int) error {
@@ -62,4 +91,23 @@ func (u *RutinitasUsecase) Create(req dto.CreateRutunitasDTO) (*domain.Rutinitas
 		WaktuReminder: req.WaktuReminder,
 		Status:        "active",
 	})
+}
+
+func (u *RutinitasUsecase) Update(id int, req dto.UpdateRutinitasDTO) (*domain.Rutinitas, error) {
+	existing, err := u.repo.GetByID(id)
+	if err != nil || existing == nil {
+		return nil, errors.New("rutinitas tidak ditemukan")
+	}
+
+	if req.NamaRutinitas != "" {
+		existing.NamaRutinitas = req.NamaRutinitas
+	}
+	if req.Deskripsi != "" {
+		existing.Deskripsi = req.Deskripsi
+	}
+	if req.WaktuReminder != "" {
+		existing.WaktuReminder = req.WaktuReminder
+	}
+
+	return u.repo.Update(id, existing)
 }

@@ -5,7 +5,8 @@ import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 
 class TambahRutinitasScreen extends StatefulWidget {
-  const TambahRutinitasScreen({super.key});
+  final dynamic rutinitas;
+  const TambahRutinitasScreen({super.key, this.rutinitas});
 
   @override
   State<TambahRutinitasScreen> createState() => _TambahRutinitasScreenState();
@@ -15,7 +16,6 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
   // ── Warna & Konstanta ───────────────────────────────────────────────────
   static const Color _bgPage = Color(0xFFF8FAF9);
   static const Color _green = Color(0xFF13EC5B);
-  static const Color _streakTeal = Color(0xFF13ECA4);
   static const Color _textPrimary = Color(0xFF0F172A);
   static const Color _textSecondary = Color(0xFF64748B);
   static const Color _cardBorder = Color(0xFFE2E8F0);
@@ -45,6 +45,54 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.rutinitas != null) {
+      _namaCtrl.text = widget.rutinitas['nama_rutinitas'] ?? '';
+      
+      String desc = widget.rutinitas['deskripsi'] ?? '';
+      if (desc.contains(' (Hari: ')) {
+        final parts = desc.split(' (Hari: ');
+        _deskripsiCtrl.text = parts.first;
+        final dayPart = parts.last.replaceAll(')', '');
+        final days = dayPart.split(', ').map((d) => d.trim()).toSet();
+        _selectedHari.clear();
+        _selectedHari.addAll(days);
+      } else if (desc.startsWith('Rutinitas harian. Hari: ')) {
+        _deskripsiCtrl.text = '';
+        if (desc.contains('Hari: ')) {
+          final dayPart = desc.split('Hari: ').last.split('.').first;
+          final days = dayPart.split(', ').map((d) => d.trim()).toSet();
+          _selectedHari.clear();
+          _selectedHari.addAll(days);
+        }
+      } else {
+        _deskripsiCtrl.text = desc;
+      }
+
+      final timeStr = widget.rutinitas['waktu_reminder'] ?? '07:00';
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        _waktuMulai = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        _waktuSelesai = TimeOfDay(hour: (int.parse(parts[0]) + 1) % 24, minute: int.parse(parts[1]));
+      }
+
+      if (desc.contains(' Waktu: ')) {
+        final timePart = desc.split(' Waktu: ').last.trim();
+        final timeClean = timePart.replaceAll('.', ''); // clean trailing periods if any
+        final times = timeClean.split(' - ');
+        if (times.length >= 2) {
+          final startParts = times[0].split(':');
+          final endParts = times[1].split(':');
+          if (startParts.length >= 2 && endParts.length >= 2) {
+            try {
+              _waktuMulai = TimeOfDay(hour: int.parse(startParts[0]), minute: int.parse(startParts[1]));
+              _waktuSelesai = TimeOfDay(hour: int.parse(endParts[0]), minute: int.parse(endParts[1]));
+            } catch (e) {
+              debugPrint("Error parsing time range: $e");
+            }
+          }
+        }
+      }
+    }
     _loadPasienSession();
   }
 
@@ -156,24 +204,35 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
 
       debugPrint("Payload: ${jsonEncode(payload)}");
 
+      final isEdit = widget.rutinitas != null;
+      final url = isEdit
+          ? "${ApiService.baseUrl}/api/pasien/rutinitas/${widget.rutinitas['id']}"
+          : "${ApiService.baseUrl}/api/pasien/rutinitas";
+
       final token = await AuthService.getToken();
       final Map<String, String> headers = {
         "Content-Type": "application/json",
         if (token != null && token.isNotEmpty) "Authorization": "Bearer $token",
       };
 
-      final response = await http.post(
-        Uri.parse("${ApiService.baseUrl}/api/pasien/rutinitas"),
-        headers: headers,
-        body: jsonEncode(payload),
-      );
+      final response = isEdit
+          ? await http.put(
+              Uri.parse(url),
+              headers: headers,
+              body: jsonEncode(payload),
+            )
+          : await http.post(
+              Uri.parse(url),
+              headers: headers,
+              body: jsonEncode(payload),
+            );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               backgroundColor: Colors.green,
-              content: Text('Rutinitas berhasil disimpan!'),
+              content: Text(isEdit ? 'Rutinitas berhasil diperbarui!' : 'Rutinitas berhasil disimpan!'),
             ),
           );
           Navigator.pop(context, true);
@@ -221,9 +280,9 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Tambah Rutinitas',
-          style: TextStyle(
+        title: Text(
+          widget.rutinitas != null ? 'Edit Rutinitas' : 'Tambah Rutinitas',
+          style: const TextStyle(
             color: _textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -412,7 +471,7 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: _green.withOpacity(0.3),
+                        color: _green.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -450,9 +509,9 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
         ),
         child: _isSaving
             ? const CircularProgressIndicator(color: Colors.white)
-            : const Text(
-                'Simpan Rutinitas',
-                style: TextStyle(
+            : Text(
+                widget.rutinitas != null ? 'Simpan Perubahan' : 'Simpan Rutinitas',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
