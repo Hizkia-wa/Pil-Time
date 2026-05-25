@@ -70,3 +70,7 @@ func (r *pasienRepo) Count() (int64, error) {
 	err := r.db.Model(&domain.Pasien{}).Count(&count).Error
 	return count, err
 }
+
+func (r *pasienRepo) UpdateProfile(id uint, p *domain.Pasien) error {
+	return r.db.Model(&domain.Pasien{}).Where("pasien_id = ?", id).Updates(p).Error
+}

@@ -23,3 +23,13 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
 }
+
+type UpdatePasienRequest struct {
+	Nama         string `json:"nama"`
+	Email        string `json:"email"`
+	Alamat       string `json:"alamat"`
+	NoTelepon    string `json:"no_telepon"`
+	JenisKelamin string `json:"jenis_kelamin"`
+	TanggalLahir string `json:"tanggal_lahir"`
+	TempatLahir  string `json:"tempat_lahir"`
+}

@@ -117,6 +117,32 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> updateProfile({
+    required int pasienId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/pasien/profile'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorBody['message'] ?? 'Gagal memperbarui profil',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
+
   // ============================
   //          RIWAYAT
   // ============================

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../services/auth_service.dart';
-import '../services/location_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import '../../bloc/auth/auth_state.dart';
+import '../../services/location_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,7 +15,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
   bool _showPassword = false;
   String? _selectedGender;
   bool _isLocationLoading = false;
@@ -111,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _register() async {
+  void _register() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -131,65 +133,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await AuthService.register(
-        nama: _namaController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-        nik: _nikController.text,
-        tempatLahir: _tempatLahirController.text,
-        tanggalLahir: _tanggalLahirController.text,
-        telepon: _teleponController.text,
-        jenisKelamin: _selectedGender!,
-        alamat: _alamatController.text,
-      );
-
-      if (!mounted) return;
-
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF15BE77),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Registrasi berhasil! Silakan masuk.',
-              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-            ),
-          ),
-        );
-        Navigator.of(context).pushReplacementNamed('/login');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              result['error'] ?? 'Registrasi gagal',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+    context.read<AuthBloc>().add(
+      RegisterSubmitted(
+        registerData: {
+          'nama': _namaController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'nik': _nikController.text,
+          'tempat_lahir': _tempatLahirController.text,
+          'tanggal_lahir': _tanggalLahirController.text,
+          'telepon': _teleponController.text,
+          'jenis_kelamin': _selectedGender!,
+          'alamat': _alamatController.text,
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     const emerald = Color(0xFF15BE77);
 
-    return Scaffold(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF15BE77),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Registrasi & Login Berhasil!',
+                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                state.error,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -601,17 +597,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
+                    onPressed: isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: emerald,
                       disabledBackgroundColor: const Color(0xFFC0E5D8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
-                      elevation: _isLoading ? 0 : 4,
+                      elevation: isLoading ? 0 : 4,
                       shadowColor: emerald.withValues(alpha: 0.3),
                     ),
-                    child: _isLoading
+                    child: isLoading
                         ? const SizedBox(
                             height: 24,
                             width: 24,
@@ -673,6 +669,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
     );
+  },
+);
   }
 
   Widget _buildFieldLabel(String text) {

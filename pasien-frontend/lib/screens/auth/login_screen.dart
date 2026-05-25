@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../services/auth_service.dart';
-import 'dashboard_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import '../../bloc/auth/auth_state.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isReturningUser;
@@ -13,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
   bool _showPassword = false;
 
   // Controllers
@@ -27,60 +28,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+  void _login() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await AuthService.login(
+    context.read<AuthBloc>().add(
+      LoginSubmitted(
         email: _emailController.text,
         password: _passwordController.text,
-      );
-
-      if (!mounted) return;
-
-      if (result['success']) {
-        final session = await AuthService.getPasienSession();
-        if (session != null && mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => DashboardScreen(
-                pasienId: session['pasien_id'],
-                pasienNama: session['pasien_name'],
-              ),
-            ),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              result['error'] ?? 'Login gagal',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                state.error,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -285,17 +267,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
+                    onPressed: isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF15BE77),
                       disabledBackgroundColor: const Color(0xFFC0E5D8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
-                      elevation: _isLoading ? 0 : 4,
+                      elevation: isLoading ? 0 : 4,
                       shadowColor: const Color(0xFF15BE77).withValues(alpha: 0.3),
                     ),
-                    child: _isLoading
+                    child: isLoading
                         ? const SizedBox(
                             height: 24,
                             width: 24,
@@ -350,6 +332,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  },
+);
   }
 }
 

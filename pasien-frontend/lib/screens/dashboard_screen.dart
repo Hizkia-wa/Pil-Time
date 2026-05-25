@@ -51,7 +51,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     dashboardFuture = _fetchDashboard();
-    _loadRutinitas();
+    // Tunda _loadRutinitas sampai setelah frame pertama untuk memastikan
+    // token sudah tersimpan sepenuhnya di SharedPreferences sebelum dibaca
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRutinitas();
+    });
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
     _checkNotificationPermission();
@@ -1987,7 +1991,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (ctx) => const ProfileScreen(),
+                  ),
                 );
               },
               child: Column(
@@ -2040,12 +2046,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        setState(() {
-          _listRutinitas = data['data'] ?? [];
-        });
+        if (mounted) {
+          setState(() {
+            _listRutinitas = data['data'] ?? [];
+          });
+        }
+      } else {
+        debugPrint('[Rutinitas] HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint("Error load rutinitas dashboard: $e");
+      debugPrint('[Rutinitas] Error: $e');
     } finally {
       if (mounted) {
         setState(() => _loadingRutinitas = false);

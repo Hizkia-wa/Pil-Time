@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import '../../bloc/auth/auth_state.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -10,9 +13,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final emailController = TextEditingController();
-  bool isLoading = false;
 
-  void sendOTP() async {
+  void sendOTP() {
     if (emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -43,36 +45,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    setState(() => isLoading = true);
-
-    final result = await ApiService.sendOtp(emailController.text);
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      Navigator.pushNamed(context, '/otp', arguments: emailController.text);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            result['error'] ?? "Gagal mengirim OTP",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
-      );
-    }
+    context.read<AuthBloc>().add(ForgotPasswordSubmitted(email: emailController.text));
   }
 
   @override
   Widget build(BuildContext context) {
     const emerald = Color(0xFF15BE77);
 
-    return Scaffold(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is ForgotPasswordSuccess) {
+          Navigator.pushNamed(context, '/otp', arguments: state.email);
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                state.error,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
       appBar: AppBar(
         leading: IconButton(
@@ -252,6 +252,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ),
     );
+  },
+);
   }
 }
 

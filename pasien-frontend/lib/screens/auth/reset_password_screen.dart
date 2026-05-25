@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import '../../bloc/auth/auth_state.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -11,7 +14,6 @@ class ResetPasswordScreen extends StatefulWidget {
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final passController = TextEditingController();
   final confirmController = TextEditingController();
-  bool isLoading = false;
   bool _showPass = false;
   bool _showConfirm = false;
 
@@ -22,13 +24,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     return hasLetter && hasNumber;
   }
 
-  bool _canSubmit() {
+  bool _canSubmit(bool isLoading) {
     return _isPasswordValid(passController.text) &&
         passController.text == confirmController.text &&
         !isLoading;
   }
 
-  void resetPassword(String email, String code) async {
+  void resetPassword(String email, String code) {
     if (!_isPasswordValid(passController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -59,33 +61,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return;
     }
 
-    setState(() => isLoading = true);
-
-    final result = await ApiService.resetPassword(
-      email,
-      passController.text,
-      code,
+    context.read<AuthBloc>().add(
+      ResetPasswordSubmitted(
+        email: email,
+        password: passController.text,
+        otp: code,
+      ),
     );
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      Navigator.pushReplacementNamed(context, '/success');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            result['error'] ?? "Gagal reset password",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
-      );
-    }
   }
 
   @override
@@ -95,7 +77,27 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final code = args['code'] as String;
     const emerald = Color(0xFF15BE77);
 
-    return Scaffold(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is ResetPasswordSuccess) {
+          Navigator.pushReplacementNamed(context, '/success');
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                state.error,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium background
       appBar: AppBar(
         leading: IconButton(
@@ -301,14 +303,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _canSubmit() ? () => resetPassword(email, code) : null,
+                  onPressed: _canSubmit(isLoading) ? () => resetPassword(email, code) : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: emerald,
                     disabledBackgroundColor: const Color(0xFFC0E5D8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
-                    elevation: _canSubmit() ? 4 : 0,
+                    elevation: _canSubmit(isLoading) ? 4 : 0,
                     shadowColor: emerald.withValues(alpha: 0.3),
                   ),
                   child: isLoading
@@ -337,6 +339,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
       ),
     );
+  },
+);
   }
 }
 

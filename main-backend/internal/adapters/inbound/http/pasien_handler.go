@@ -251,3 +251,37 @@ func (h *PasienHandler) GetProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, profile)
 }
+
+// UpdateProfile menangani HTTP request untuk memperbarui profil pasien
+func (h *PasienHandler) UpdateProfile(c *gin.Context) {
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id is required",
+		})
+		return
+	}
+
+	var req dto.UpdatePasienRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "VALIDATION_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	err := h.usecase.UpdateProfile(pasienID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "UPDATE_PROFILE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profil berhasil diperbarui",
+	})
+}

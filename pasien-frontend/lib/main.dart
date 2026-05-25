@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'config/app_config.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/fcm_service.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/otp_verification_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/success_screen.dart';
+import 'bloc/auth/auth_bloc.dart';
+import 'bloc/auth/auth_event.dart';
+import 'bloc/auth/auth_state.dart';
 
 /// Global key untuk navigasi dari mana saja (khususnya untuk Notifikasi)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -46,11 +49,15 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  // AuthBloc dibuat di sini supaya hidup selama app berjalan
+  // dan bisa diakses oleh SEMUA screen via MaterialApp builder
+  late final AuthBloc _authBloc;
   late Future<Widget> _homeFuture;
 
   @override
   void initState() {
     super.initState();
+    _authBloc = AuthBloc()..add(AuthCheckRequested());
     _homeFuture = _determineInitialScreen();
 
     // Handle FCM ketika app di foreground:
@@ -64,6 +71,12 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  @override
+  void dispose() {
+    _authBloc.close();
+    super.dispose();
+  }
+
   Future<Widget> _determineInitialScreen() async {
     // Check if user has seen onboarding
     final prefs = await SharedPreferences.getInstance();
@@ -74,20 +87,28 @@ class _MyAppState extends State<MyApp> {
       return const OnboardingScreen();
     }
 
-    // Check if user is logged in
-    final isLoggedIn = await AuthService.isLoggedIn();
-    if (isLoggedIn) {
-      final session = await AuthService.getPasienSession();
-      if (session != null) {
-        return DashboardScreen(
-          pasienId: session['pasien_id'],
-          pasienNama: session['pasien_name'],
-        );
-      }
-    }
-
-    // User has seen onboarding but not logged in → returning user
-    return const LoginScreen(isReturningUser: true);
+    // User has seen onboarding -> now yield to BLoC to handle Login / Dashboard dynamically!
+    return BlocBuilder<AuthBloc, AuthState>(
+      bloc: _authBloc,
+      // Hanya rebuild saat status auth benar-benar berubah (bukan saat AuthLoading sementara)
+      // Ini mencegah DashboardScreen direset ulang setiap ada transisi state
+      buildWhen: (previous, current) {
+        if (current is AuthLoading) return false; // jangan rebuild saat loading
+        return true;
+      },
+      builder: (context, state) {
+        if (state is AuthInitial) {
+          return const _SplashScreen();
+        } else if (state is AuthAuthenticated) {
+          return DashboardScreen(
+            pasienId: state.session['pasien_id'],
+            pasienNama: state.session['pasien_name'],
+          );
+        } else {
+          return const LoginScreen(isReturningUser: true);
+        }
+      },
+    );
   }
 
   @override
@@ -99,6 +120,16 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF15BE77)),
       ),
+      // ✅ builder dijalankan untuk SETIAP route/screen yang dibuka.
+      // Dengan membungkus child dalam BlocProvider.value, semua screen
+      // di seluruh app (termasuk yang dipush via Navigator) mendapat
+      // akses ke AuthBloc yang sama — tanpa perlu pass manual per-route.
+      builder: (context, child) {
+        return BlocProvider<AuthBloc>.value(
+          value: _authBloc,
+          child: child!,
+        );
+      },
       home: FutureBuilder<Widget>(
         future: _homeFuture,
         builder: (context, snapshot) {

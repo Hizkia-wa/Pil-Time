@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../login_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 
@@ -16,6 +18,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String? _errorMsg;
   bool _isExpanded = false;
+
+  bool _isEditing = false;
+  bool _isSaving = false;
+  final _formKey = GlobalKey<FormState>();
+
+  final _namaCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _alamatCtrl = TextEditingController();
+  final _noTeleponCtrl = TextEditingController();
+  final _jenisKelaminCtrl = TextEditingController();
+  final _tempatLahirCtrl = TextEditingController();
+  final _tanggalLahirCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _namaCtrl.dispose();
+    _emailCtrl.dispose();
+    _alamatCtrl.dispose();
+    _noTeleponCtrl.dispose();
+    _jenisKelaminCtrl.dispose();
+    _tempatLahirCtrl.dispose();
+    _tanggalLahirCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -82,13 +108,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLogoutDialog() {
+    // Capture AuthBloc reference BEFORE opening BottomSheet,
+    // because the sheet's builder gets a new context that doesn't
+    // inherit the BlocProvider from the widget tree.
+    final authBloc = context.read<AuthBloc>();
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: Colors.white,
-      builder: (context) {
+      builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
@@ -137,17 +168,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       side: const BorderSide(color: Color(0xFFFEE2E2), width: 1.5),
                     ),
                   ),
-                  onPressed: () async {
-                    await AuthService.clearSession();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    }
+                  onPressed: () {
+                    // 1. Tutup bottom sheet
+                    Navigator.of(sheetContext).pop();
+                    // 2. Pop ProfileScreen (dan semua route lain) kembali ke root,
+                    //    agar BlocBuilder di main.dart bisa menampilkan LoginScreen
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    // 3. Dispatch logout — BlocBuilder akan ubah home ke LoginScreen
+                    authBloc.add(LogoutRequested());
                   },
                   child: const Text(
                     'Ya, Keluar dari Akun',
@@ -172,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(sheetContext),
                   child: const Text(
                     'Batal',
                     style: TextStyle(
@@ -463,49 +491,142 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           collapsedIconColor: const Color(0xFF64748B),
                           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                           children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildInfoItem("Nama Lengkap", _profileData?['nama']),
-                                  _buildInfoItem("Email", _profileData?['email']),
-                                  _buildInfoItem("Alamat", _profileData?['alamat']),
-                                  _buildInfoItem("NIK", _profileData?['nik']),
-                                  _buildInfoItem("Jenis Kelamin", _profileData?['jenis_kelamin']),
-                                  _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
-                                  _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
-                                  _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: emerald,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(26),
-                                  ),
-                                  shadowColor: emerald.withValues(alpha: 0.2),
-                                ),
-                                onPressed: () {
-                                  // Action simpan perubahan
-                                },
-                                child: const Text(
-                                  "Simpan Perubahan", 
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    fontFamily: 'Inter',
+                            if (!_isEditing) ...[
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isEditing = true;
+                                      _namaCtrl.text = _profileData?['nama'] ?? '';
+                                      _emailCtrl.text = _profileData?['email'] ?? '';
+                                      _alamatCtrl.text = _profileData?['alamat'] ?? '';
+                                      _noTeleponCtrl.text = _profileData?['no_telepon'] ?? '';
+                                      _jenisKelaminCtrl.text = _profileData?['jenis_kelamin'] ?? 'Laki-laki';
+                                      _tempatLahirCtrl.text = _profileData?['tempat_lahir'] ?? '';
+                                      _tanggalLahirCtrl.text = _profileData?['tanggal_lahir'] ?? '';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.edit_rounded, color: emerald, size: 16),
+                                  label: const Text(
+                                    "Ubah Data",
+                                    style: TextStyle(
+                                      color: emerald,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoItem("Nama Lengkap", _profileData?['nama']),
+                                    _buildInfoItem("Email", _profileData?['email']),
+                                    _buildInfoItem("Alamat", _profileData?['alamat']),
+                                    _buildInfoItem("NIK", _profileData?['nik']),
+                                    _buildInfoItem("Jenis Kelamin", _profileData?['jenis_kelamin']),
+                                    _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
+                                    _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
+                                    _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoItem("NIK (Tidak dapat diubah)", _profileData?['nik']),
+                                    const SizedBox(height: 8),
+                                    _buildEditableField("Nama Lengkap", _namaCtrl, validator: (v) {
+                                      if (v == null || v.isEmpty) return 'Nama tidak boleh kosong';
+                                      return null;
+                                    }),
+                                    _buildEditableField("Email", _emailCtrl, keyboardType: TextInputType.emailAddress, validator: (v) {
+                                      if (v == null || v.isEmpty) return 'Email tidak boleh kosong';
+                                      if (!v.contains('@')) return 'Email tidak valid';
+                                      return null;
+                                    }),
+                                    _buildEditableField("Alamat", _alamatCtrl, maxLines: 2),
+                                    _buildDropdownField("Jenis Kelamin", _jenisKelaminCtrl, ['Laki-laki', 'Perempuan']),
+                                    _buildEditableField("Tempat Lahir", _tempatLahirCtrl),
+                                    _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl),
+                                    _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone),
+                                    const SizedBox(height: 24),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: 52,
+                                            child: OutlinedButton(
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: const Color(0xFF64748B),
+                                                side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(26),
+                                                ),
+                                              ),
+                                              onPressed: _isSaving ? null : () {
+                                                setState(() {
+                                                  _isEditing = false;
+                                                });
+                                              },
+                                              child: const Text(
+                                                "Batal",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  fontFamily: 'Inter',
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: 52,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: emerald,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(26),
+                                                ),
+                                              ),
+                                              onPressed: _isSaving ? null : _saveProfileChanges,
+                                              child: _isSaving
+                                                  ? const SizedBox(
+                                                      width: 24,
+                                                      height: 24,
+                                                      child: CircularProgressIndicator(
+                                                        color: Colors.white,
+                                                        strokeWidth: 2.5,
+                                                      ),
+                                                    )
+                                                  : const Text(
+                                                      "Simpan",
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 14,
+                                                        fontFamily: 'Inter',
+                                                      ),
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -549,6 +670,285 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Future<void> _saveProfileChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isSaving = true);
+    
+    try {
+      final updatedData = {
+        'nama': _namaCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'alamat': _alamatCtrl.text.trim(),
+        'no_telepon': _noTeleponCtrl.text.trim(),
+        'jenis_kelamin': _jenisKelaminCtrl.text.trim(),
+        'tempat_lahir': _tempatLahirCtrl.text.trim(),
+        'tanggal_lahir': _tanggalLahirCtrl.text.trim(),
+      };
+      
+      final response = await ApiService.updateProfile(
+        pasienId: _pasienId!,
+        data: updatedData,
+      );
+      
+      if (response['success'] == true) {
+        setState(() {
+          // Sync local data
+          _profileData?['nama'] = updatedData['nama'];
+          _profileData?['email'] = updatedData['email'];
+          _profileData?['alamat'] = updatedData['alamat'];
+          _profileData?['no_telepon'] = updatedData['no_telepon'];
+          _profileData?['jenis_kelamin'] = updatedData['jenis_kelamin'];
+          _profileData?['tempat_lahir'] = updatedData['tempat_lahir'];
+          _profileData?['tanggal_lahir'] = updatedData['tanggal_lahir'];
+          
+          _isEditing = false;
+        });
+        
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profil Anda berhasil diperbarui! 🏆"),
+            backgroundColor: Color(0xFF15BE77),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal menyimpan: ${response['error']}"),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Terjadi kesalahan: ${e.toString()}"),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Widget _buildEditableField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            validator: validator,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+              fontFamily: 'Inter',
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF15BE77), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownField(
+    String label,
+    TextEditingController controller,
+    List<String> options,
+  ) {
+    if (!options.contains(controller.text)) {
+      controller.text = options.first;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            initialValue: controller.text,
+            items: options.map((opt) {
+              return DropdownMenuItem<String>(
+                value: opt,
+                child: Text(
+                  opt,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                controller.text = val;
+              }
+            },
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF15BE77), width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePickerField(
+    String label,
+    TextEditingController controller,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: controller,
+            readOnly: true,
+            onTap: () async {
+              DateTime initialDate = DateTime.now().subtract(const Duration(days: 365 * 20));
+              try {
+                if (controller.text.isNotEmpty) {
+                  initialDate = DateTime.parse(controller.text);
+                }
+              } catch (_) {}
+              
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: initialDate,
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFF15BE77),
+                        onPrimary: Colors.white,
+                        onSurface: Color(0xFF0F172A),
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              
+              if (picked != null) {
+                controller.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+              }
+            },
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+              fontFamily: 'Inter',
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              suffixIcon: const Icon(Icons.calendar_today_rounded, color: Color(0xFF94A3B8), size: 20),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF15BE77), width: 1.5),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

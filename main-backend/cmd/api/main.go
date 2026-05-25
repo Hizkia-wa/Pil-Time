@@ -138,6 +138,7 @@ func main() {
 			pasienAuth.GET("/dashboard", pasienHandler.GetDashboard)
 			pasienAuth.GET("/jadwal", pasienHandler.GetJadwal)
 			pasienAuth.GET("/profile", pasienHandler.GetProfile)
+			pasienAuth.PUT("/profile", pasienHandler.UpdateProfile)
 
 			// Pasien - Rutinitas
 			pasienAuth.GET("/rutinitas", rutinitasHandler.GetAllForPasien)

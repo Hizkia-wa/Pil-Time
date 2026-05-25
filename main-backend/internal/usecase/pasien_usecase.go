@@ -364,3 +364,38 @@ func (u *PasienUsecase) GetByID(pasienID int) (*dto.PasienResponseDTO, error) {
 		NoTelepon:    pasien.NoTelepon,
 	}, nil
 }
+
+// UpdateProfile memperbarui profil pasien
+func (u *PasienUsecase) UpdateProfile(pasienID int, req *dto.UpdatePasienRequest) error {
+	existing, err := u.repo.GetByID(uint(pasienID))
+	if err != nil || existing == nil {
+		return errors.New("pasien tidak ditemukan")
+	}
+
+	if req.Nama != "" {
+		existing.Nama = req.Nama
+	}
+	if req.Email != "" {
+		existing.Email = req.Email
+	}
+	if req.Alamat != "" {
+		existing.Alamat = req.Alamat
+	}
+	if req.NoTelepon != "" {
+		existing.NoTelepon = req.NoTelepon
+	}
+	if req.JenisKelamin != "" {
+		existing.JenisKelamin = req.JenisKelamin
+	}
+	if req.TempatLahir != "" {
+		existing.TempatLahir = req.TempatLahir
+	}
+	if req.TanggalLahir != "" {
+		parsedDate, err := time.Parse("2006-01-02", req.TanggalLahir)
+		if err == nil {
+			existing.TanggalLahir = parsedDate
+		}
+	}
+
+	return u.repo.UpdateProfile(uint(pasienID), existing)
+}

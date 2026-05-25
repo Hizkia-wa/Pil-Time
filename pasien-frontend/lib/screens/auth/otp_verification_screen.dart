@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../../services/api_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import '../../bloc/auth/auth_state.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({super.key});
@@ -17,7 +20,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final otp5 = TextEditingController();
   final otp6 = TextEditingController();
 
-  bool isLoading = false;
   int _secondsRemaining = 60;
   Timer? _timer;
 
@@ -51,7 +53,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  void verifyOTP(String email) async {
+  void verifyOTP(String email) {
     if (otp1.text.isEmpty ||
         otp2.text.isEmpty ||
         otp3.text.isEmpty ||
@@ -73,73 +75,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
 
     String otp = otp1.text + otp2.text + otp3.text + otp4.text + otp5.text + otp6.text;
-
-    setState(() => isLoading = true);
-
-    final result = await ApiService.verifyOtp(email, otp);
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      Navigator.pushNamed(
-        context,
-        '/reset',
-        arguments: {'email': email, 'code': otp},
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            result['error'] ?? "OTP salah",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
-      );
-    }
+    context.read<AuthBloc>().add(OtpVerificationSubmitted(email: email, otp: otp));
   }
 
-  void _resendOtp(String email) async {
-    setState(() {
-      isLoading = true;
-    });
-
-    final result = await ApiService.sendOtp(email);
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF15BE77),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            "Kode OTP baru telah dikirim!",
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
-      );
-      _startTimer();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            result['error'] ?? "Gagal mengirim ulang OTP",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
-      );
-    }
+  void _resendOtp(String email) {
+    context.read<AuthBloc>().add(ForgotPasswordSubmitted(email: email));
   }
 
   Widget otpBox(TextEditingController controller, {bool autoFocus = false}) {
@@ -195,7 +135,43 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final email = ModalRoute.of(context)!.settings.arguments as String;
     const emerald = Color(0xFF15BE77);
 
-    return Scaffold(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is OtpVerificationSuccess) {
+          Navigator.pushNamed(
+            context,
+            '/reset',
+            arguments: {'email': state.email, 'code': state.otp},
+          );
+        } else if (state is ForgotPasswordSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFF15BE77),
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                "Kode OTP baru telah dikirim!",
+                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+          _startTimer();
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                state.error,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium background
       appBar: AppBar(
         leading: IconButton(
@@ -386,6 +362,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       ),
     );
+  },
+);
   }
 }
 
