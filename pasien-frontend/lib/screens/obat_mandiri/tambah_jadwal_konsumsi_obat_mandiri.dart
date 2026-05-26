@@ -279,6 +279,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

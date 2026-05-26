@@ -1717,7 +1717,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // --- BOTTOM NAV (ACCESSIBLE LABELED BAR) ---
   Widget _buildBottomNav() {
     return Container(
-      height: 76,
+      height: 78,
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
@@ -1735,103 +1735,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           // HOME TAB
-          Expanded(
-            child: InkWell(
-              onTap: () {},
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.home_rounded,
-                    color: Color(0xFF15BE77),
-                    size: 28,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Beranda',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF15BE77),
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _BottomNavTab(
+            icon: Icons.home_rounded,
+            label: 'Beranda',
+            isActive: true,
+            onTap: () {},
           ),
 
           // ADD ROUTINE TAB (CENTER PLUS)
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RutinitasSehatScreen(initialIndex: 1),
-                  ),
-                );
-              },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF15BE77),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF15BE77).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _BottomNavCenterButton(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RutinitasSehatScreen(initialIndex: 1),
+                ),
+              );
+            },
           ),
 
           // PROFILE TAB
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (ctx) => const ProfileScreen(),
-                  ),
-                );
-              },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.person_rounded,
-                    color: Color(0xFF94A3B8),
-                    size: 28,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Profil',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF94A3B8),
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _BottomNavTab(
+            icon: Icons.person_rounded,
+            label: 'Profil',
+            isActive: false,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (ctx) => const ProfileScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -2109,4 +2044,185 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 enum _JadwalStatus { onTime, late, upcoming, expired }
+
+class _BottomNavTab extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _BottomNavTab({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  State<_BottomNavTab> createState() => _BottomNavTabState();
+}
+
+class _BottomNavTabState extends State<_BottomNavTab> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const activeColor = Color(0xFF15BE77);
+    const inactiveColor = Color(0xFF94A3B8);
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _controller.forward(),
+        onTapUp: (_) {
+          _controller.reverse();
+          widget.onTap();
+        },
+        onTapCancel: () => _controller.reverse(),
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.isActive ? 16 : 8,
+                  vertical: widget.isActive ? 6 : 4,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.isActive 
+                      ? activeColor.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: AnimatedScale(
+                  duration: const Duration(milliseconds: 300),
+                  scale: widget.isActive ? 1.15 : 1.0,
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    widget.icon,
+                    color: widget.isActive ? activeColor : inactiveColor,
+                    size: 24,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: widget.isActive ? FontWeight.w800 : FontWeight.bold,
+                  color: widget.isActive ? activeColor : inactiveColor,
+                  fontFamily: 'Inter',
+                ),
+                child: Text(widget.label),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavCenterButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _BottomNavCenterButton({
+    required this.onTap,
+  });
+
+  @override
+  State<_BottomNavCenterButton> createState() => _BottomNavCenterButtonState();
+}
+
+class _BottomNavCenterButtonState extends State<_BottomNavCenterButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF15BE77);
+
+    return Expanded(
+      child: GestureDetector(
+        onTapDown: (_) => _controller.forward(),
+        onTapUp: (_) {
+          _controller.reverse();
+          widget.onTap();
+        },
+        onTapCancel: () => _controller.reverse(),
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 

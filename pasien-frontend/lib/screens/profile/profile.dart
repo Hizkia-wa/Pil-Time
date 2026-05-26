@@ -527,6 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ] else ...[
                             Form(
                               key: _formKey,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
