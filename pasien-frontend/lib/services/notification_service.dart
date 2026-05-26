@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../main.dart';
 import '../screens/alarm/alarm_ringing_screen.dart';
+import '../screens/notifikasi/notifikasi_screen.dart';
 
 // ============================================================
 // NOTIFICATION SERVICE — PIL TIME
@@ -31,11 +33,26 @@ class NotificationService {
 
   bool _initialized = false;
 
+  // ── Timer auto-show alarm (Dart side) ─────────────────────
+  // Key: notifId, Value: Timer yang akan otomatis tampilkan AlarmRingingScreen
+  final Map<int, Timer> _pendingAlarmTimers = {};
+
+  // ── Durasi suara alarm_voice (diukur dari file, ~1.58 detik) ─
+  // Digunakan untuk menghitung kapan otomatis buka AlarmRingingScreen
+  // setelah suara berbunyi 2 kali.
+  static const int _alarmVoiceDurationMs = 1600; // ms per putar
+  static const int _alarmVoicePlays = 2;          // berapa kali berbunyi sebelum auto-open
+
   // ── Konstanta Channel Android ──────────────────────────────
-  static const String _channelId = 'pil_time_alarm';
+  static const String _channelId = 'pil_time_alarm_custom';
   static const String _channelName = 'Alarm Minum Obat';
   static const String _channelDesc =
       'Notifikasi pengingat jadwal minum obat Pil Time';
+
+  static const String _reminderChannelId = 'pil_time_reminders';
+  static const String _reminderChannelName = 'Pengingat Obat';
+  static const String _reminderChannelDesc =
+      'Notifikasi pengingat biasa sebelum minum obat Pil Time';
 
   // ── Timezone WIB (Asia/Jakarta) ───────────────────────────
   static const String _timezone = 'Asia/Jakarta';
@@ -139,18 +156,20 @@ class NotificationService {
         fullScreenIntent: true, // Tampil over lock screen
         ongoing: false,
         playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarm_voice'),
         enableVibration: true,
         vibrationPattern: vibrationPattern,
         // FLAG_INSISTENT (4): Membuat suara berdering terus menerus seperti alarm jam
         additionalFlags: Int32List.fromList(<int>[4]),
         styleInformation: const BigTextStyleInformation(''),
-        icon: '@mipmap/ic_launcher',
+        icon: 'ic_notification',
       );
 
       const darwinDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'alarm_voice.mp3',
       );
 
       final notifDetails = NotificationDetails(
@@ -173,6 +192,26 @@ class NotificationService {
 
       debugPrint(
           '[PilTime] Scheduled alarm #$currentNotifId for $namaObat at $timeStr (WIB)');
+
+      // ── Auto-show alarm screen dari Dart side (tanpa tap notifikasi) ──
+      // Alur: notifikasi muncul → alarm_voice berbunyi 2x → baru buka AlarmRingingScreen
+      final now = tz.TZDateTime.now(tz.getLocation(_timezone));
+      final delayUntilAlarmMs = scheduledTZ.difference(now).inMilliseconds;
+      if (delayUntilAlarmMs > 0) {
+        // Tunggu hingga alarm berbunyi + 2 kali durasi suara
+        final autoOpenDelayMs =
+            delayUntilAlarmMs + (_alarmVoiceDurationMs * _alarmVoicePlays);
+        _pendingAlarmTimers[currentNotifId]?.cancel();
+        _pendingAlarmTimers[currentNotifId] = Timer(
+          Duration(milliseconds: autoOpenDelayMs),
+          () {
+            debugPrint('[PilTime] Auto-show alarm setelah bunyi 2x (timer #$currentNotifId)');
+            showAlarmScreen('$jadwalId:$namaObat');
+          },
+        );
+        debugPrint(
+            '[PilTime] Auto-open timer: ${delayUntilAlarmMs}ms + ${_alarmVoiceDurationMs * _alarmVoicePlays}ms (2x sound) = ${autoOpenDelayMs}ms');
+      }
     }
   }
 
@@ -197,15 +236,15 @@ class NotificationService {
     }
 
     final androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDesc,
+      _reminderChannelId,
+      _reminderChannelName,
+      channelDescription: _reminderChannelDesc,
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
       styleInformation: const BigTextStyleInformation(''),
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_notification',
     );
 
     const darwinDetails = DarwinNotificationDetails(
@@ -228,7 +267,7 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: '$jadwalId:$namaObat',
+      payload: 'reminder:$jadwalId:$namaObat',
       matchDateTimeComponents: DateTimeComponents.time,
     );
 
@@ -320,6 +359,11 @@ class NotificationService {
       await _plugin.cancel(jadwalId + 10000 + offset); // reminder_pagi
       await _plugin.cancel(jadwalId + 20000 + offset); // reminder_malam
       await _plugin.cancel(jadwalId + 30000 + offset); // advance_reminder
+
+      // Batalkan Dart-side timer juga
+      _pendingAlarmTimers.remove(jadwalId + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 10000 + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 20000 + offset)?.cancel();
     }
     debugPrint('[PilTime] Cancelled notifications for jadwal #$jadwalId');
   }
@@ -329,7 +373,12 @@ class NotificationService {
   // ==========================================================
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
-    debugPrint('[PilTime] All notifications cancelled.');
+    // Batalkan semua Dart-side timer
+    for (final timer in _pendingAlarmTimers.values) {
+      timer.cancel();
+    }
+    _pendingAlarmTimers.clear();
+    debugPrint('[PilTime] All notifications and timers cancelled.');
   }
 
   // ==========================================================
@@ -360,16 +409,18 @@ class NotificationService {
       priority: Priority.max,
       fullScreenIntent: true,
       playSound: true,
+      sound: const RawResourceAndroidNotificationSound('alarm_voice'),
       enableVibration: true,
       vibrationPattern: vibrationPattern,
       additionalFlags: Int32List.fromList(<int>[4]), // Insistent
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_notification',
     );
 
     const darwinDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'alarm_voice.mp3',
     );
 
     final notifDetails = NotificationDetails(
@@ -389,8 +440,71 @@ class NotificationService {
       payload: 'test:$namaObat',
     );
 
+    // ── Auto-show alarm screen setelah notifikasi berbunyi 2x ──
+    // Alur: notifikasi muncul (T+delaySeconds) → bunyi 2x → buka alarm screen
+    final autoOpenMs =
+        (delaySeconds * 1000) + (_alarmVoiceDurationMs * _alarmVoicePlays);
+    _pendingAlarmTimers[99999]?.cancel();
+    _pendingAlarmTimers[99999] = Timer(
+      Duration(milliseconds: autoOpenMs),
+      () {
+        debugPrint('[PilTime] Auto-show test alarm setelah bunyi 2x (${autoOpenMs}ms)');
+        showAlarmScreen('99999:$namaObat');
+      },
+    );
     debugPrint(
-        '[PilTime] Test notification scheduled in ${delaySeconds}s for: $namaObat');
+        '[PilTime] Test alarm: notif T+${delaySeconds}s, screen T+${autoOpenMs}ms (setelah 2x suara)');
+  }
+
+  // ==========================================================
+  // TEST HELPER — Schedule notifikasi pengingat biasa (15m sebelum) N detik dari sekarang
+  // ==========================================================
+  Future<void> scheduleTestReminderNotification({
+    required String namaObat,
+    int delaySeconds = 3,
+  }) async {
+    if (!_initialized) await initialize();
+
+    final location = tz.getLocation(_timezone);
+    final scheduledTime = tz.TZDateTime.now(location)
+        .add(Duration(seconds: delaySeconds));
+
+    final androidDetails = AndroidNotificationDetails(
+      _reminderChannelId,
+      _reminderChannelName,
+      channelDescription: _reminderChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      icon: 'ic_notification',
+    );
+
+    const darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final notifDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      88888, // ID khusus untuk test reminder
+      '🔔 Siapkan Obat: $namaObat',
+      'Siapkan obat ini. Waktu minum: Waktu Jadwal',
+      scheduledTime,
+      notifDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'reminder:88888:$namaObat',
+    );
+
+    debugPrint(
+        '[PilTime] Test reminder notification scheduled in ${delaySeconds}s for: $namaObat');
   }
 
   // ==========================================================
@@ -409,9 +523,19 @@ class NotificationService {
       channelDescription: _channelDesc,
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'ic_notification',
+      sound: RawResourceAndroidNotificationSound('alarm_voice'),
     );
 
-    const notifDetails = NotificationDetails(android: androidDetails);
+    const notifDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'alarm_voice.mp3',
+      ),
+    );
 
     await _plugin.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique ID sementara
@@ -529,19 +653,34 @@ class NotificationService {
   Future<void> _createNotificationChannel() async {
     if (!Platform.isAndroid) return;
 
-    const channel = AndroidNotificationChannel(
+    // 1. Channel Alarm Kustom (Minum Obat) dengan suara kustom
+    const alarmChannel = AndroidNotificationChannel(
       _channelId,
       _channelName,
       description: _channelDesc,
       importance: Importance.max,
       enableVibration: true,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound('alarm_voice'),
     );
 
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    // 2. Channel Pengingat Biasa dengan suara default sistem
+    const reminderChannel = AndroidNotificationChannel(
+      _reminderChannelId,
+      _reminderChannelName,
+      description: _reminderChannelDesc,
+      importance: Importance.high,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(alarmChannel);
+      await androidPlugin.createNotificationChannel(reminderChannel);
+    }
   }
 
   Future<void> _requestPermissions() async {
@@ -578,8 +717,49 @@ class NotificationService {
     }
 
     if (response.payload != null) {
-      showAlarmScreen(response.payload!);
+      final payload = response.payload!;
+      if (payload.startsWith('reminder:')) {
+        showNotificationScreen(payload: payload);
+      } else {
+        showAlarmScreen(payload);
+      }
     }
+  }
+
+  void showNotificationScreen({String? payload}) {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint('[PilTime] Navigator belum siap, notification screen tidak bisa ditampilkan.');
+      return;
+    }
+
+    // Parse payload untuk membuat mock item yang tampil di daftar
+    NotificationItem? mockItem;
+    if (payload != null && payload.startsWith('reminder:')) {
+      try {
+        // Format: reminder:jadwalId:namaObat
+        final withoutPrefix = payload.substring('reminder:'.length);
+        final parts = withoutPrefix.split(':');
+        final namaObat = parts.length > 1 ? parts.sublist(1).join(':') : 'Obat';
+        final now = DateTime.now();
+        final timeStr =
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        mockItem = NotificationItem(
+          title: namaObat,
+          desc: 'Siapkan obat ini. Waktu minum segera tiba.',
+          time: timeStr,
+          type: NotificationType.mendatang,
+          isAdvanceReminder: true,
+        );
+      } catch (_) {}
+    }
+
+    navigator.push(
+      MaterialPageRoute(
+        builder: (context) => NotificationScreen(mockItem: mockItem),
+      ),
+    );
+    debugPrint('[PilTime] NotificationScreen ditampilkan dari tap pengingat.');
   }
 
   // ==========================================================
@@ -622,7 +802,11 @@ class NotificationService {
       debugPrint('[PilTime] App diluncurkan dari notifikasi, payload: $payload');
       // Delay singkat agar Navigator sudah siap
       await Future.delayed(const Duration(milliseconds: 500));
-      showAlarmScreen(payload);
+      if (payload.startsWith('reminder:')) {
+        showNotificationScreen(payload: payload);
+      } else {
+        showAlarmScreen(payload);
+      }
     }
   }
 }

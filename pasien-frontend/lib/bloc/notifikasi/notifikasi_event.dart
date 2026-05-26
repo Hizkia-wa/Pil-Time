@@ -59,3 +59,12 @@ class SubmitMissedReasonEvent extends NotifikasiEvent {
   @override
   List<Object?> get props => [item, reason, pasienId];
 }
+
+class AddMockNotification extends NotifikasiEvent {
+  final NotificationItem item;
+
+  const AddMockNotification({required this.item});
+
+  @override
+  List<Object?> get props => [item];
+}

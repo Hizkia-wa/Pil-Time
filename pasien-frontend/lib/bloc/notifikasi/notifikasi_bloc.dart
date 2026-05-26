@@ -12,6 +12,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
     on<DeferNotificationEvent>(_onDeferNotification);
     on<UndeferNotificationEvent>(_onUndeferNotification);
     on<SubmitMissedReasonEvent>(_onSubmitMissedReason);
+    on<AddMockNotification>(_onAddMockNotification);
   }
 
   bool _isTimeExpired(String waktu) {
@@ -689,6 +690,23 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
       emit(NotifikasiLoaded(
         allNotifications: allNotifications,
         deferredNotifications: deferredNotifications,
+      ));
+    }
+  }
+
+  Future<void> _onAddMockNotification(
+    AddMockNotification event,
+    Emitter<NotifikasiState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is NotifikasiLoaded) {
+      final updatedNotifications = List<NotificationItem>.from(currentState.allNotifications)
+        ..insert(0, event.item); // taruh paling atas
+      emit(currentState.copyWith(allNotifications: updatedNotifications));
+    } else {
+      emit(NotifikasiLoaded(
+        allNotifications: [event.item],
+        deferredNotifications: const {},
       ));
     }
   }

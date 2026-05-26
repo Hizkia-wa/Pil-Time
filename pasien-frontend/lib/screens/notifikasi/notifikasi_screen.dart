@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../../bloc/notifikasi/notifikasi_bloc.dart';
 import '../../bloc/notifikasi/notifikasi_event.dart';
 import '../../bloc/notifikasi/notifikasi_state.dart';
@@ -28,7 +29,9 @@ class NotificationItem {
 }
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key});
+  final NotificationItem? mockItem;
+
+  const NotificationScreen({super.key, this.mockItem});
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -37,20 +40,30 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   late final NotifikasiBloc _notifikasiBloc;
   int? _pasienId;
+  bool _isExplanationExpanded = false;
 
   @override
   void initState() {
     super.initState();
     _notifikasiBloc = NotifikasiBloc();
-    _loadSessionAndFetch();
+    _loadSessionAndFetch(mockItem: widget.mockItem);
   }
 
-  Future<void> _loadSessionAndFetch() async {
+  Future<void> _loadSessionAndFetch({NotificationItem? mockItem}) async {
     try {
       final session = await AuthService.getPasienSession();
       if (session != null) {
         _pasienId = session['pasien_id'] as int;
         _notifikasiBloc.add(FetchNotifications(pasienId: _pasienId!));
+
+        // Jika ada mock item (dari tap notifikasi sistem), sisipkan setelah
+        // fetch selesai agar tampil di daftar
+        if (mockItem != null) {
+          await Future.delayed(const Duration(milliseconds: 1200));
+          if (!_notifikasiBloc.isClosed) {
+            _notifikasiBloc.add(AddMockNotification(item: mockItem));
+          }
+        }
       }
     } catch (_) {}
   }
@@ -59,6 +72,405 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void dispose() {
     _notifikasiBloc.close();
     super.dispose();
+  }
+
+  Future<void> _triggerTestReminder() async {
+    try {
+      await NotificationService.instance.scheduleTestReminderNotification(
+        namaObat: 'Paracetamol (Uji Coba)',
+        delaySeconds: 3,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '🔔 Menjadwalkan pengingat biasa dalam 3 detik! Bunyi chime pendek dan akan otomatis masuk ke daftar bawah.',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF15BE77),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menjadwalkan tes: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _triggerTestAlarm() async {
+    try {
+      await NotificationService.instance.scheduleTestNotification(
+        namaObat: 'Paracetamol (Alarm)',
+        delaySeconds: 3,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.volume_up_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '🔊 Alarm dijadwalkan dalam 3 detik! Layar alarm akan MUNCUL OTOMATIS — tanpa perlu tap notifikasi.',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0D9488),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menjadwalkan alarm kustom: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildTestPanel() {
+    const emerald = Color(0xFF15BE77);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF15BE77), Color(0xFF0D9488)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: emerald.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.science_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'SISTEM UJI COBA NOTIFIKASI & ALARM',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white70,
+                    letterSpacing: 1.2,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Uji Alur Notifikasi Pil-Time',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'Roboto',
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Verifikasi alur berdering kustom dan masuknya notifikasi ke halaman rekam medis Anda secara interaktif.',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white70,
+              height: 1.4,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // BUTTON 1: Notif Pengingat Biasa (15 Menit Sebelum)
+          ElevatedButton.icon(
+            onPressed: _triggerTestReminder,
+            icon: const Icon(Icons.notifications_active_rounded, size: 18),
+            label: const Text(
+              '1. Tes Notif Biasa (15m Sebelum)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontFamily: 'Inter',
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF0D9488),
+              elevation: 0,
+              alignment: Alignment.centerLeft,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              '• Mengeluarkan bunyi ping biasa (chime sistem) & otomatis masuk ke daftar notifikasi di bawah agar terlihat oleh pengguna.',
+              style: TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Inter'),
+            ),
+          ),
+
+          // BUTTON 2: Alarm Berdering (Waktu Minum Obat)
+          ElevatedButton.icon(
+            onPressed: _triggerTestAlarm,
+            icon: const Icon(Icons.volume_up_rounded, size: 18),
+            label: const Text(
+              '2. Tes Alarm Berdering (Waktu Minum)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontFamily: 'Inter',
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white30,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              alignment: Alignment.centerLeft,
+              minimumSize: const Size.fromHeight(48),
+              side: const BorderSide(color: Colors.white30, width: 1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              '• Mengeluarkan suara alarm kustom (alarm_voice) tiada henti dan memicu Alarm Ringing Screen persis saat jadwal minum obat.',
+              style: TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Inter'),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          const Divider(color: Colors.white24, height: 1),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExplanationExpanded = !_isExplanationExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.help_outline_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Kenapa notifikasi asli/riil harus dipisah?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isExplanationExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white70,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Sesuai prosedur kesehatan:\n1. Pengingat 15 menit sebelum menggunakan bunyi chime biasa agar ramah bagi pengguna dan otomatis diarsipkan ke halaman ini untuk rekam medis.\n2. Alarm waktu minum obat berbunyi tiada henti dengan suara manusia (alarm_voice) untuk memastikan Anda tidak terlewat, dan didesain murni sebagai alarm interaktif penentu aksi minum obat saat itu juga.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  height: 1.5,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+            crossFadeState: _isExplanationExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSliverContent(NotifikasiState state) {
+    if (state is NotifikasiInitial || state is NotifikasiLoading) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF15BE77),
+          ),
+        ),
+      );
+    }
+
+    if (state is NotifikasiFailure) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Gagal Memuat Notifikasi',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  state.error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (_pasienId != null) {
+                      _notifikasiBloc.add(FetchNotifications(pasienId: _pasienId!));
+                    } else {
+                      _loadSessionAndFetch();
+                    }
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Coba Lagi'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF15BE77),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (state is NotifikasiLoaded) {
+      final visibleNotifications = state.allNotifications.where((n) {
+        return !state.deferredNotifications.contains(n);
+      }).toList();
+
+      if (visibleNotifications.isEmpty) {
+        return const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.notifications_off, size: 48, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Tidak ada notifikasi',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Semua jadwal Anda berjalan dengan baik',
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => buildCard(visibleNotifications[index]),
+            childCount: visibleNotifications.length,
+          ),
+        ),
+      );
+    }
+
+    return const SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF15BE77),
+        ),
+      ),
+    );
   }
 
   @override
@@ -89,6 +501,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               SnackBar(
                 content: Text('✓ ${state.message}'),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           } else if (state is NotifikasiActionFailure) {
@@ -96,83 +509,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
               SnackBar(
                 content: Text('Error: ${state.error}'),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
         },
         builder: (context, state) {
-          if (state is NotifikasiInitial || state is NotifikasiLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is NotifikasiFailure) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Gagal Memuat Notifikasi',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    state.error,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (_pasienId != null) {
-                        _notifikasiBloc.add(FetchNotifications(pasienId: _pasienId!));
-                      } else {
-                        _loadSessionAndFetch();
-                      }
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Coba Lagi'),
-                  ),
-                ],
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildTestPanel(),
               ),
-            );
-          }
-
-          if (state is NotifikasiLoaded) {
-            final visibleNotifications = state.allNotifications.where((n) {
-              return !state.deferredNotifications.contains(n);
-            }).toList();
-
-            if (visibleNotifications.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.notifications_off, size: 48, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Tidak ada notifikasi',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Semua jadwal Anda berjalan dengan baik',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: visibleNotifications.length,
-              itemBuilder: (_, i) => buildCard(visibleNotifications[i]),
-            );
-          }
-
-          return const Center(child: CircularProgressIndicator());
+              _buildSliverContent(state),
+            ],
+          );
         },
       ),
     );
