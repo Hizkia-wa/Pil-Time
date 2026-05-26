@@ -1,8 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import './tambah_jadwal_konsumsi_obat_mandiri.dart';
-import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../bloc/rutinitas/rutinitas_bloc.dart';
+import '../../bloc/rutinitas/rutinitas_event.dart';
+import '../../bloc/rutinitas/rutinitas_state.dart';
 
 class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
   final int streakHari;
@@ -16,85 +18,101 @@ class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
 
 class _JadwalKonsumsiObatMandiriStyledState
     extends State<JadwalKonsumsiObatMandiriStyled> {
-  List<dynamic> jadwalList = [];
-  bool isLoading = true;
-
-  String get baseUrl => "${ApiService.baseUrl}/api/admin/jadwal";
+  late final RutinitasBloc _rutinitasBloc;
+  List<dynamic> _jadwalList = [];
+  int? _pasienId;
 
   @override
   void initState() {
     super.initState();
-    fetchJadwal();
+    _rutinitasBloc = RutinitasBloc();
+    _loadSessionAndFetch();
   }
 
-  // ================= FETCH DATA =================
-  Future<void> fetchJadwal() async {
-    if (!mounted) return;
-    setState(() => isLoading = true);
+  @override
+  void dispose() {
+    _rutinitasBloc.close();
+    super.dispose();
+  }
 
+  Future<void> _loadSessionAndFetch() async {
     try {
-      final response = await http.get(Uri.parse(baseUrl));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          jadwalList = data['data'] ?? [];
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
+      final session = await AuthService.getPasienSession();
+      if (session != null && session['pasien_id'] != null) {
+        _pasienId = session['pasien_id'] as int;
+        _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
       }
     } catch (e) {
-      setState(() => isLoading = false);
-      debugPrint("Error fetch: $e");
+      debugPrint("Error loading session: $e");
     }
   }
 
-  // ================= DELETE =================
-  Future<void> deleteJadwal(int id) async {
-    try {
-      final response = await http.delete(Uri.parse("$baseUrl/$id"));
-      if (response.statusCode == 200) {
-        fetchJadwal();
-      }
-    } catch (e) {
-      debugPrint("Error delete: $e");
-    }
-  }
-
-  // ================= BUILD =================
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: fetchJadwal,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-        children: [
-          _buildStreakCard(),
-          const SizedBox(height: 16),
-          const Text(
-            "Daftar Obat",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          if (isLoading)
-            const Center(child: CircularProgressIndicator())
-          else if (jadwalList.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  "Belum ada jadwal obat",
-                  style: TextStyle(fontSize: 14),
-                ),
+    return BlocConsumer<RutinitasBloc, RutinitasState>(
+      bloc: _rutinitasBloc,
+      listener: (context, state) {
+        if (state is RutinitasSehatLoaded) {
+          _jadwalList = state.listObat;
+        } else if (state is RutinitasActionSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: const Color(0xFF15BE77),
+            ),
+          );
+          if (_pasienId != null) {
+            _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
+          }
+        } else if (state is RutinitasActionFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error),
+              backgroundColor: Colors.red[400],
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is RutinitasSehatLoading || state is RutinitasActionLoading;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            if (_pasienId != null) {
+              _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
+            }
+          },
+          color: const Color(0xFF15BE77),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+            children: [
+              _buildStreakCard(),
+              const SizedBox(height: 16),
+              const Text(
+                "Daftar Obat",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
-            )
-          else
-            ...jadwalList.map(_buildObatCard),
-          const SizedBox(height: 30),
-          _buildTambahButton(),
-        ],
-      ),
+              const SizedBox(height: 10),
+              if (isLoading && _jadwalList.isEmpty)
+                const Center(child: CircularProgressIndicator(color: Color(0xFF15BE77)))
+              else if (_jadwalList.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      "Belum ada jadwal obat",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                )
+              else
+                ..._jadwalList.map(_buildObatCard),
+              const SizedBox(height: 30),
+              _buildTambahButton(),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -132,6 +150,9 @@ class _JadwalKonsumsiObatMandiriStyledState
 
   // ================= OBAT CARD =================
   Widget _buildObatCard(dynamic item) {
+    // Handling potential map structure from obat-mandiri endpoint (id vs jadwal_id)
+    final id = item['id'] ?? item['jadwal_id'];
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -144,11 +165,14 @@ class _JadwalKonsumsiObatMandiriStyledState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item['nama_jadwal'] ?? '-',
+            item['nama_jadwal'] ?? item['nama_obat'] ?? '-',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
-          Text(item['dosis'] ?? '-', style: const TextStyle(fontSize: 12)),
+          Text(
+            item['dosis'] ?? '${item['jumlah_dosis'] ?? ""} ${item['satuan'] ?? ""}'.trim(), 
+            style: const TextStyle(fontSize: 12),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -157,7 +181,9 @@ class _JadwalKonsumsiObatMandiriStyledState
                 color: Colors.red,
                 bg: const Color(0xFFFEE2E2),
                 onTap: () {
-                  _showDeleteConfirmation(item['jadwal_id']);
+                  if (id != null) {
+                    _showDeleteConfirmation(id);
+                  }
                 },
               ),
             ],
@@ -183,7 +209,7 @@ class _JadwalKonsumsiObatMandiriStyledState
           ),
           TextButton(
             onPressed: () {
-              deleteJadwal(id);
+              _rutinitasBloc.add(DeleteObatMandiri(obatId: id));
               Navigator.pop(context);
             },
             child: const Text("Hapus", style: TextStyle(color: Colors.red)),
@@ -224,7 +250,11 @@ class _JadwalKonsumsiObatMandiriStyledState
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const TambahJadwalKonsumsi()),
-          ).then((_) => fetchJadwal());
+          ).then((_) {
+            if (_pasienId != null) {
+              _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
+            }
+          });
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF13EC5B),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
-import '../../services/api_service.dart';
+import '../../bloc/riwayat/riwayat_bloc.dart';
+import '../../bloc/riwayat/riwayat_event.dart';
+import '../../bloc/riwayat/riwayat_state.dart';
 
 // ─── MODEL ───────────────────────────────────────────────────────────────────
 
@@ -28,59 +29,6 @@ class DayLog {
   const DayLog({required this.date, required this.logs});
 }
 
-// ─── HELPER FUNCTIONS ───────────────────────────────────────────────────────
-
-List<DayLog> _mapResponseToDayLogs(List<dynamic> response) {
-  if (response.isEmpty) return [];
-
-  // Group by tanggal
-  final Map<String, List<Map<String, dynamic>>> grouped = {};
-  for (final item in response) {
-    final tanggal = item['tanggal'] as String?;
-    if (tanggal != null) {
-      grouped.putIfAbsent(tanggal, () => []);
-      grouped[tanggal]!.add(item as Map<String, dynamic>);
-    }
-  }
-
-  // Convert to DayLog
-  final dayLogs = <DayLog>[];
-  for (final entry in grouped.entries) {
-    final date = DateTime.parse(entry.key);
-    final logs = <MedLog>[];
-
-    for (final item in entry.value) {
-      final status = item['status'] as String?;
-      final namaObat = item['nama_obat'] as String? ?? 'Obat';
-      final waktuMinum = item['waktu_minum'] as String?;
-      final jadwal = item['jadwal'] as String?;
-
-      // Map status
-      MedStatus medStatus;
-      if (status == 'Diminum') {
-        medStatus = MedStatus.taken;
-      } else if (status == 'Terlambat') {
-        medStatus = MedStatus.late;
-      } else {
-        medStatus = MedStatus.missed;
-      }
-
-      // Build instruction from waktu_minum or jadwal
-      final instruction = waktuMinum ?? jadwal ?? 'Tidak ada waktu';
-
-      logs.add(
-        MedLog(name: namaObat, instruction: instruction, status: medStatus),
-      );
-    }
-
-    dayLogs.add(DayLog(date: date, logs: logs));
-  }
-
-  // Sort by date descending (newest first)
-  dayLogs.sort((a, b) => b.date.compareTo(a.date));
-  return dayLogs;
-}
-
 // ─── SCREEN ───────────────────────────────────────────────────────────────────
 
 class RiwayatKonsumsiObatScreen extends StatefulWidget {
@@ -92,92 +40,35 @@ class RiwayatKonsumsiObatScreen extends StatefulWidget {
 }
 
 class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
+  late final RiwayatBloc _riwayatBloc;
   int _selectedFilter = 0;
   final List<String> _filters = ['Semua', '7 Hari', '30 Hari', '3 Bulan'];
 
   List<DayLog> _allData = [];
-  bool _isLoading = true;
-  String? _errorMsg;
+  int? _pasienId;
 
   @override
   void initState() {
     super.initState();
+    _riwayatBloc = RiwayatBloc();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _riwayatBloc.close();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
     try {
       final session = await AuthService.getPasienSession();
-      if (session == null) {
-        setState(() {
-          _errorMsg = 'User session tidak ditemukan';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final pasienId = session['pasien_id'] as int;
-      await _fetchRiwayat(pasienId);
-    } catch (e) {
-      debugPrint("Error loading data: $e");
-      setState(() {
-        _errorMsg = 'Gagal memuat data: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _fetchRiwayat(int pasienId) async {
-    try {
-      final token = await AuthService.getToken();
-      final Map<String, String> headers = {
-        'Content-Type': 'application/json',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      };
-
-      final response = await http
-          .get(
-            Uri.parse("${ApiService.baseUrl}/api/pasien/riwayat"),
-            headers: headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseBody = jsonDecode(response.body);
-        final List<dynamic> data = responseBody['data'] ?? [];
-
-        if (data.isEmpty) {
-          setState(() {
-            _allData = [];
-            _isLoading = false;
-            _errorMsg = null;
-          });
-        } else {
-          final dayLogs = _mapResponseToDayLogs(data);
-          setState(() {
-            _allData = dayLogs;
-            _isLoading = false;
-            _errorMsg = null;
-          });
-        }
-      } else {
-        final Map<String, dynamic> errorBody = jsonDecode(response.body);
-        final errorMsg =
-            errorBody['message'] ??
-            errorBody['error'] ??
-            'Server Error ${response.statusCode}';
-        debugPrint("Error Response: ${response.statusCode} - $errorMsg");
-        setState(() {
-          _errorMsg = errorMsg;
-          _isLoading = false;
-        });
+      if (session != null && session['pasien_id'] != null) {
+        _pasienId = session['pasien_id'] as int;
+        _riwayatBloc.add(FetchRiwayat(pasienId: _pasienId!));
       }
     } catch (e) {
-      debugPrint("Exception in _fetchRiwayat: $e");
-      setState(() {
-        _errorMsg = 'Gagal memuat data: ${e.toString()}';
-        _isLoading = false;
-      });
+      debugPrint("Error loading session: $e");
     }
   }
 
@@ -216,8 +107,8 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                       Icons.chevron_left_rounded,
                       color: Color(0xFF0F172A),
                       size: 32,
-                ),
-                onPressed: () => Navigator.pop(context),
+                    ),
+                    onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 4),
                   const Text(
@@ -233,93 +124,112 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                 ],
               ),
             ),
-            Expanded(child: _buildBody()),
+            Expanded(
+              child: BlocConsumer<RiwayatBloc, RiwayatState>(
+                bloc: _riwayatBloc,
+                listener: (context, state) {
+                  if (state is RiwayatLoaded) {
+                    _allData = state.allData;
+                  }
+                },
+                builder: (context, state) {
+                  if (state is RiwayatInitial || state is RiwayatLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF15BE77),
+                        strokeWidth: 3,
+                      ),
+                    );
+                  }
+
+                  if (state is RiwayatFailure) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded, 
+                              size: 56, 
+                              color: Color(0xFFFF4D4D),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Gagal Memuat Data',
+                              style: TextStyle(
+                                fontSize: 16, 
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.error,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13, 
+                                color: Color(0xFF64748B),
+                                fontFamily: 'Inter',
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                if (_pasienId != null) {
+                                  _riwayatBloc.add(FetchRiwayat(pasienId: _pasienId!));
+                                } else {
+                                  _loadData();
+                                }
+                              },
+                              icon: const Icon(Icons.refresh_rounded),
+                              label: const Text('Coba Lagi'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF15BE77),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      if (_pasienId != null) {
+                        _riwayatBloc.add(FetchRiwayat(pasienId: _pasienId!));
+                      }
+                    },
+                    color: const Color(0xFF15BE77),
+                    child: ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildComplianceCard(),
+                        _buildFilterRow(),
+                        const SizedBox(height: 12),
+                        ..._buildDayLogs(),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF15BE77),
-          strokeWidth: 3,
-        ),
-      );
-    }
-
-    if (_errorMsg != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded, 
-                size: 56, 
-                color: Color(0xFFFF4D4D),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Gagal Memuat Data',
-                style: TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                  fontFamily: 'Roboto',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMsg!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13, 
-                  color: Color(0xFF64748B),
-                  fontFamily: 'Inter',
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() => _isLoading = true);
-                  _loadData();
-                },
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Coba Lagi'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF15BE77),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.zero,
-      children: [
-        _buildComplianceCard(),
-        _buildFilterRow(),
-        const SizedBox(height: 12),
-        ..._buildDayLogs(),
-        const SizedBox(height: 32),
-      ],
     );
   }
 
@@ -740,4 +650,3 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
     'Des',
   ][month - 1];
 }
-

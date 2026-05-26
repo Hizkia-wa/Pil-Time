@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
-import '../../services/api_service.dart';
+import '../../bloc/rutinitas/rutinitas_bloc.dart';
+import '../../bloc/rutinitas/rutinitas_event.dart';
+import '../../bloc/rutinitas/rutinitas_state.dart';
 
 class TambahRutinitasScreen extends StatefulWidget {
   final dynamic rutinitas;
@@ -41,10 +42,12 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
   int? _pasienId;
   bool _isSaving = false;
   bool _isLoading = true;
+  late final RutinitasBloc _rutinitasBloc;
 
   @override
   void initState() {
     super.initState();
+    _rutinitasBloc = RutinitasBloc();
     if (widget.rutinitas != null) {
       _namaCtrl.text = widget.rutinitas['nama_rutinitas'] ?? '';
       
@@ -117,6 +120,7 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
   void dispose() {
     _namaCtrl.dispose();
     _deskripsiCtrl.dispose();
+    _rutinitasBloc.close();
     super.dispose();
   }
 
@@ -186,75 +190,24 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    // Build deskripsi from selected days
+    final String hariStr = _selectedHari.join(', ');
+    final String deskripsi = _deskripsiCtrl.text.trim().isNotEmpty
+        ? '${_deskripsiCtrl.text.trim()} (Hari: $hariStr)'
+        : 'Rutinitas harian. Hari: $hariStr. Waktu: ${_formatTime(_waktuMulai)} - ${_formatTime(_waktuSelesai)}';
 
-    try {
-      // Build deskripsi from selected days
-      final String hariStr = _selectedHari.join(', ');
-      final String deskripsi = _deskripsiCtrl.text.trim().isNotEmpty
-          ? '${_deskripsiCtrl.text.trim()} (Hari: $hariStr)'
-          : 'Rutinitas harian. Hari: $hariStr. Waktu: ${_formatTime(_waktuMulai)} - ${_formatTime(_waktuSelesai)}';
+    final Map<String, dynamic> payload = {
+      "pasien_id": _pasienId,
+      "nama_rutinitas": _namaCtrl.text.trim(),
+      "deskripsi": deskripsi,
+      "waktu_reminder": _formatTime(_waktuMulai),
+    };
 
-      final Map<String, dynamic> payload = {
-        "pasien_id": _pasienId,
-        "nama_rutinitas": _namaCtrl.text.trim(),
-        "deskripsi": deskripsi,
-        "waktu_reminder": _formatTime(_waktuMulai),
-      };
-
-      debugPrint("Payload: ${jsonEncode(payload)}");
-
-      final isEdit = widget.rutinitas != null;
-      final url = isEdit
-          ? "${ApiService.baseUrl}/api/pasien/rutinitas/${widget.rutinitas['id']}"
-          : "${ApiService.baseUrl}/api/pasien/rutinitas";
-
-      final token = await AuthService.getToken();
-      final Map<String, String> headers = {
-        "Content-Type": "application/json",
-        if (token != null && token.isNotEmpty) "Authorization": "Bearer $token",
-      };
-
-      final response = isEdit
-          ? await http.put(
-              Uri.parse(url),
-              headers: headers,
-              body: jsonEncode(payload),
-            )
-          : await http.post(
-              Uri.parse(url),
-              headers: headers,
-              body: jsonEncode(payload),
-            );
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.green,
-              content: Text(isEdit ? 'Rutinitas berhasil diperbarui!' : 'Rutinitas berhasil disimpan!'),
-            ),
-          );
-          Navigator.pop(context, true);
-        }
-      } else {
-        debugPrint("Error Server: ${response.statusCode} - ${response.body}");
-        final errorBody = jsonDecode(response.body);
-        final errorMsg =
-            errorBody['error'] ??
-            errorBody['message'] ??
-            'Server Error ${response.statusCode}';
-        throw Exception(errorMsg);
-      }
-    } catch (e) {
-      debugPrint("Exception: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+    final isEdit = widget.rutinitas != null;
+    if (isEdit) {
+      _rutinitasBloc.add(UpdateRutinitasSehat(id: widget.rutinitas['id'], payload: payload));
+    } else {
+      _rutinitasBloc.add(CreateRutinitasSehat(payload));
     }
   }
 
@@ -291,54 +244,84 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionLabel('Nama Rutinitas'),
-                      const SizedBox(height: 10),
-                      _buildNamaField(),
-                      const SizedBox(height: 24),
-                      _sectionLabel('Deskripsi (Opsional)'),
-                      const SizedBox(height: 10),
-                      _buildDeskripsiField(),
-                      const SizedBox(height: 24),
-                      Row(
+        child: BlocConsumer<RutinitasBloc, RutinitasState>(
+          bloc: _rutinitasBloc,
+          listener: (context, state) {
+            if (state is RutinitasActionLoading) {
+              setState(() {
+                _isSaving = true;
+              });
+            } else if (state is RutinitasActionSuccess) {
+              setState(() {
+                _isSaving = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.green,
+                  content: Text(state.message),
+                ),
+              );
+              Navigator.pop(context, true);
+            } else if (state is RutinitasActionFailure) {
+              setState(() {
+                _isSaving = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal menyimpan: ${state.error}')),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _buildTimeInput(
-                              'Waktu Mulai',
-                              _waktuMulai,
-                              true,
-                            ),
+                          _sectionLabel('Nama Rutinitas'),
+                          const SizedBox(height: 10),
+                          _buildNamaField(),
+                          const SizedBox(height: 24),
+                          _sectionLabel('Deskripsi (Opsional)'),
+                          const SizedBox(height: 10),
+                          _buildDeskripsiField(),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTimeInput(
+                                  'Waktu Mulai',
+                                  _waktuMulai,
+                                  true,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTimeInput(
+                                  'Waktu Selesai',
+                                  _waktuSelesai,
+                                  false,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTimeInput(
-                              'Waktu Selesai',
-                              _waktuSelesai,
-                              false,
-                            ),
-                          ),
+                          const SizedBox(height: 24),
+                          _sectionLabel('Pengulangan Hari'),
+                          const SizedBox(height: 12),
+                          _buildHariSelector(),
+                          const SizedBox(height: 32),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      _sectionLabel('Pengulangan Hari'),
-                      const SizedBox(height: 12),
-                      _buildHariSelector(),
-                      const SizedBox(height: 32),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
       floatingActionButton: _buildSimpanButton(),

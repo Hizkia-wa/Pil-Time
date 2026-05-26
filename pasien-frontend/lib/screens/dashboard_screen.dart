@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/api_service.dart';
@@ -13,8 +14,10 @@ import 'package:frontend_pasien/screens/notifikasi/notifikasi_screen.dart';
 import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
 import 'package:frontend_pasien/screens/profile/profile.dart';
 import '../services/notification_service.dart';
-import '../services/jadwal_cache_service.dart';
 import '../services/fcm_service.dart';
+import '../bloc/dashboard/dashboard_bloc.dart';
+import '../bloc/dashboard/dashboard_event.dart';
+import '../bloc/dashboard/dashboard_state.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -31,7 +34,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  late Future<Dashboard?> dashboardFuture;
+  late final DashboardBloc _dashboardBloc;
   DateTime _selectedDate = DateTime.now();
   bool _isWeekView = true; // toggle Minggu/Bulan
 
@@ -40,7 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Track jadwal yang sudah ditandai diminum di sesi ini
   final Set<int> _takenJadwalIds = {};
-  bool _isMarkingTaken = false;
   bool _notificationPermissionGranted = true;
 
   // Properti Rutinitas Sehat
@@ -50,7 +52,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    dashboardFuture = _fetchDashboard();
+    _dashboardBloc = DashboardBloc()..add(FetchDashboard(
+      pasienId: widget.pasienId,
+      pasienNama: widget.pasienNama,
+    ));
     // Tunda _loadRutinitas sampai setelah frame pertama untuk memastikan
     // token sudah tersimpan sepenuhnya di SharedPreferences sebelum dibaca
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,6 +64,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
     _checkNotificationPermission();
+  }
+
+  @override
+  void dispose() {
+    _dashboardBloc.close();
+    super.dispose();
   }
 
   Future<void> _checkNotificationPermission() async {
@@ -70,145 +81,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<Dashboard?> _fetchDashboard() async {
-    try {
-      // Ambil riwayat kepatuhan untuk mewarnai kalender
-      final riwayatResponse = await ApiService.getPasienRiwayat();
-      if (mounted && riwayatResponse['success']) {
-        final List<dynamic> data = riwayatResponse['data'] ?? [];
-        final Map<String, List<String>> tempRiwayat = {};
-        final today = DateTime.now();
-        final todayDateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        final tempTakenJadwalIds = <int>{};
-
-        for (final item in data) {
-          final tanggal = item['tanggal'] as String?;
-          final status = item['status'] as String?;
-          final jadwalIdStr = item['jadwal_id'];
-          final parsedJadwalId = int.tryParse(jadwalIdStr.toString());
-
-          if (tanggal != null && status != null) {
-            tempRiwayat.putIfAbsent(tanggal, () => []);
-            tempRiwayat[tanggal]!.add(status);
-
-            // Jika tanggal adalah hari ini dan status adalah 'Diminum' atau 'Terlambat', masukkan ke _takenJadwalIds
-            if (tanggal == todayDateStr &&
-                (status == 'Diminum' || status == 'Terlambat') &&
-                parsedJadwalId != null) {
-              tempTakenJadwalIds.add(parsedJadwalId);
-            }
-          }
-        }
-        setState(() {
-          _riwayatByDate = tempRiwayat;
-          _takenJadwalIds.addAll(tempTakenJadwalIds);
-        });
-      }
-
-      final response = await ApiService.getDashboard(pasienId: widget.pasienId);
-      if (!mounted) return null;
-
-      if (response['success']) {
-        final dashboard = Dashboard.fromJson(response['data']);
-
-        // Simpan jadwal ke cache untuk akses offline
-        await JadwalCacheService.saveJadwals(
-          [...dashboard.todayJadwals, ...dashboard.allJadwals],
-        );
-
-        // Auto-schedule alarm dari jadwal terbaru
-        _scheduleAlarmsBackground(dashboard.todayJadwals);
-
-        return dashboard;
-      } else {
-        // ── Jika 401: token expired/hilang → logout & redirect ke login ──
-        if (response['statusCode'] == 401) {
-          await AuthService.logout();
-          if (mounted) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/login',
-              (route) => false,
-            );
-          }
-          return null;
-        }
-
-        // ── Offline fallback: coba load dari cache ──
-        final cachedJadwals = await JadwalCacheService.getJadwals();
-        if (cachedJadwals.isNotEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('📴 Offline — menampilkan data tersimpan'),
-                backgroundColor: Color(0xFFF59E0B),
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-          // Buat Dashboard dari cache dengan todayJadwals berisi semua jadwal aktif
-          return Dashboard(
-            pasienId: widget.pasienId,
-            nama: widget.pasienNama,
-            email: '',
-            noTelepon: '',
-            jenisKelamin: '',
-            tanggalLahir: '',
-            alamat: '',
-            todayJadwals: cachedJadwals.where((j) => j.status == 'aktif').toList(),
-            allJadwals: cachedJadwals,
-          );
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${response['error']}')),
-          );
-        }
-        return null;
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-      return null;
-    }
-  }
-
-  /// Schedule semua alarm hari ini di background — tidak memblokir UI
-  void _scheduleAlarmsBackground(List<Jadwal> jadwals) {
-    Future(() async {
-      try {
-        final notifModels = jadwals
-            .where((j) => j.status.toLowerCase() == 'aktif')
-            .map((j) => JadwalNotifModel(
-                  jadwalId: j.id,
-                  namaObat: j.namaObat,
-                  dosis: '${j.jumlahDosis} ${j.satuan}',
-                  waktuMinum: j.waktuMinum,
-                  waktuReminderPagi: j.waktuReminderPagi,
-                  waktuReminderMalam: j.waktuReminderMalam,
-                ))
-            .toList();
-
-        await NotificationService.instance.scheduleAllJadwals(notifModels);
-        debugPrint('[Dashboard] ${notifModels.length} alarm dijadwalkan dari dashboard.');
-      } catch (e) {
-        debugPrint('[Dashboard] Gagal jadwalkan alarm (non-fatal): $e');
-      }
-    });
-  }
-
   Future<void> _onRefresh() async {
-    // Trigger dashboard refresh
-    setState(() {
-      dashboardFuture = _fetchDashboard();
-      _takenJadwalIds.clear();
-    });
+    _dashboardBloc.add(FetchDashboard(
+      pasienId: widget.pasienId,
+      pasienNama: widget.pasienNama,
+    ));
     _loadRutinitas();
-    // Wait for the future to complete
-    await dashboardFuture;
   }
 
   // ==========================================================
@@ -222,8 +100,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Log jadwal sebagai 'Diminum' ke backend tracking API
   Future<void> _markAsTaken(Jadwal jadwal, int pasienId) async {
-    if (_isMarkingTaken) return;
-
     final status = _getJadwalStatus(jadwal.waktuMinum);
     if (status == _JadwalStatus.upcoming) {
       if (mounted) {
@@ -253,113 +129,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    if (status == _JadwalStatus.expired) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.cancel_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Jadwal minum obat ${jadwal.namaObat} sudah terlewat (>75 menit).',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEF4444), // Red error color
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-      return;
-    }
-
-    setState(() => _isMarkingTaken = true);
-
-    try {
-      final now = DateTime.now();
-      final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
-          '${now.minute.toString().padLeft(2, '0')}';
-
-      // ── Gunakan ComplianceStatus untuk menentukan status kepatuhan ──
-      // checkComplianceFromString membandingkan waktu sekarang vs waktu jadwal
-      // menghasilkan: Diminum (0–60 min), Terlambat (61–75 min), Terlewat (>75 min)
-      final complianceStatus = NotificationService.checkComplianceFromString(
-        scheduledTimeStr: jadwal.waktuMinum,
-        confirmationTime: now,
-      );
-      final status = complianceStatus.backendValue;
-
-      final result = await ApiService.postRiwayat(
-        jadwalId: jadwal.id,
-        status: status,
-        waktuMinum: waktuSekarang,
-      );
-
-      if (result['success']) {
-        setState(() => _takenJadwalIds.add(jadwal.id));
-        // Re-fetch dashboard & riwayat to update the calendar color instantly!
-        _fetchDashboard();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Text('${jadwal.namaObat} berhasil dicatat!'),
-                ],
-              ),
-              backgroundColor: const Color(0xFF15BE77),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal mencatat: ${result['error']}'),
-              backgroundColor: Colors.red[400],
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red[400],
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isMarkingTaken = false);
-    }
+    _dashboardBloc.add(MarkAsTaken(jadwal: jadwal, pasienId: pasienId));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
-      body: FutureBuilder<Dashboard?>(
-        future: dashboardFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: BlocConsumer<DashboardBloc, DashboardState>(
+        bloc: _dashboardBloc,
+        listener: (context, state) {
+          if (state is DashboardFailure && state.statusCode == 401) {
+            AuthService.logout();
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/login',
+              (route) => false,
+            );
+          } else if (state is DashboardMarkingSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text(state.message),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF15BE77),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else if (state is DashboardMarkingFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                backgroundColor: Colors.red[400],
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is DashboardInitial || state is DashboardLoading) {
             return const Center(
               child: CircularProgressIndicator(
                 color: Color(0xFF15BE77),
@@ -368,7 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
 
-          if (!snapshot.hasData || snapshot.data == null) {
+          if (state is DashboardFailure) {
             return RefreshIndicator(
               onRefresh: _onRefresh,
               color: const Color(0xFF15BE77),
@@ -387,9 +202,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           size: 48,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Gagal memuat dashboard',
-                          style: TextStyle(
+                        Text(
+                          state.error,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F172A),
@@ -398,9 +213,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed: () => setState(
-                            () => dashboardFuture = _fetchDashboard(),
-                          ),
+                          onPressed: () => _dashboardBloc.add(FetchDashboard(
+                            pasienId: widget.pasienId,
+                            pasienNama: widget.pasienNama,
+                          )),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF15BE77),
                             foregroundColor: Colors.white,
@@ -421,15 +237,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Tarik ke bawah untuk memuat ulang',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF64748B),
-                            fontFamily: 'Inter',
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -438,37 +245,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
 
-          final dashboard = snapshot.data!;
-          return SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    color: const Color(0xFF15BE77),
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(dashboard),
-                          _buildProgressCard(dashboard.todayJadwals),
-                          if (!_notificationPermissionGranted)
-                            _buildPermissionWarningBanner(),
-                          _buildMenuUtama(),
-                          _buildCalendarSection(dashboard.allJadwals),
-                          _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
-                          _buildRutinitasHariIniList(),
-                          const SizedBox(height: 24),
-                        ],
+          if (state is DashboardLoaded) {
+            final dashboard = state.dashboard;
+            _takenJadwalIds.clear();
+            _takenJadwalIds.addAll(state.takenJadwalIds);
+            _riwayatByDate = state.riwayatByDate;
+
+            return SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      color: const Color(0xFF15BE77),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(dashboard),
+                            _buildProgressCard(dashboard.todayJadwals),
+                            if (!_notificationPermissionGranted)
+                              _buildPermissionWarningBanner(),
+                            _buildMenuUtama(),
+                            _buildCalendarSection(dashboard.allJadwals),
+                            _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
+                            _buildRutinitasHariIniList(),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                _buildBottomNav(),
-              ],
-            ),
-          );
+                  _buildBottomNav(),
+                ],
+              ),
+            );
+          }
+
+          return const SizedBox.shrink();
         },
       ),
     );

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_pasien/services/api_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:frontend_pasien/models/obat.dart';
 import 'detail_info_obat.dart';
+import '../../bloc/info_obat/info_obat_bloc.dart';
+import '../../bloc/info_obat/info_obat_event.dart';
+import '../../bloc/info_obat/info_obat_state.dart';
 
 // ─── GROUPED OBAT DATA ────────────────────────────────────────────────────
 
@@ -29,59 +32,12 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  late Future<List<ObatDay>> _obatFuture;
+  late final InfoObatBloc _infoObatBloc;
 
   @override
   void initState() {
     super.initState();
-    _obatFuture = _fetchObat();
-  }
-
-  Future<List<ObatDay>> _fetchObat() async {
-    try {
-      final response = await ApiService.getMedicines(pasienId: widget.pasienId);
-      if (!response['success']) {
-        throw Exception(response['error'] ?? 'Gagal mengambil data obat');
-      }
-
-      final responseData = response['data'] as Map<String, dynamic>;
-      final List<dynamic> jadwalsList = responseData['jadwals'] ?? [];
-      final obats = jadwalsList
-          .map((item) => ObatDetail.fromJson(item as Map<String, dynamic>))
-          .toList();
-
-      // Group medicines by tanggalMulai
-      final Map<String, List<ObatDetail>> grouped = {};
-      for (var obat in obats) {
-        if (obat.status.toLowerCase() == 'aktif') {
-          final key = obat.tanggalMulai;
-          if (!grouped.containsKey(key)) {
-            grouped[key] = [];
-          }
-          grouped[key]!.add(obat);
-        }
-      }
-
-      // Convert to ObatDay sorted by date (newest first)
-      final List<ObatDay> days = grouped.entries
-          .map((e) {
-            try {
-              final date = DateTime.parse(e.key);
-              return ObatDay(tanggal: date, obatList: e.value);
-            } catch (e) {
-              return null;
-            }
-          })
-          .whereType<ObatDay>()
-          .toList();
-
-      days.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-
-      return days;
-    } catch (e) {
-      debugPrint('Error fetching obat: $e');
-      rethrow;
-    }
+    _infoObatBloc = InfoObatBloc()..add(FetchInfoObat(pasienId: widget.pasienId));
   }
 
   List<ObatDay> _filterData(List<ObatDay> days) {
@@ -117,6 +73,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _infoObatBloc.close();
     super.dispose();
   }
 
@@ -125,10 +82,10 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Premium soft background
       body: SafeArea(
-        child: FutureBuilder<List<ObatDay>>(
-          future: _obatFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: BlocBuilder<InfoObatBloc, InfoObatState>(
+          bloc: _infoObatBloc,
+          builder: (context, state) {
+            if (state is InfoObatInitial || state is InfoObatLoading) {
               return const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF15BE77),
@@ -137,7 +94,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
               );
             }
 
-            if (snapshot.hasError) {
+            if (state is InfoObatFailure) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -150,9 +107,9 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
                         size: 56,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Gagal mengambil data obat',
-                        style: TextStyle(
+                      Text(
+                        state.error,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
@@ -161,7 +118,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton.icon(
-                        onPressed: () => setState(() => _obatFuture = _fetchObat()),
+                        onPressed: () => _infoObatBloc.add(FetchInfoObat(pasienId: widget.pasienId)),
                         icon: const Icon(Icons.refresh_rounded),
                         label: const Text('Coba Lagi'),
                         style: ElevatedButton.styleFrom(
@@ -183,7 +140,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
               );
             }
 
-            final allData = snapshot.data ?? [];
+            final allData = (state is InfoObatLoaded) ? state.obatDays : <ObatDay>[];
             final displayData = _filterData(allData);
 
             return Column(
@@ -219,7 +176,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
                 _buildSearchBar(),
                 _buildFilterRow(),
                 const SizedBox(height: 12),
-                
+
                 Expanded(
                   child: displayData.isEmpty
                       ? Center(

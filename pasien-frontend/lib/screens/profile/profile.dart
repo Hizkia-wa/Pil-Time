@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../services/auth_service.dart';
-import '../../services/api_service.dart';
+import '../../bloc/profile/profile_bloc.dart';
+import '../../bloc/profile/profile_event.dart';
+import '../../bloc/profile/profile_state.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,10 +15,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  late final ProfileBloc _profileBloc;
   int? _pasienId;
   Map<String, dynamic>? _profileData;
-  bool _isLoading = true;
-  String? _errorMsg;
   bool _isExpanded = false;
 
   bool _isEditing = false;
@@ -40,12 +41,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _jenisKelaminCtrl.dispose();
     _tempatLahirCtrl.dispose();
     _tanggalLahirCtrl.dispose();
+    _profileBloc.close();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _profileBloc = ProfileBloc();
     _loadPasienSession();
   }
 
@@ -53,47 +56,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final session = await AuthService.getPasienSession();
       if (session != null && session['pasien_id'] != null) {
-        setState(() {
-          _pasienId = session['pasien_id'] as int;
-        });
-        await _fetchProfile();
-      } else {
-        setState(() {
-          _errorMsg = 'Session tidak ditemukan, silakan login kembali';
-          _isLoading = false;
-        });
+        _pasienId = session['pasien_id'] as int;
+        _profileBloc.add(FetchProfile(pasienId: _pasienId!));
       }
     } catch (e) {
       debugPrint('Error loading session: $e');
-      setState(() {
-        _errorMsg = 'Gagal memuat session';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _fetchProfile() async {
-    if (_pasienId == null) return;
-
-    try {
-      final response = await ApiService.getProfile(pasienId: _pasienId!);
-      if (response['success'] == true) {
-        setState(() {
-          _profileData = response['data'] ?? {};
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMsg = response['error'] ?? 'Gagal memuat data profil';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile: $e');
-      setState(() {
-        _errorMsg = 'Terjadi kesalahan: ${e.toString()}';
-        _isLoading = false;
-      });
     }
   }
 
@@ -108,9 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLogoutDialog() {
-    // Capture AuthBloc reference BEFORE opening BottomSheet,
-    // because the sheet's builder gets a new context that doesn't
-    // inherit the BlocProvider from the widget tree.
     final authBloc = context.read<AuthBloc>();
 
     showModalBottomSheet(
@@ -169,12 +133,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   onPressed: () {
-                    // 1. Tutup bottom sheet
                     Navigator.of(sheetContext).pop();
-                    // 2. Pop ProfileScreen (dan semua route lain) kembali ke root,
-                    //    agar BlocBuilder di main.dart bisa menampilkan LoginScreen
                     Navigator.of(context).popUntil((route) => route.isFirst);
-                    // 3. Dispatch logout — BlocBuilder akan ubah home ke LoginScreen
                     authBloc.add(LogoutRequested());
                   },
                   child: const Text(
@@ -254,22 +214,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final name = _profileData?['nama'] ?? 'Nama Pasien';
-    final nik = _profileData?['nik'] ?? '-';
     const emerald = Color(0xFF15BE77);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Premium background
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(
+        child: BlocConsumer<ProfileBloc, ProfileState>(
+          bloc: _profileBloc,
+          listener: (context, state) {
+            if (state is ProfileLoaded) {
+              _profileData = state.profileData;
+            } else if (state is ProfileUpdateSuccess) {
+              _profileData = state.profileData;
+              _isEditing = false;
+              _isSaving = false;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: emerald,
+                ),
+              );
+            } else if (state is ProfileUpdateFailure) {
+              _isSaving = false;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Gagal menyimpan: ${state.error}"),
+                  backgroundColor: Colors.red[400],
+                ),
+              );
+            } else if (state is ProfileUpdating) {
+              _isSaving = true;
+            }
+          },
+          builder: (context, state) {
+            if (state is ProfileInitial || state is ProfileLoading) {
+              return const Center(
                 child: CircularProgressIndicator(
                   color: emerald,
                   strokeWidth: 3,
                 ),
-              )
-            : _errorMsg != null
-            ? Center(
+              );
+            }
+
+            if (state is ProfileFailure) {
+              return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -281,9 +269,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Color(0xFFFF4D4D),
                       ),
                       const SizedBox(height: 16),
-                      Text(
+                      const Text(
                         'Gagal Memuat Data',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
@@ -292,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _errorMsg!,
+                        state.error,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 13,
@@ -303,11 +291,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: () {
-                          setState(() {
-                            _isLoading = true;
-                            _errorMsg = null;
-                          });
-                          _loadPasienSession();
+                          if (_pasienId != null) {
+                            _profileBloc.add(FetchProfile(pasienId: _pasienId!));
+                          } else {
+                            _loadPasienSession();
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: emerald,
@@ -326,418 +314,374 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-              )
-            : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    // AppBar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.chevron_left_rounded, 
-                              size: 32,
-                              color: Color(0xFF0F172A),
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const Expanded(
-                            child: Text(
-                              "Profil & Pengaturan",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
-                                fontFamily: 'Roboto',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 48), // Spacer to balance back button
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+              );
+            }
 
-                    // Profile Image
-                    Center(
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 54,
-                            backgroundColor: emerald,
-                            child: CircleAvatar(
-                              radius: 51,
-                              backgroundColor: Colors.white,
-                              child: CircleAvatar(
-                                radius: 46,
-                                backgroundColor: const Color(0xFFE8F8F1),
-                                child: Text(
-                                  _getInitials(name),
-                                  style: const TextStyle(
-                                    color: emerald,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 2,
-                            right: 2,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ],
-                              ),
-                              child: const Icon(Icons.edit_rounded, size: 16, color: emerald),
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+            final name = _profileData?['nama'] ?? 'Nama Pasien';
+            final nik = _profileData?['nik'] ?? '-';
 
-                    // User Name & NIK
-                    Center(
-                      child: Text(
-                        name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22, 
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          "NIK: $nik",
-                          style: const TextStyle(
-                            fontSize: 13, 
-                            color: Color(0xFF475569),
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Inter',
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.chevron_left_rounded, 
+                            size: 32,
+                            color: Color(0xFF0F172A),
                           ),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Data Pribadi Card
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                      ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          dividerColor: Colors.transparent,
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                        ),
-                        child: ExpansionTile(
-                          onExpansionChanged: (val) {
-                            setState(() {
-                               _isExpanded = val;
-                            });
-                          },
-                          leading: Icon(
-                            Icons.person_outline_rounded, 
-                            color: _isExpanded ? emerald : const Color(0xFF64748B),
-                            size: 24,
-                          ),
-                          title: const Text(
-                            "Data Pribadi",
+                        const Expanded(
+                          child: Text(
+                            "Profil & Pengaturan",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 15,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                               color: Color(0xFF0F172A),
                               fontFamily: 'Roboto',
                             ),
                           ),
-                          iconColor: const Color(0xFF64748B),
-                          collapsedIconColor: const Color(0xFF64748B),
-                          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          children: [
-                            if (!_isEditing) ...[
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isEditing = true;
-                                      _namaCtrl.text = _profileData?['nama'] ?? '';
-                                      _emailCtrl.text = _profileData?['email'] ?? '';
-                                      _alamatCtrl.text = _profileData?['alamat'] ?? '';
-                                      _noTeleponCtrl.text = _profileData?['no_telepon'] ?? '';
-                                      _jenisKelaminCtrl.text = _profileData?['jenis_kelamin'] ?? 'Laki-laki';
-                                      _tempatLahirCtrl.text = _profileData?['tempat_lahir'] ?? '';
-                                      _tanggalLahirCtrl.text = _profileData?['tanggal_lahir'] ?? '';
-                                    });
-                                  },
-                                  icon: const Icon(Icons.edit_rounded, color: emerald, size: 16),
-                                  label: const Text(
-                                    "Ubah Data",
-                                    style: TextStyle(
-                                      color: emerald,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Inter',
-                                      fontSize: 13,
-                                    ),
-                                  ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 54,
+                          backgroundColor: emerald,
+                          child: CircleAvatar(
+                            radius: 51,
+                            backgroundColor: Colors.white,
+                            child: CircleAvatar(
+                              radius: 46,
+                              backgroundColor: const Color(0xFFE8F8F1),
+                              child: Text(
+                                _getInitials(name),
+                                style: const TextStyle(
+                                  color: emerald,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Roboto',
                                 ),
                               ),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildInfoItem("Nama Lengkap", _profileData?['nama']),
-                                    _buildInfoItem("Email", _profileData?['email']),
-                                    _buildInfoItem("Alamat", _profileData?['alamat']),
-                                    _buildInfoItem("NIK", _profileData?['nik']),
-                                    _buildInfoItem("Jenis Kelamin", _profileData?['jenis_kelamin']),
-                                    _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
-                                    _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
-                                    _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
-                                  ],
-                                ),
-                              ),
-                            ] else ...[
-                              Form(
-                                key: _formKey,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildInfoItem("NIK (Tidak dapat diubah)", _profileData?['nik']),
-                                    const SizedBox(height: 8),
-                                    _buildEditableField("Nama Lengkap", _namaCtrl, validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Nama tidak boleh kosong';
-                                      return null;
-                                    }),
-                                    _buildEditableField("Email", _emailCtrl, keyboardType: TextInputType.emailAddress, validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Email tidak boleh kosong';
-                                      if (!v.contains('@')) return 'Email tidak valid';
-                                      return null;
-                                    }),
-                                    _buildEditableField("Alamat", _alamatCtrl, maxLines: 2),
-                                    _buildDropdownField("Jenis Kelamin", _jenisKelaminCtrl, ['Laki-laki', 'Perempuan']),
-                                    _buildEditableField("Tempat Lahir", _tempatLahirCtrl),
-                                    _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl),
-                                    _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone),
-                                    const SizedBox(height: 24),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: SizedBox(
-                                            height: 52,
-                                            child: OutlinedButton(
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: const Color(0xFF64748B),
-                                                side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(26),
-                                                ),
-                                              ),
-                                              onPressed: _isSaving ? null : () {
-                                                setState(() {
-                                                  _isEditing = false;
-                                                });
-                                              },
-                                              child: const Text(
-                                                "Batal",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: SizedBox(
-                                            height: 52,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: emerald,
-                                                foregroundColor: Colors.white,
-                                                elevation: 0,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(26),
-                                                ),
-                                              ),
-                                              onPressed: _isSaving ? null : _saveProfileChanges,
-                                              child: _isSaving
-                                                  ? const SizedBox(
-                                                      width: 24,
-                                                      height: 24,
-                                                      child: CircularProgressIndicator(
-                                                        color: Colors.white,
-                                                        strokeWidth: 2.5,
-                                                      ),
-                                                    )
-                                                  : const Text(
-                                                      "Simpan",
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 14,
-                                                        fontFamily: 'Inter',
-                                                      ),
-                                                    ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: const Icon(Icons.edit_rounded, size: 16, color: emerald),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Center(
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 22, 
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "NIK: $nik",
+                        style: const TextStyle(
+                          fontSize: 13, 
+                          color: Color(0xFF475569),
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 32),
 
-                    // Keluar Akun Button (Premium Red)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2), // Soft pink/red background
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFFEE2E2), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFEF4444).withValues(alpha: 0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        dividerColor: Colors.transparent,
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
                       ),
-                      child: ListTile(
-                        leading: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+                      child: ExpansionTile(
+                        onExpansionChanged: (val) {
+                          setState(() {
+                             _isExpanded = val;
+                          });
+                        },
+                        leading: Icon(
+                          Icons.person_outline_rounded, 
+                          color: _isExpanded ? emerald : const Color(0xFF64748B),
+                          size: 24,
+                        ),
                         title: const Text(
-                          "Keluar Akun",
+                          "Data Pribadi",
                           style: TextStyle(
-                            color: Color(0xFFEF4444), 
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.bold, 
                             fontSize: 15,
+                            color: Color(0xFF0F172A),
                             fontFamily: 'Roboto',
                           ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                        onTap: _showLogoutDialog,
+                        iconColor: const Color(0xFF64748B),
+                        collapsedIconColor: const Color(0xFF64748B),
+                        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        children: [
+                          if (!_isEditing) ...[
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _isEditing = true;
+                                    _namaCtrl.text = _profileData?['nama'] ?? '';
+                                    _emailCtrl.text = _profileData?['email'] ?? '';
+                                    _alamatCtrl.text = _profileData?['alamat'] ?? '';
+                                    _noTeleponCtrl.text = _profileData?['no_telepon'] ?? '';
+                                    _jenisKelaminCtrl.text = _profileData?['jenis_kelamin'] ?? 'Laki-laki';
+                                    _tempatLahirCtrl.text = _profileData?['tempat_lahir'] ?? '';
+                                    _tanggalLahirCtrl.text = _profileData?['tanggal_lahir'] ?? '';
+                                  });
+                                },
+                                icon: const Icon(Icons.edit_rounded, color: emerald, size: 16),
+                                label: const Text(
+                                  "Ubah Data",
+                                  style: TextStyle(
+                                    color: emerald,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoItem("Nama Lengkap", _profileData?['nama']),
+                                  _buildInfoItem("Email", _profileData?['email']),
+                                  _buildInfoItem("Alamat", _profileData?['alamat']),
+                                  _buildInfoItem("NIK", _profileData?['nik']),
+                                  _buildInfoItem("Jenis Kelamin", _profileData?['jenis_kelamin']),
+                                  _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
+                                  _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
+                                  _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoItem("NIK (Tidak dapat diubah)", _profileData?['nik']),
+                                  const SizedBox(height: 8),
+                                  _buildEditableField("Nama Lengkap", _namaCtrl, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Nama tidak boleh kosong';
+                                    return null;
+                                  }),
+                                  _buildEditableField("Email", _emailCtrl, keyboardType: TextInputType.emailAddress, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Email tidak boleh kosong';
+                                    if (!v.contains('@')) return 'Email tidak valid';
+                                    return null;
+                                  }),
+                                  _buildEditableField("Alamat", _alamatCtrl, maxLines: 2),
+                                  _buildDropdownField("Jenis Kelamin", _jenisKelaminCtrl, ['Laki-laki', 'Perempuan']),
+                                  _buildEditableField("Tempat Lahir", _tempatLahirCtrl),
+                                  _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl),
+                                  _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone),
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFF64748B),
+                                              side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(26),
+                                              ),
+                                            ),
+                                            onPressed: _isSaving ? null : () {
+                                              setState(() {
+                                                _isEditing = false;
+                                              });
+                                            },
+                                            child: const Text(
+                                              "Batal",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: emerald,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(26),
+                                              ),
+                                            ),
+                                            onPressed: _isSaving ? null : _saveProfileChanges,
+                                            child: _isSaving
+                                                ? const SizedBox(
+                                                    width: 24,
+                                                    height: 24,
+                                                    child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2.5,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    "Simpan",
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    
-                    const SizedBox(height: 32),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFFEE2E2), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+                      title: const Text(
+                        "Keluar Akun",
+                        style: TextStyle(
+                          color: Color(0xFFEF4444), 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      onTap: _showLogoutDialog,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                ],
               ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Future<void> _saveProfileChanges() async {
+  void _saveProfileChanges() {
     if (!_formKey.currentState!.validate()) return;
-    
-    setState(() => _isSaving = true);
-    
-    try {
-      final updatedData = {
-        'nama': _namaCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'alamat': _alamatCtrl.text.trim(),
-        'no_telepon': _noTeleponCtrl.text.trim(),
-        'jenis_kelamin': _jenisKelaminCtrl.text.trim(),
-        'tempat_lahir': _tempatLahirCtrl.text.trim(),
-        'tanggal_lahir': _tanggalLahirCtrl.text.trim(),
-      };
-      
-      final response = await ApiService.updateProfile(
-        pasienId: _pasienId!,
-        data: updatedData,
-      );
-      
-      if (response['success'] == true) {
-        setState(() {
-          // Sync local data
-          _profileData?['nama'] = updatedData['nama'];
-          _profileData?['email'] = updatedData['email'];
-          _profileData?['alamat'] = updatedData['alamat'];
-          _profileData?['no_telepon'] = updatedData['no_telepon'];
-          _profileData?['jenis_kelamin'] = updatedData['jenis_kelamin'];
-          _profileData?['tempat_lahir'] = updatedData['tempat_lahir'];
-          _profileData?['tanggal_lahir'] = updatedData['tanggal_lahir'];
-          
-          _isEditing = false;
-        });
-        
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Profil Anda berhasil diperbarui! 🏆"),
-            backgroundColor: Color(0xFF15BE77),
-          ),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Gagal menyimpan: ${response['error']}"),
-            backgroundColor: Colors.red[400],
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Terjadi kesalahan: ${e.toString()}"),
-          backgroundColor: Colors.red[400],
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
+    if (_pasienId == null) return;
+
+    final updatedData = {
+      'nama': _namaCtrl.text.trim(),
+      'email': _emailCtrl.text.trim(),
+      'alamat': _alamatCtrl.text.trim(),
+      'no_telepon': _noTeleponCtrl.text.trim(),
+      'jenis_kelamin': _jenisKelaminCtrl.text.trim(),
+      'tempat_lahir': _tempatLahirCtrl.text.trim(),
+      'tanggal_lahir': _tanggalLahirCtrl.text.trim(),
+    };
+
+    _profileBloc.add(UpdateProfileEvent(
+      pasienId: _pasienId!,
+      updatedData: updatedData,
+    ));
   }
 
   Widget _buildEditableField(
@@ -953,4 +897,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

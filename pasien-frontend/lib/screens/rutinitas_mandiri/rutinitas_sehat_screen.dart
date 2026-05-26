@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
-import '../../services/api_service.dart';
 import 'tambah_rutinitas_screen.dart';
 import '../obat_mandiri/tambah_jadwal_konsumsi_obat_mandiri.dart';
+import '../../bloc/rutinitas/rutinitas_bloc.dart';
+import '../../bloc/rutinitas/rutinitas_event.dart';
+import '../../bloc/rutinitas/rutinitas_state.dart';
 
 class RutinitasSehatScreen extends StatefulWidget {
   final int initialIndex;
@@ -27,12 +28,12 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   bool _isLoading = true;
   int? _pasienId;
   late TabController _tabController;
-
-  String get _baseUrl => "${ApiService.baseUrl}/api/pasien";
+  late final RutinitasBloc _rutinitasBloc;
 
   @override
   void initState() {
     super.initState();
+    _rutinitasBloc = RutinitasBloc();
     _tabController = TabController(
       length: 2,
       vsync: this,
@@ -49,6 +50,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _rutinitasBloc.close();
     super.dispose();
   }
 
@@ -59,66 +61,16 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
         setState(() {
           _pasienId = session['pasien_id'] as int;
         });
-        await _initData();
+        _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
       }
     } catch (e) {
       debugPrint('Error loading session: $e');
     }
   }
 
-  Future<Map<String, String>> _getAuthHeaders() async {
-    final token = await AuthService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-    };
-  }
-
   Future<void> _initData() async {
-    if (!mounted || _pasienId == null) return;
-    setState(() => _isLoading = true);
-    try {
-      final headers = await _getAuthHeaders();
-
-      final obatResponse = await http.get(
-        Uri.parse("$_baseUrl/obat-mandiri"),
-        headers: headers,
-      );
-
-      final rutinitasResponse = await http.get(
-        Uri.parse("$_baseUrl/rutinitas"),
-        headers: headers,
-      );
-
-      final streakResponse = await http.get(
-        Uri.parse("$_baseUrl/rutinitas/streak/$_pasienId"),
-        headers: headers,
-      );
-
-      if (obatResponse.statusCode == 200) {
-        final obatData = jsonDecode(obatResponse.body);
-        setState(() {
-          _listObat = obatData['data'] ?? [];
-        });
-      }
-
-      if (rutinitasResponse.statusCode == 200) {
-        final rutinitasData = jsonDecode(rutinitasResponse.body);
-        setState(() {
-          _listRutinitas = rutinitasData['data'] ?? [];
-        });
-      }
-
-      if (streakResponse.statusCode == 200) {
-        final streakData = jsonDecode(streakResponse.body);
-        setState(() {
-          _streakHari = streakData['current_streak'] ?? 0;
-        });
-      }
-    } catch (e) {
-      debugPrint("Gagal load data: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    if (_pasienId != null) {
+      _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
     }
   }
 
@@ -129,100 +81,150 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
       child: Scaffold(
         backgroundColor: _bgPage,
         body: SafeArea(
-          child: Column(
-            children: [
-              // ─── APP BAR (CUSTOM ERGONOMIC) ──────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 16, 24, 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.chevron_left_rounded,
-                        color: _textPrimary,
-                        size: 32,
-                      ),
-                      onPressed: () => Navigator.pop(context),
+          child: BlocConsumer<RutinitasBloc, RutinitasState>(
+            bloc: _rutinitasBloc,
+            listener: (context, state) {
+              if (state is RutinitasSehatLoading) {
+                setState(() {
+                  _isLoading = true;
+                });
+              } else if (state is RutinitasSehatLoaded) {
+                setState(() {
+                  _listObat = state.listObat;
+                  _listRutinitas = state.listRutinitas;
+                  _streakHari = state.streakHari;
+                  _isLoading = false;
+                });
+              } else if (state is RutinitasSehatFailure) {
+                setState(() {
+                  _isLoading = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: ${state.error}')),
+                );
+              } else if (state is RutinitasActionLoading) {
+                setState(() {
+                  _isLoading = true;
+                });
+              } else if (state is RutinitasActionSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: const Color(0xFF15BE77),
+                  ),
+                );
+                if (_pasienId != null) {
+                  _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
+                }
+              } else if (state is RutinitasActionFailure) {
+                setState(() {
+                  _isLoading = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.error),
+                    backgroundColor: Colors.red[400],
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return Column(
+                children: [
+                  // ─── APP BAR (CUSTOM ERGONOMIC) ──────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 16, 24, 4),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.chevron_left_rounded,
+                            color: _textPrimary,
+                            size: 32,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Rutinitas Sehat',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _textPrimary,
+                            fontFamily: 'Roboto',
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Rutinitas Sehat',
-                      style: TextStyle(
-                        fontSize: 20,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildStreakCard(),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Custom styled TabBar inside white container
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _textPrimary.withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorSize: TabBarIndicatorSize.tab, // Membagi rata tab indikator antara Obat dan Rutinitas
+                      indicatorColor: _green,
+                      indicatorWeight: 0,
+                      indicator: BoxDecoration(
+                        color: _green,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: _textSecondary,
+                      labelStyle: const TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: _textPrimary,
-                        fontFamily: 'Roboto',
-                        letterSpacing: -0.5,
+                        fontFamily: 'Inter',
                       ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Inter',
+                      ),
+                      tabs: const [
+                        Tab(text: "Obat"),
+                        Tab(text: "Rutinitas"),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              const SizedBox(height: 8),
-              
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildStreakCard(),
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Custom styled TabBar inside white container
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _textPrimary.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildObatSection(),
+                        _buildListSection(_listRutinitas, "rutinitas"),
+                      ],
                     ),
-                  ],
-                ),
-
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorSize: TabBarIndicatorSize.tab, // Membagi rata tab indikator antara Obat dan Rutinitas
-                  indicatorColor: _green,
-                  indicatorWeight: 0,
-                  indicator: BoxDecoration(
-                    color: _green,
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: _textSecondary,
-                  labelStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Inter',
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Inter',
-                  ),
-                  tabs: const [
-                    Tab(text: "Obat"),
-                    Tab(text: "Rutinitas"),
-                  ],
-                ),
-              ),
-              
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildObatSection(),
-                    _buildListSection(_listRutinitas, "rutinitas"),
-                  ],
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
         floatingActionButton: _buildTambahButton(),
@@ -836,30 +838,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     );
 
     if (confirm == true && mounted) {
-      setState(() => _isLoading = true);
-      try {
-        final token = await AuthService.getToken();
-        final response = await http.delete(
-          Uri.parse("$_baseUrl/obat-mandiri/${item['obat_id']}"),
-          headers: {
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-        );
-        if (!mounted) return;
-        if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jadwal obat berhasil dihapus')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus jadwal obat')),
-          );
-        }
-      } catch (e) {
-        debugPrint("Error delete obat: $e");
-      } finally {
-        _initData();
-      }
+      _rutinitasBloc.add(DeleteObatMandiri(obatId: item['obat_id']));
     }
   }
 
@@ -947,30 +926,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
     );
 
     if (confirm == true && mounted) {
-      setState(() => _isLoading = true);
-      try {
-        final token = await AuthService.getToken();
-        final response = await http.delete(
-          Uri.parse("$_baseUrl/rutinitas/${item['id']}"),
-          headers: {
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-        );
-        if (!mounted) return;
-        if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Rutinitas berhasil dihapus')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus rutinitas')),
-          );
-        }
-      } catch (e) {
-        debugPrint("Error delete rutinitas: $e");
-      } finally {
-        _initData();
-      }
+      _rutinitasBloc.add(DeleteRutinitasSehat(id: item['id']));
     }
   }
 }

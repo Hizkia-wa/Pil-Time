@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
 import 'dart:io';
 import '../../services/auth_service.dart';
-import '../../services/api_service.dart';
+import '../../bloc/rutinitas/rutinitas_bloc.dart';
+import '../../bloc/rutinitas/rutinitas_event.dart';
+import '../../bloc/rutinitas/rutinitas_state.dart';
 
 class TambahJadwalKonsumsi extends StatefulWidget {
   final dynamic obat;
@@ -23,8 +25,6 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   static const Color _textSecondary = Color(0xFF64748B);
   static const Color _cardBorder = Color(0xFFE2E8F0);
 
-  String get baseUrl => "${ApiService.baseUrl}/api";
-
   final _formKey = GlobalKey<FormState>();
   final _namaObatCtrl = TextEditingController();
   final _dosisCtrl = TextEditingController();
@@ -36,6 +36,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   bool _isSaving = false;
   File? _pickedImage;
   final List<String?> _selectedCustomTimes = [null, null, null, null];
+  late final RutinitasBloc _rutinitasBloc;
 
   final List<String> _frekuensiOptions = [
     '1x sehari',
@@ -47,6 +48,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   @override
   void initState() {
     super.initState();
+    _rutinitasBloc = RutinitasBloc();
     if (widget.obat != null) {
       _namaObatCtrl.text = widget.obat['nama_obat'] ?? '';
       _dosisCtrl.text = widget.obat['fungsi'] ?? '';
@@ -87,6 +89,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     _frekuensiCtrl.dispose();
     _durasiHariCtrl.dispose();
     _catatanCtrl.dispose();
+    _rutinitasBloc.close();
     super.dispose();
   }
 
@@ -211,8 +214,6 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
       return;
     }
 
-    setState(() => _isSaving = true);
-
     final Map<String, dynamic> data = {
       "nama_obat": _namaObatCtrl.text.trim(),
       "dosis": _dosisCtrl.text.trim(),
@@ -227,59 +228,10 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     };
 
     final isEdit = widget.obat != null;
-    final url = isEdit
-        ? '$baseUrl/pasien/obat-mandiri/${widget.obat['obat_id']}'
-        : '$baseUrl/pasien/obat-mandiri';
-
-    try {
-      final token = await AuthService.getToken();
-      final response = isEdit
-          ? await http.put(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null && token.isNotEmpty)
-                  'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode(data),
-            )
-          : await http.post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null && token.isNotEmpty)
-                  'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode(data),
-            );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) {
-          Navigator.pop(context, true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(isEdit ? 'Obat berhasil diperbarui' : 'Obat berhasil ditambahkan')),
-          );
-        }
-      } else {
-        final errorBody = jsonDecode(response.body);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorBody['error'] ?? (isEdit ? 'Gagal memperbarui obat' : 'Gagal menambahkan obat')),
-            ),
-          );
-        }
-        debugPrint("Gagal simpan: ${response.body}");
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-      }
-      debugPrint("Error API: $e");
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+    if (isEdit) {
+      _rutinitasBloc.add(UpdateObatMandiri(obatId: widget.obat['obat_id'], data: data));
+    } else {
+      _rutinitasBloc.add(CreateObatMandiri(data));
     }
   }
 
@@ -288,8 +240,39 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     return Scaffold(
       backgroundColor: _bgPage,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: BlocConsumer<RutinitasBloc, RutinitasState>(
+          bloc: _rutinitasBloc,
+          listener: (context, state) {
+            if (state is RutinitasActionLoading) {
+              setState(() {
+                _isSaving = true;
+              });
+            } else if (state is RutinitasActionSuccess) {
+              setState(() {
+                _isSaving = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: const Color(0xFF15BE77),
+                ),
+              );
+              Navigator.pop(context, true);
+            } else if (state is RutinitasActionFailure) {
+              setState(() {
+                _isSaving = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error),
+                  backgroundColor: Colors.red[400],
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Column(
+              children: [
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
@@ -345,8 +328,10 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
+    ),
+  ),
       floatingActionButton: _buildSimpanButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
