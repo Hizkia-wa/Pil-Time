@@ -52,13 +52,14 @@ class _MyAppState extends State<MyApp> {
   // AuthBloc dibuat di sini supaya hidup selama app berjalan
   // dan bisa diakses oleh SEMUA screen via MaterialApp builder
   late final AuthBloc _authBloc;
-  late Future<Widget> _homeFuture;
+  bool _hasSeenOnboarding = false;
+  bool _initDone = false;
 
   @override
   void initState() {
     super.initState();
-    _authBloc = AuthBloc()..add(AuthCheckRequested());
-    _homeFuture = _determineInitialScreen();
+    _authBloc = AuthBloc();
+    _initApp();
 
     // Handle FCM ketika app di foreground:
     // Jika ada pesan FCM masuk saat app terbuka, tampilkan alarm screen langsung
@@ -71,44 +72,25 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> _initApp() async {
+    // Cek onboarding terlebih dahulu, BARU dispatch AuthCheckRequested
+    // sehingga BlocBuilder sudah terpasang ketika state berubah → tidak ada race condition
+    final prefs = await SharedPreferences.getInstance();
+    _hasSeenOnboarding = prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
+
+    if (mounted) {
+      setState(() => _initDone = true);
+      // Dispatch SETELAH widget ter-mount supaya BlocBuilder tidak kehilangan event
+      if (_hasSeenOnboarding) {
+        _authBloc.add(AuthCheckRequested());
+      }
+    }
+  }
+
   @override
   void dispose() {
     _authBloc.close();
     super.dispose();
-  }
-
-  Future<Widget> _determineInitialScreen() async {
-    // Check if user has seen onboarding
-    final prefs = await SharedPreferences.getInstance();
-    final hasSeenOnboarding =
-        prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
-
-    if (!hasSeenOnboarding) {
-      return const OnboardingScreen();
-    }
-
-    // User has seen onboarding -> now yield to BLoC to handle Login / Dashboard dynamically!
-    return BlocBuilder<AuthBloc, AuthState>(
-      bloc: _authBloc,
-      // Hanya rebuild saat status auth benar-benar berubah (bukan saat AuthLoading sementara)
-      // Ini mencegah DashboardScreen direset ulang setiap ada transisi state
-      buildWhen: (previous, current) {
-        if (current is AuthLoading) return false; // jangan rebuild saat loading
-        return true;
-      },
-      builder: (context, state) {
-        if (state is AuthInitial) {
-          return const _SplashScreen();
-        } else if (state is AuthAuthenticated) {
-          return DashboardScreen(
-            pasienId: state.session['pasien_id'],
-            pasienNama: state.session['pasien_name'],
-          );
-        } else {
-          return const LoginScreen(isReturningUser: true);
-        }
-      },
-    );
   }
 
   @override
@@ -130,15 +112,33 @@ class _MyAppState extends State<MyApp> {
           child: child!,
         );
       },
-      home: FutureBuilder<Widget>(
-        future: _homeFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _SplashScreen();
-          }
-          return snapshot.data ?? const OnboardingScreen();
-        },
-      ),
+      home: !_initDone
+          // Masih loading SharedPreferences → tampilkan splash
+          ? const _SplashScreen()
+          : !_hasSeenOnboarding
+              // Belum onboarding → arahkan ke onboarding
+              ? const OnboardingScreen()
+              // Sudah onboarding → BlocBuilder menentukan Login atau Dashboard
+              : BlocBuilder<AuthBloc, AuthState>(
+                  bloc: _authBloc,
+                  // Hanya rebuild saat status auth benar-benar berubah
+                  buildWhen: (previous, current) {
+                    if (current is AuthLoading) return false;
+                    return true;
+                  },
+                  builder: (context, state) {
+                    if (state is AuthAuthenticated) {
+                      return DashboardScreen(
+                        pasienId: state.session['pasien_id'],
+                        pasienNama: state.session['pasien_name'],
+                      );
+                    } else if (state is AuthInitial || state is AuthLoading) {
+                      return const _SplashScreen();
+                    } else {
+                      return const LoginScreen(isReturningUser: true);
+                    }
+                  },
+                ),
       routes: {
         '/register': (context) => const RegisterScreen(),
         '/login': (context) => const LoginScreen(),
