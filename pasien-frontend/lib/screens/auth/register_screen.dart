@@ -168,7 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           );
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         } else if (state is AuthFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

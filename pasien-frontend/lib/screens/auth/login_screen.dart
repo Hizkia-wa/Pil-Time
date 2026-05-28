@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         } else if (state is AuthFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -37,11 +37,7 @@ class NotificationService {
   // Key: notifId, Value: Timer yang akan otomatis tampilkan AlarmRingingScreen
   final Map<int, Timer> _pendingAlarmTimers = {};
 
-  // ── Durasi suara alarm_voice (diukur dari file, ~1.58 detik) ─
-  // Digunakan untuk menghitung kapan otomatis buka AlarmRingingScreen
-  // setelah suara berbunyi 2 kali.
-  static const int _alarmVoiceDurationMs = 1600; // ms per putar
-  static const int _alarmVoicePlays = 2;          // berapa kali berbunyi sebelum auto-open
+
 
   // ── Konstanta Channel Android ──────────────────────────────
   static const String _channelId = 'pil_time_alarm_custom';
@@ -159,8 +155,6 @@ class NotificationService {
         sound: const RawResourceAndroidNotificationSound('alarm_voice'),
         enableVibration: true,
         vibrationPattern: vibrationPattern,
-        // FLAG_INSISTENT (4): Membuat suara berdering terus menerus seperti alarm jam
-        additionalFlags: Int32List.fromList(<int>[4]),
         styleInformation: const BigTextStyleInformation(''),
         icon: 'ic_notification',
       );
@@ -194,23 +188,20 @@ class NotificationService {
           '[PilTime] Scheduled alarm #$currentNotifId for $namaObat at $timeStr (WIB)');
 
       // ── Auto-show alarm screen dari Dart side (tanpa tap notifikasi) ──
-      // Alur: notifikasi muncul → alarm_voice berbunyi 2x → baru buka AlarmRingingScreen
+      // Alur: notifikasi muncul → langsung buka AlarmRingingScreen secara otomatis
       final now = tz.TZDateTime.now(tz.getLocation(_timezone));
       final delayUntilAlarmMs = scheduledTZ.difference(now).inMilliseconds;
       if (delayUntilAlarmMs > 0) {
-        // Tunggu hingga alarm berbunyi + 2 kali durasi suara
-        final autoOpenDelayMs =
-            delayUntilAlarmMs + (_alarmVoiceDurationMs * _alarmVoicePlays);
         _pendingAlarmTimers[currentNotifId]?.cancel();
         _pendingAlarmTimers[currentNotifId] = Timer(
-          Duration(milliseconds: autoOpenDelayMs),
+          Duration(milliseconds: delayUntilAlarmMs),
           () {
-            debugPrint('[PilTime] Auto-show alarm setelah bunyi 2x (timer #$currentNotifId)');
+            debugPrint('[PilTime] Auto-show alarm secara instan (timer #$currentNotifId)');
             showAlarmScreen('$jadwalId:$namaObat');
           },
         );
         debugPrint(
-            '[PilTime] Auto-open timer: ${delayUntilAlarmMs}ms + ${_alarmVoiceDurationMs * _alarmVoicePlays}ms (2x sound) = ${autoOpenDelayMs}ms');
+            '[PilTime] Auto-open timer: ${delayUntilAlarmMs}ms (instan)');
       }
     }
   }
@@ -412,7 +403,6 @@ class NotificationService {
       sound: const RawResourceAndroidNotificationSound('alarm_voice'),
       enableVibration: true,
       vibrationPattern: vibrationPattern,
-      additionalFlags: Int32List.fromList(<int>[4]), // Insistent
       icon: 'ic_notification',
     );
 
@@ -440,20 +430,18 @@ class NotificationService {
       payload: 'test:$namaObat',
     );
 
-    // ── Auto-show alarm screen setelah notifikasi berbunyi 2x ──
-    // Alur: notifikasi muncul (T+delaySeconds) → bunyi 2x → buka alarm screen
-    final autoOpenMs =
-        (delaySeconds * 1000) + (_alarmVoiceDurationMs * _alarmVoicePlays);
+    // ── Auto-show alarm screen secara instan setelah delay berakhir ──
+    final autoOpenMs = delaySeconds * 1000;
     _pendingAlarmTimers[99999]?.cancel();
     _pendingAlarmTimers[99999] = Timer(
       Duration(milliseconds: autoOpenMs),
       () {
-        debugPrint('[PilTime] Auto-show test alarm setelah bunyi 2x (${autoOpenMs}ms)');
+        debugPrint('[PilTime] Auto-show test alarm secara instan (${autoOpenMs}ms)');
         showAlarmScreen('99999:$namaObat');
       },
     );
     debugPrint(
-        '[PilTime] Test alarm: notif T+${delaySeconds}s, screen T+${autoOpenMs}ms (setelah 2x suara)');
+        '[PilTime] Test alarm: notif T+${delaySeconds}s, screen T+${autoOpenMs}ms (instan)');
   }
 
   // ==========================================================
@@ -769,6 +757,32 @@ class NotificationService {
   //                 atau main.dart saat app dibuka via notif.
   // ==========================================================
   void showAlarmScreen(String payload) {
+    // Batalkan notifikasi terkait secara instan agar suaranya mati saat layar alarm terbuka
+    try {
+      final parts = payload.split(':');
+      if (parts.isNotEmpty) {
+        final idStr = parts[0];
+        if (idStr == 'test') {
+          _plugin.cancel(99999);
+        } else {
+          final id = int.tryParse(idStr);
+          if (id != null) {
+            // Batalkan semua kemungkinan offset notifikasi untuk jadwal ini
+            for (int i = 0; i <= 5; i++) {
+              _plugin.cancel(id + (i * 1000));
+              _plugin.cancel(id + 10000 + (i * 1000));
+              _plugin.cancel(id + 20000 + (i * 1000));
+            }
+            if (id == 99999) {
+              _plugin.cancel(99999);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[PilTime] Gagal membatalkan notifikasi di showAlarmScreen: $e');
+    }
+
     final navigator = navigatorKey.currentState;
     if (navigator == null) {
       debugPrint('[PilTime] Navigator belum siap, alarm screen tidak bisa ditampilkan.');

@@ -40,7 +40,6 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   late final NotifikasiBloc _notifikasiBloc;
   int? _pasienId;
-  bool _isExplanationExpanded = false;
 
   @override
   void initState() {
@@ -74,292 +73,168 @@ class _NotificationScreenState extends State<NotificationScreen> {
     super.dispose();
   }
 
+  // ── Tes notifikasi pengingat biasa (15 menit sebelum) ─────
   Future<void> _triggerTestReminder() async {
     try {
       await NotificationService.instance.scheduleTestReminderNotification(
         namaObat: 'Paracetamol (Uji Coba)',
         delaySeconds: 3,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '🔔 Menjadwalkan pengingat biasa dalam 3 detik! Bunyi chime pendek dan akan otomatis masuk ke daftar bawah.',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
-                  ),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '🔔 Notif pengingat muncul dalam 3 detik. Tap notifikasi untuk masuk ke halaman ini.',
+                  style: TextStyle(fontSize: 13),
                 ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF15BE77),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 4),
+              ),
+            ],
           ),
-        );
-      }
+          backgroundColor: const Color(0xFF15BE77),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menjadwalkan tes: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating),
+      );
     }
   }
 
+  // ── Tes alarm berdering (suara alarm_voice, auto buka layar) ─
   Future<void> _triggerTestAlarm() async {
     try {
       await NotificationService.instance.scheduleTestNotification(
         namaObat: 'Paracetamol (Alarm)',
         delaySeconds: 3,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.volume_up_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '🔊 Alarm dijadwalkan dalam 3 detik! Layar alarm akan MUNCUL OTOMATIS — tanpa perlu tap notifikasi.',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF0D9488),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menjadwalkan alarm kustom: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildTestPanel() {
-    const emerald = Color(0xFF15BE77);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF15BE77), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: emerald.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.science_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
+              Icon(Icons.alarm_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(
                 child: Text(
-                  'SISTEM UJI COBA NOTIFIKASI & ALARM',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white70,
-                    letterSpacing: 1.2,
-                    fontFamily: 'Inter',
-                  ),
+                  '🔊 Alarm berbunyi dalam 3 detik. Layar alarm OTOMATIS muncul setelah bunyi 2×.',
+                  style: TextStyle(fontSize: 13),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Uji Alur Notifikasi Pil-Time',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontFamily: 'Roboto',
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Verifikasi alur berdering kustom dan masuknya notifikasi ke halaman rekam medis Anda secara interaktif.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white70,
-              height: 1.4,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          // BUTTON 1: Notif Pengingat Biasa (15 Menit Sebelum)
-          ElevatedButton.icon(
-            onPressed: _triggerTestReminder,
-            icon: const Icon(Icons.notifications_active_rounded, size: 18),
-            label: const Text(
-              '1. Tes Notif Biasa (15m Sebelum)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                fontFamily: 'Inter',
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0D9488),
-              elevation: 0,
-              alignment: Alignment.centerLeft,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 12),
-            child: Text(
-              '• Mengeluarkan bunyi ping biasa (chime sistem) & otomatis masuk ke daftar notifikasi di bawah agar terlihat oleh pengguna.',
-              style: TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Inter'),
-            ),
-          ),
+          backgroundColor: const Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
 
-          // BUTTON 2: Alarm Berdering (Waktu Minum Obat)
-          ElevatedButton.icon(
-            onPressed: _triggerTestAlarm,
-            icon: const Icon(Icons.volume_up_rounded, size: 18),
-            label: const Text(
-              '2. Tes Alarm Berdering (Waktu Minum)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                fontFamily: 'Inter',
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white30,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              alignment: Alignment.centerLeft,
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: Colors.white30, width: 1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              '• Mengeluarkan suara alarm kustom (alarm_voice) tiada henti dan memicu Alarm Ringing Screen persis saat jadwal minum obat.',
-              style: TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Inter'),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isExplanationExpanded = !_isExplanationExpanded;
-              });
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.help_outline_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Kenapa notifikasi asli/riil harus dipisah?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _isExplanationExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white70,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Sesuai prosedur kesehatan:\n1. Pengingat 15 menit sebelum menggunakan bunyi chime biasa agar ramah bagi pengguna dan otomatis diarsipkan ke halaman ini untuk rekam medis.\n2. Alarm waktu minum obat berbunyi tiada henti dengan suara manusia (alarm_voice) untuk memastikan Anda tidak terlewat, dan didesain murni sebagai alarm interaktif penentu aksi minum obat saat itu juga.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                  height: 1.5,
-                  fontFamily: 'Inter',
-                ),
-              ),
-            ),
-            crossFadeState: _isExplanationExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 300),
+  // ── Panel uji coba notifikasi & alarm ─────────────────────
+  Widget _buildTestPanel() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF15BE77).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.science_rounded,
+                    color: Color(0xFF15BE77),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'UJI COBA SISTEM',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF15BE77),
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    Text(
+                      'Notifikasi & Alarm',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white12, height: 1),
+            const SizedBox(height: 16),
+
+            // Button 1 – Notif Pengingat
+            _TestButton(
+              icon: Icons.notifications_active_rounded,
+              label: 'Tes Notifikasi Pengingat',
+              sublabel: 'Bunyi chime pendek • Tap notif → masuk halaman ini',
+              color: const Color(0xFF15BE77),
+              onTap: _triggerTestReminder,
+            ),
+            const SizedBox(height: 12),
+
+            // Button 2 – Alarm Berdering
+            _TestButton(
+              icon: Icons.alarm_rounded,
+              label: 'Tes Alarm Berdering',
+              sublabel: 'Suara alarm_voice 2× → layar alarm muncul otomatis',
+              color: const Color(0xFF0D9488),
+              onTap: _triggerTestAlarm,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -518,10 +393,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(
-                child: _buildTestPanel(),
-              ),
+              // Panel uji coba selalu tampil di atas
+              SliverToBoxAdapter(child: _buildTestPanel()),
               _buildSliverContent(state),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           );
         },
@@ -812,3 +687,122 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 }
+
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// HELPER WIDGET \u2014 Tombol uji coba dengan desain premium
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+class _TestButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TestButton({
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_TestButton> createState() => _TestButtonState();
+}
+
+class _TestButtonState extends State<_TestButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      lowerBound: 0.94,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+    _scale = _ctrl;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(_) => _ctrl.reverse();
+  void _onTapUp(_) => _ctrl.forward();
+  void _onTapCancel() => _ctrl.forward();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: widget.color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: widget.color.withValues(alpha: 0.35),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(widget.icon, color: widget.color, size: 18),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: widget.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.sublabel,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11.5,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: widget.color.withValues(alpha: 0.6),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

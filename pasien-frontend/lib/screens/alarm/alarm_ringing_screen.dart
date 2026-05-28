@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../services/auth_service.dart';
@@ -20,13 +21,17 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   String _namaObat = 'Obat';
   int _jadwalId = 0;
 
+  // ── Kontrol Pemutaran Suara Kustom & Alarm Sistem ──
+  Timer? _customSoundTimer;
+  int _playCount = 0;
+
   @override
   void initState() {
     super.initState();
     _parsePayload();
 
-    // Pastikan suara alarm berbunyi terus menerus saat layar ini terbuka
-    FlutterRingtonePlayer().playAlarm();
+    // Mulai sequence suara: suara kustom 3x → lalu alarm sistem
+    _startAlarmSoundSequence();
 
     // Animasi denyut (pulse) untuk lingkaran
     _pulseController = AnimationController(
@@ -37,6 +42,41 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+  }
+
+  void _startAlarmSoundSequence() {
+    _playCount = 1;
+    debugPrint('[PilTime] Memutar suara kustom alarm_voice untuk pertama kali (1/3)');
+    FlutterRingtonePlayer().play(
+      fromAsset: "assets/audio/alarm_voice.mp3",
+      looping: false,
+      volume: 1.0,
+      asAlarm: true,
+    );
+
+    // Timer periodic setiap 4000ms (memberikan durasi penuh agar berkas suara kustom 3.x detik tidak terpotong)
+    _customSoundTimer = Timer.periodic(const Duration(milliseconds: 4000), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_playCount < 3) {
+        _playCount++;
+        debugPrint('[PilTime] Memutar suara kustom alarm_voice ($_playCount/3)');
+        FlutterRingtonePlayer().play(
+          fromAsset: "assets/audio/alarm_voice.mp3",
+          looping: false,
+          volume: 1.0,
+          asAlarm: true,
+        );
+      } else {
+        debugPrint('[PilTime] Suara kustom selesai 3x. Beralih ke suara alarm sistem (looping)');
+        timer.cancel();
+        _customSoundTimer = null;
+        FlutterRingtonePlayer().playAlarm();
+      }
+    });
   }
 
   void _parsePayload() {
@@ -55,12 +95,16 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   @override
   void dispose() {
     _pulseController.dispose();
-    FlutterRingtonePlayer().stop(); // Hentikan suara saat layar ditutup
+    _customSoundTimer?.cancel();
+    _customSoundTimer = null;
+    FlutterRingtonePlayer().stop(); // Hentikan semua suara saat layar ditutup
     super.dispose();
   }
 
   void _handleMatikanAlarm() {
-    FlutterRingtonePlayer().stop(); // Hentikan suara alarm
+    _customSoundTimer?.cancel();
+    _customSoundTimer = null;
+    FlutterRingtonePlayer().stop(); // Hentikan semua suara alarm
     if (mounted) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();

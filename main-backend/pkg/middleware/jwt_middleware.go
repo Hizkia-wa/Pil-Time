@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"backend/pkg/utils"
+	"log"
 	"net/http"
 	"strings"
 
@@ -85,6 +86,7 @@ func JWTPasienMiddleware() gin.HandlerFunc {
 
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
+			log.Printf("[DEBUG-AUTH] Token validation failed: %v | Token string: '%s'", err, tokenString)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":   "UNAUTHORIZED",
 				"message": "Token tidak valid atau sudah kadaluarsa",
