@@ -5,18 +5,25 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     vue(),
+
     VitePWA({
+
       registerType: 'autoUpdate',
+
       manifest: {
         name: 'Admin Panel - Pil Time',
         short_name: 'Pil Time Admin',
         description: 'Admin Panel untuk Tracking Jadwal & Obat',
+
         theme_color: '#1e40af',
         background_color: '#ffffff',
+
         start_url: '/',
         scope: '/',
+
         display: 'standalone',
         orientation: 'portrait-primary',
+
         icons: [
           {
             src: '/img/icon-192x192.svg',
@@ -44,13 +51,31 @@ export default defineConfig({
           }
         ]
       },
+
+      /* =========================
+         WORKBOX FIX
+      ========================= */
+
+      workbox: {
+
+        navigateFallback: '/index.html',
+
+        navigateFallbackAllowlist: [
+          /^\/.*/
+        ]
+
+      },
+
       devOptions: {
         enabled: true
       }
+
     })
   ],
+
   server: {
     port: 5173,
+
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

@@ -1,16 +1,10 @@
 <template>
   <div class="about-page">
 
-    <div class="nav-links">
-  <router-link to="/dashboard">Dashboard</router-link>
-  <router-link to="/tentang">Tentang</router-link> <router-link to="/install">Install</router-link>
-  <router-link to="/panduan">Panduan</router-link>
-</div>
     <!-- NAVBAR -->
     <NavbarView />
 
-
-    <!-- HERO SECTION -->
+    <!-- HERO -->
     <section class="hero">
 
       <div class="overlay"></div>
@@ -18,14 +12,15 @@
       <div class="hero-content">
 
         <span class="badge">
-          🚀 Tentang Pil Time
+          Tentang Pil Time
         </span>
 
         <h1>Pil Time</h1>
 
         <p>
-          Solusi cerdas untuk membantu generasi muda mengatur
-          keuangan, waktu, dan kebiasaan menabung dengan bantuan teknologi AI.
+          Platform digital kesehatan yang membantu pasien, keluarga, dan tenaga medis
+          dalam mengatur jadwal obat, meningkatkan kepatuhan pengobatan, serta
+          menciptakan perawatan yang lebih aman, terarah, dan konsisten.
         </p>
 
       </div>
@@ -33,181 +28,181 @@
     </section>
 
     <!-- LATAR BELAKANG -->
+<section class="section">
+
+  <div class="container">
+
+    <div class="section-title">
+
+      <span>LATAR BELAKANG</span>
+
+      <h2>Mengapa Pil Time Hadir?</h2>
+
+    </div>
+
+    <div class="latar-wrapper">
+
+      <!-- TEXT -->
+      <div class="content-box">
+
+        <p>
+          Banyak pasien masih mengalami kesulitan dalam menjaga kepatuhan
+          mengonsumsi obat sesuai jadwal yang telah ditentukan oleh tenaga kesehatan.
+          Hal ini menyebabkan pasien sering lupa, terlambat, atau tidak mengikuti
+          aturan penggunaan obat dengan benar.
+        </p>
+
+        <p>
+          Selain itu, tenaga kesehatan juga kesulitan dalam memantau kepatuhan
+          pasien secara langsung setelah pasien kembali ke rumah. Kondisi ini
+          membuat proses pengobatan menjadi kurang optimal dan berisiko
+          menurunkan efektivitas terapi.
+        </p>
+
+        <p>
+          Oleh karena itu, Pil Time hadir sebagai solusi berbasis teknologi mobile
+          untuk menyediakan pengingat otomatis, pencatatan konsumsi obat,
+          serta pemantauan kepatuhan pasien secara lebih terstruktur dan efisien.
+        </p>
+
+      </div>
+
+      <!-- PHONE MOCKUP (BARU) -->
+      <div class="hero-right">
+        <div class="phone-wrap">
+          <div class="phone-glow"></div>
+
+          <div class="pill-float pf1"><span class="dot"></span> Obat diminum ✓</div>
+          <div class="pill-float pf2"><span class="dot"></span> Reminder aktif</div>
+          <div class="pill-float pf3"><span class="dot"></span> 78% tercapai</div>
+
+          <div class="phone">
+            <div class="screen">
+
+              <div class="screen-header">
+                <div>
+                  <div class="screen-greeting">Selamat Siang, 👋</div>
+                  <div class="screen-name">Pasien</div>
+                </div>
+                <div class="screen-bell">🔔</div>
+              </div>
+
+              <div class="comply-card">
+                <div class="comply-label">Kepatuhan Hari Ini</div>
+                <div class="comply-val">1 dari 2 Selesai</div>
+                <div class="comply-bar"><div class="comply-fill"></div></div>
+                <div class="comply-sub">Jangan lupa dosis berikutnya!</div>
+              </div>
+
+              <div class="menu-label">Menu Utama</div>
+
+              <div class="menu-grid">
+                <div class="menu-item">
+                  <div class="menu-icon">⏰</div>
+                  <div class="menu-name">Reminder</div>
+                  <div class="menu-sub green">Pengingat Obat</div>
+                </div>
+
+                <div class="menu-item">
+                  <div class="menu-icon">💊</div>
+                  <div class="menu-name">Obat</div>
+                  <div class="menu-sub amber">Info & Dosis</div>
+                </div>
+
+                <div class="menu-item">
+                  <div class="menu-icon">📊</div>
+                  <div class="menu-name">Riwayat</div>
+                  <div class="menu-sub blue">Kepatuhan</div>
+                </div>
+
+                <div class="menu-item">
+                  <div class="menu-icon">🏥</div>
+                  <div class="menu-name">Kesehatan</div>
+                  <div class="menu-sub purple">Monitoring</div>
+                </div>
+              </div>
+
+              <div class="bottom-nav">
+                <div class="bnav-item active">
+                  <span class="bnav-icon">🏠</span>
+                  <span>Home</span>
+                </div>
+                <div class="bnav-item">
+                  <div class="bnav-plus">+</div>
+                </div>
+                <div class="bnav-item">
+                  <span class="bnav-icon">👤</span>
+                  <span>Profil</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
     <section class="section">
+  <div class="container">
 
-      <div class="container">
+    <div class="section-title">
+      <span>MANFAAT</span>
+      <h2>Manfaat Pil Time</h2>
+    </div>
 
-        <div class="section-title">
-          <span>LATAR BELAKANG</span>
-          <h2>Mengapa Pil Time Hadir?</h2>
-        </div>
+    <div class="benefit-grid">
 
-        <div class="content-box">
+  <div class="benefit-card">
+    <div class="benefit-number">01</div>
+    <p>
+      Membantu pasien menjalani pengobatan secara lebih disiplin dengan sistem pengingat otomatis yang konsisten setiap hari, sehingga mengurangi risiko lupa minum obat.
+    </p>
+  </div>
 
-          <p>
-            Pil Time hadir sebagai solusi atas permasalahan generasi muda
-            yang sering mengalami kesulitan dalam mengatur keuangan,
-            membangun kebiasaan menabung, dan mengelola waktu secara disiplin.
-            Banyak orang memiliki pendapatan, namun tidak mengetahui
-            ke mana uang mereka digunakan setiap harinya.
-          </p>
+  <div class="benefit-card">
+    <div class="benefit-number">02</div>
+    <p>
+      Meningkatkan tingkat kepatuhan pengobatan terutama pada pasien dengan penyakit kronis atau pasien lansia yang membutuhkan pemantauan rutin dan berkelanjutan.
+    </p>
+  </div>
 
-          <p>
-            Selain itu, perkembangan teknologi digital membuka peluang
-            untuk menghadirkan sistem keuangan yang lebih cerdas,
-            personal, dan interaktif. Oleh karena itu, Pil Time dikembangkan
-            sebagai aplikasi modern berbasis AI yang membantu pengguna
-            memahami pola pengeluaran, membangun target keuangan,
-            serta meningkatkan produktivitas harian.
-          </p>
+  <div class="benefit-card">
+    <div class="benefit-number">03</div>
+    <p>
+      Membantu tenaga kesehatan dalam memantau riwayat konsumsi obat pasien secara digital, sehingga proses evaluasi pengobatan menjadi lebih akurat dan efisien.
+    </p>
+  </div>
 
-        </div>
+  <div class="benefit-card">
+    <div class="benefit-number">04</div>
+    <p>
+      Mengurangi risiko kesalahan penggunaan obat seperti dosis yang terlewat atau konsumsi yang tidak sesuai aturan, yang dapat berdampak pada efektivitas pengobatan.
+    </p>
+  </div>
 
-      </div>
+  <div class="benefit-card">
+    <div class="benefit-number">05</div>
+    <p>
+      Meningkatkan kualitas hidup pasien dengan membantu membangun rutinitas kesehatan yang lebih teratur, stabil, dan mudah diikuti setiap hari.
+    </p>
+  </div>
 
-    </section>
+  <div class="benefit-card">
+    <div class="benefit-number">06</div>
+    <p>
+      Memberikan ketenangan bagi keluarga pasien karena dapat memastikan proses pengobatan berjalan dengan baik melalui sistem monitoring yang transparan.
+    </p>
+  </div>
 
-    <!-- FITUR -->
-    <section class="section bg-light">
-
-      <div class="container">
-
-        <div class="section-title">
-          <span>INOVASI PIL TIME</span>
-          <h2>Fitur Unggulan</h2>
-        </div>
-
-        <div class="feature-grid">
-
-          <div class="feature-card">
-            <div class="icon">💰</div>
-
-            <h3>Smart Financial Tracker</h3>
-
-            <p>
-              Memantau pemasukan, pengeluaran, tabungan,
-              dan uang aktif secara real-time.
-            </p>
-          </div>
-
-          <div class="feature-card">
-            <div class="icon">🤖</div>
-
-            <h3>AI Kategori Pengeluaran</h3>
-
-            <p>
-              Sistem AI secara otomatis mengkategorikan
-              pengeluaran menjadi primer, sekunder, atau tersier.
-            </p>
-          </div>
-
-          <div class="feature-card">
-            <div class="icon">🎯</div>
-
-            <h3>Target Tabungan Pintar</h3>
-
-            <p>
-              Membantu pengguna menentukan target menabung
-              berdasarkan waktu dan kemampuan finansial.
-            </p>
-          </div>
-
-          <div class="feature-card">
-            <div class="icon">🔔</div>
-
-            <h3>Reminder Menabung</h3>
-
-            <p>
-              Notifikasi otomatis untuk membantu pengguna
-              tetap konsisten menabung setiap hari.
-            </p>
-          </div>
-
-          <div class="feature-card">
-            <div class="icon">📊</div>
-
-            <h3>Dashboard Interaktif</h3>
-
-            <p>
-              Menampilkan grafik keuangan yang mudah dipahami
-              dan membantu analisis pengeluaran pengguna.
-            </p>
-          </div>
-
-          <div class="feature-card">
-            <div class="icon">✨</div>
-
-            <h3>Motivasi Finansial</h3>
-
-            <p>
-              Memberikan visual motivasi menabung dan pencapaian target
-              agar pengguna tetap semangat mencapai tujuan finansial.
-            </p>
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-    <!-- MANFAAT -->
-    <section class="section">
-
-      <div class="container">
-
-        <div class="section-title">
-          <span>MANFAAT</span>
-          <h2>Manfaat Pil Time</h2>
-        </div>
-
-        <div class="benefit-grid">
-
-          <div class="benefit-card">
-            <div class="benefit-icon">✔</div>
-
-            <p>
-              Membantu masyarakat mengelola keuangan dengan lebih disiplin.
-            </p>
-          </div>
-
-          <div class="benefit-card">
-            <div class="benefit-icon">✔</div>
-
-            <p>
-              Meningkatkan kebiasaan menabung sejak usia muda.
-            </p>
-          </div>
-
-          <div class="benefit-card">
-            <div class="benefit-icon">✔</div>
-
-            <p>
-              Membantu pengguna memahami pola pengeluaran mereka.
-            </p>
-          </div>
-
-          <div class="benefit-card">
-            <div class="benefit-icon">✔</div>
-
-            <p>
-              Mendorong produktivitas dan pengelolaan waktu yang lebih baik.
-            </p>
-          </div>
-
-          <div class="benefit-card">
-            <div class="benefit-icon">✔</div>
-
-            <p>
-              Menghadirkan pengalaman finansial modern berbasis AI.
-            </p>
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
+    </div>
+  </div>
+</section>
 
     <!-- DEVELOPER -->
     <section class="section bg-light">
@@ -215,25 +210,37 @@
       <div class="container">
 
         <div class="section-title">
+
           <span>DEVELOPER</span>
+
           <h2>Pengembang Pil Time</h2>
+
         </div>
 
         <div class="developer-card">
 
-          <div class="avatar">
-            HS
-          </div>
+          <img
+            src="https://i.pravatar.cc/500"
+            alt="Developer"
+            class="developer-photo"
+          />
 
-          <div>
+          <div class="developer-info">
 
-            <h3>Hizkia Cristian Siahaan</h3>
+            <span>FULLSTACK DEVELOPER</span>
+
+            <h3>
+              Hizkia Cristian Siahaan
+            </h3>
+
+            <h4>
+              Institut Teknologi Del
+            </h4>
 
             <p>
-              Developer dan penggagas aplikasi Pil Time.
-              Fokus pada pengembangan teknologi digital,
-              AI, dan solusi inovatif untuk membantu masyarakat
-              dalam pengelolaan keuangan serta produktivitas.
+              “Berfokus pada pengembangan teknologi kesehatan digital yang membantu pasien
+              dan tenaga medis dalam meningkatkan kepatuhan pengobatan melalui sistem yang
+              sederhana, efisien, dan mudah digunakan.”
             </p>
 
           </div>
@@ -250,24 +257,39 @@
       <div class="container">
 
         <div class="section-title">
-          <span>MITRA</span>
-          <h2>Partner Kolaborasi</h2>
+
+          <span>MITRA KOLABORASI</span>
+
+          <h2>Desa Nauli</h2>
+
         </div>
 
         <div class="partner-card">
 
-          <div class="partner-logo">
-            🏡
+          <div class="maps-box">
+
+            <iframe
+              src="https://www.google.com/maps?q=Danau%20Toba&output=embed"
+              allowfullscreen=""
+              loading="lazy">
+            </iframe>
+
           </div>
 
-          <div>
+          <div class="partner-info">
+
+            <span>KOLABORASI DIGITAL</span>
 
             <h3>Desa Nauli</h3>
 
             <p>
-              Desa Nauli menjadi mitra dalam pengembangan dan implementasi
-              Pil Time sebagai bagian dari dukungan terhadap transformasi
-              digital dan peningkatan literasi keuangan masyarakat desa.
+              Desa Nauli menjadi mitra dalam implementasi Pil Time untuk mendukung transformasi
+              digital di sektor kesehatan masyarakat, khususnya dalam manajemen pengobatan.
+            </p>
+
+            <p>
+              Melalui kolaborasi ini, diharapkan masyarakat dapat lebih mudah mengakses sistem
+              pengingat obat dan meningkatkan kesadaran akan pentingnya kepatuhan pengobatan.
             </p>
 
           </div>
@@ -294,7 +316,109 @@ export default {
 </script>
 
 <style scoped>
+/* ===== BENEFIT GRID FIX (3 ATAS 3 BAWAH) ===== */
+.benefit-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 40px;
+}
 
+/* RESPONSIVE */
+@media(max-width: 992px){
+  .benefit-grid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media(max-width: 600px){
+  .benefit-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* CARD */
+.benefit-card{
+  background: #f8fafc;
+  padding: 28px;
+  border-radius: 22px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+
+  transition: all .4s ease;
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+/* ANIMASI FLOAT BERGANTIAN */
+.benefit-card:nth-child(2n){
+  animation-delay: 1s;
+}
+.benefit-card:nth-child(3n){
+  animation-delay: 2s;
+}
+
+@keyframes floatCard{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-10px); }
+}
+
+/* HOVER */
+.benefit-card:hover{
+  transform: translateY(-12px) scale(1.04);
+  box-shadow: 0 20px 45px rgba(22,163,74,0.18);
+}
+
+/* GLASS EFFECT MOVE */
+.benefit-card::before{
+  content: '';
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(22,163,74,0.15), transparent 70%);
+  top: -50px;
+  right: -50px;
+  transform: scale(0);
+  transition: .4s ease;
+}
+
+.benefit-card:hover::before{
+  transform: scale(1.6);
+}
+
+/* NUMBER */
+.benefit-number{
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg,#16a34a,#22c55e);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+
+  transition: .3s ease;
+}
+
+.benefit-card:hover .benefit-number{
+  transform: rotate(-8deg) scale(1.1);
+}
+
+/* TEXT */
+.benefit-card p{
+  color: #64748b;
+  line-height: 1.8;
+  font-size: 14px;
+  transition: .3s;
+}
+
+.benefit-card:hover p{
+  color: #334155;
+}
 *{
   margin: 0;
   padding: 0;
@@ -310,6 +434,7 @@ export default {
 /* HERO */
 .hero{
   position: relative;
+
   min-height: 75vh;
 
   display: flex;
@@ -321,9 +446,9 @@ export default {
   padding: 140px 20px 100px;
 
   background:
-    radial-gradient(circle at top left,#dbeafe 0%,transparent 35%),
-    radial-gradient(circle at bottom right,#ede9fe 0%,transparent 35%),
-    linear-gradient(135deg,#2563eb,#7c3aed);
+    radial-gradient(circle at top left,#dcfce7 0%,transparent 35%),
+    radial-gradient(circle at bottom right,#bbf7d0 0%,transparent 35%),
+    linear-gradient(135deg,#16a34a,#22c55e);
 
   overflow: hidden;
 }
@@ -388,7 +513,7 @@ export default {
 }
 
 .section-title span{
-  color: #2563eb;
+  color: #16a34a;
   font-weight: 600;
   letter-spacing: 2px;
 }
@@ -400,6 +525,7 @@ export default {
 
 .content-box{
   background: white;
+
   padding: 40px;
   border-radius: 30px;
 
@@ -435,14 +561,20 @@ export default {
   transform: translateY(-6px);
 }
 
-.icon{
-  font-size: 50px;
-  margin-bottom: 20px;
+.feature-line{
+  width: 70px;
+  height: 6px;
+
+  border-radius: 20px;
+
+  background: linear-gradient(135deg,#16a34a,#22c55e);
+
+  margin-bottom: 25px;
 }
 
 .feature-card h3{
   margin-bottom: 15px;
-  color: #2563eb;
+  color: #16a34a;
 }
 
 .feature-card p{
@@ -472,15 +604,15 @@ export default {
   transform: translateY(-5px);
 }
 
-.benefit-icon{
-  width: 60px;
-  height: 60px;
+.benefit-number{
+  width: 55px;
+  height: 55px;
 
   margin: auto auto 20px;
 
-  border-radius: 20px;
+  border-radius: 18px;
 
-  background: linear-gradient(135deg,#2563eb,#7c3aed);
+  background: linear-gradient(135deg,#16a34a,#22c55e);
 
   color: white;
 
@@ -488,8 +620,8 @@ export default {
   align-items: center;
   justify-content: center;
 
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .benefit-card p{
@@ -501,83 +633,266 @@ export default {
 .developer-card{
   background: white;
 
-  padding: 40px;
   border-radius: 30px;
 
-  display: flex;
-  align-items: center;
-  gap: 30px;
+  overflow: hidden;
+
+  display: grid;
+  grid-template-columns: 350px 1fr;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.developer-photo{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.developer-info{
+  padding: 50px;
+}
+
+.developer-info span{
+  color: #16a34a;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.developer-info h3{
+  font-size: 38px;
+  margin: 18px 0 10px;
+}
+
+.developer-info h4{
+  color: #64748b;
+  margin-bottom: 25px;
+  font-weight: 500;
+}
+
+.developer-info p{
+  color: #64748b;
+  line-height: 1.9;
+}
+
+/* MITRA */
+.partner-card{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 40px;
+
+  background: white;
+
+  padding: 30px;
+  border-radius: 30px;
 
   box-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
 
-.avatar{
-  width: 100px;
-  height: 100px;
+.maps-box{
+  width: 100%;
+  height: 350px;
 
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.maps-box iframe{
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.partner-info{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.partner-info span{
+  color: #16a34a;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+}
+
+.partner-info h3{
+  font-size: 40px;
+  margin-bottom: 20px;
+}
+
+.partner-info p{
+  color: #64748b;
+  line-height: 1.9;
+  margin-bottom: 20px;
+}
+
+.latar-wrapper{
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+
+/* ===== PHONE WRAPPER FIX ===== */
+.hero-right{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* glow dibuat lebih halus & tidak ganggu layout */
+.phone-glow{
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(22,163,74,0.18) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
+  z-index: 0;
+}
 
-  background: linear-gradient(135deg,#2563eb,#7c3aed);
+/* phone frame diperbaiki supaya proporsional */
+.phone{
+  width: 260px;
+  height: 540px;
+  background: #0f172a;
+  border-radius: 42px;
+  padding: 10px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
 
-  color: white;
+/* screen lebih clean */
+.screen{
+  width: 100%;
+  height: 100%;
+  border-radius: 32px;
+  background: linear-gradient(160deg, #f0faf5 0%, #e0f2fe 100%);
+  overflow: hidden;
+  position: relative;
+}
 
+/* HEADER */
+.screen-header{
+  padding: 22px 14px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.screen-greeting{
+  font-size: 11px;
+  color: #64748b;
+}
+
+.screen-name{
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.screen-bell{
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(22,163,74,0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 32px;
-  font-weight: bold;
-
-  flex-shrink: 0;
 }
 
-.developer-card h3{
-  margin-bottom: 15px;
-}
-
-.developer-card p{
-  color: #64748b;
-  line-height: 1.9;
-}
-
-/* PARTNER */
-.partner-card{
-  background: #f8fafc;
-
-  padding: 40px;
-  border-radius: 30px;
-
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.partner-logo{
-  width: 100px;
-  height: 100px;
-
-  border-radius: 30px;
-
-  background: linear-gradient(135deg,#2563eb,#7c3aed);
-
+/* CARD */
+.comply-card{
+  margin: 10px 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
   color: white;
+}
 
+.comply-label{
+  font-size: 10px;
+  opacity: .8;
+}
+
+.comply-val{
+  font-size: 18px;
+  font-weight: 800;
+  margin: 4px 0;
+}
+
+.comply-bar{
+  height: 6px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.comply-fill{
+  height: 100%;
+  width: 78%;
+  background: #fff;
+  border-radius: 10px;
+}
+
+/* MENU */
+.menu-label{
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.menu-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.menu-item{
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.menu-icon{
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+/* FLOATING BADGE FIX */
+.pill-float{
+  position: absolute;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
   display: flex;
   align-items: center;
-  justify-content: center;
-
-  font-size: 42px;
-
-  flex-shrink: 0;
+  gap: 6px;
+  z-index: 3;
+  white-space: nowrap;
 }
 
-.partner-card h3{
-  margin-bottom: 15px;
-}
+.pf1{ top: 12%; right: -25px; color:#16a34a; }
+.pf2{ bottom: 30%; left: -30px; color:#2563eb; }
+.pf3{ top: 55%; right: -35px; color:#0d9488; }
 
-.partner-card p{
-  color: #64748b;
-  line-height: 1.9;
+.dot{
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 /* RESPONSIVE */
@@ -595,12 +910,17 @@ export default {
     font-size: 34px;
   }
 
-  .developer-card,
+  .developer-card{
+    grid-template-columns: 1fr;
+  }
+
+  .developer-photo{
+    height: 320px;
+  }
+
   .partner-card{
-    flex-direction: column;
-    text-align: center;
+    grid-template-columns: 1fr;
   }
 
 }
-
 </style>
