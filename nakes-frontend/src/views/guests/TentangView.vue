@@ -205,51 +205,43 @@
 </section>
 
     <!-- DEVELOPER -->
-    <section class="section bg-light">
+<section class="section bg-light">
 
-      <div class="container">
+  <div class="container">
 
-        <div class="section-title">
+    <div class="section-title">
+      <span>DEVELOPER</span>
+      <h2>Tim Pengembang Pil Time</h2>
+    </div>
 
-          <span>DEVELOPER</span>
+    <div class="developer-grid">
 
-          <h2>Pengembang Pil Time</h2>
+      <div
+        class="developer-card"
+        v-for="(developer,index) in developers"
+        :key="index"
+      >
 
-        </div>
+        <img
+      :src="developer.photo"
+      :alt="developer.name"
+      class="developer-photo"
+    />
 
-        <div class="developer-card">
-
-          <img
-            src="https://i.pravatar.cc/500"
-            alt="Developer"
-            class="developer-photo"
-          />
-
-          <div class="developer-info">
-
-            <span>FULLSTACK DEVELOPER</span>
-
-            <h3>
-              Hizkia Cristian Siahaan
-            </h3>
-
-            <h4>
-              Institut Teknologi Del
-            </h4>
-
-            <p>
-              “Berfokus pada pengembangan teknologi kesehatan digital yang membantu pasien
-              dan tenaga medis dalam meningkatkan kepatuhan pengobatan melalui sistem yang
-              sederhana, efisien, dan mudah digunakan.”
-            </p>
-
-          </div>
-
-        </div>
+    <div class="developer-info">
+      <span>{{ developer.role }}</span>
+      <h3>{{ developer.name }}</h3>
+      <h4>{{ developer.campus }}</h4>
+      <p>{{ developer.description }}</p>
+    </div>
 
       </div>
 
-    </section>
+    </div>
+
+  </div>
+
+</section>
 
     <!-- MITRA -->
     <section class="section">
@@ -306,11 +298,64 @@
 <script>
 import NavbarView from './NavbarView.vue'
 
+import developer1 from './../../assets/images/developer1.jpeg'
+import developer2 from './../../assets/images/developer2.jpeg'
+import developer3 from './../../assets/images/developer3.jpeg'
+import developer4 from './../../assets/images/developer4.jpeg'
+import developer5 from './../../assets/images/Developer5.jpeg'
+
 export default {
   name: "AboutPage",
 
   components: {
     NavbarView
+  },
+
+  data() {
+    return {
+      developers: [
+        {
+          name: "Hizkia Cristian Siahaan",
+          role: "Project Manager",
+          campus: "Institut Teknologi Del",
+          photo: developer1,
+          description:
+            "The future belongs to those who keep learning, keep building, and keep believing in their ideas and god."
+        },
+        {
+          name: "De Pedro Monang Pane",
+          role: "Progremmer",
+          campus: "Institut Teknologi Del",
+          photo: developer2,
+          description:
+            "Bertanggung jawab dalam pengembangan antarmuka pengguna yang responsif, modern, dan mudah digunakan oleh seluruh pengguna Pil Time."
+        },
+        {
+          name: "Elisabeth Putri Panggabean",
+          role: "Data Analysis",
+          campus: "Institut Teknologi Del",
+          photo: developer3,
+          description:
+            "Saya percaya bahwa setiap proses yang saya jalani hari ini akan membawa saya lebih dekat kepada impian dan versi terbaik dari diri saya."
+        },
+        {
+          name: "Rima Mutiara Gultom",
+          role: "UI/UX Designer",
+          campus: "Institut Teknologi Del",
+          photo: developer4,
+          description:
+            "be kind, even when it feels heavy, and stay real in every relationship you go through some people are just passing, but you? you’re still you"
+        },
+        {
+          name: "Monalisa Dea Anastasya",
+          role: "Tester Softwate",
+          campus: "Institut Teknologi Del",
+          photo: developer5,
+          description:
+            "it's never too late to be who i wanna be, so if i fall today, i still can be who i want tomorrow"
+        }
+      ]
+    }
   }
 }
 </script>
@@ -629,50 +674,89 @@ export default {
   line-height: 1.8;
 }
 
-/* DEVELOPER */
+/* GRID DEVELOPER */
+.developer-grid{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+}
+
+/* CARD */
 .developer-card{
   background: white;
+  border-radius: 24px;
+  padding: 25px;
 
-  border-radius: 30px;
-
-  overflow: hidden;
-
-  display: grid;
-  grid-template-columns: 350px 1fr;
+  display: flex;
+  align-items: center;
+  gap: 20px;
 
   box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  transition: .3s;
 }
 
+.developer-card:hover{
+  transform: translateY(-5px);
+}
+
+/* FOTO */
 .developer-photo{
-  width: 100%;
-  height: 100%;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  border: 4px solid #dcfce7;
 }
 
+/* INFO */
 .developer-info{
-  padding: 50px;
+  padding: 0;
 }
 
 .developer-info span{
   color: #16a34a;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  font-size: 13px;
 }
 
 .developer-info h3{
-  font-size: 38px;
-  margin: 18px 0 10px;
+  margin: 8px 0;
+  font-size: 22px;
 }
 
 .developer-info h4{
   color: #64748b;
-  margin-bottom: 25px;
-  font-weight: 500;
+  margin-bottom: 10px;
+  font-size: 15px;
 }
 
 .developer-info p{
   color: #64748b;
-  line-height: 1.9;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+/* TABLET */
+@media(max-width: 992px){
+  .developer-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* MOBILE */
+@media(max-width: 600px){
+  .developer-card{
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .developer-photo{
+    width: 100px;
+    height: 100px;
+  }
 }
 
 /* MITRA */
