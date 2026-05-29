@@ -1,537 +1,1084 @@
+<script setup>
+import { Bell, Pill, BarChart3, Heart } from "@lucide/vue";
+</script>
 <template>
-  <div class="landing-page">
 
-    <!-- NAVBAR -->
-    <NavbarView />
 
-    <!-- HERO SECTION -->
-    <section class="hero">
-      <div class="orb orb1"></div>
-      <div class="orb orb2"></div>
-      <div class="orb orb3"></div>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo">
+      <div class="logo-box">💊</div>
+      <span>Pil<span class="green">Time</span></span>
+    </div>
 
-      <div class="hero-left">
-        <h1>
-          Jangan Pernah<br>
-          Lupa Minum Obat<br>
-          Bersama <span class="brand">Pil Time</span>
-        </h1>
-        <p class="hero-desc">
-         Pil Time hadir sebagai solusi untuk membantu pengguna mengatur jadwal minum obat dengan lebih mudah, teratur, dan tepat waktu. Aplikasi ini menyediakan fitur pengingat konsumsi obat, pemantauan kepatuhan harian, serta pencatatan riwayat 
-         penggunaan obat untuk membantu pengguna menjaga rutinitas kesehatan secara konsisten. 
-         Dengan tampilan yang sederhana dan mudah digunakan, Pil Time membantu pengguna agar tidak lupa minum obat dan tetap disiplin dalam menjalani pengobatan setiap hari.
-        </p>
-        <div class="hero-btns">
-          <router-link to="/install" class="btn-primary">📥 Download APK</router-link>
-          <router-link to="/tentang" class="btn-secondary">Tentang Pil Time →</router-link>
-        </div>
+    <div class="nav-links">
+      <a href="#">Dashboard</a>
+      <a href="#">Tentang</a>
+      <a href="#">Install</a>
+      <a href="#">Panduan</a>
+    </div>
+
+    <button class="login-btn">Login</button>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <div class="landing">
+
+    <!-- LEFT -->
+    <div class="hero-left">
+
+      <h1>
+        Jangan Pernah
+        <br />
+        Lupa Minum
+        <br />
+        Obat Bersama
+        <span class="green">PilTime</span>
+      </h1>
+
+      <p>
+        Pengingat minum obat yang hangat, sederhana, dan mudah digunakan
+        untuk membantu lansia menjaga kesehatan setiap hari dengan lebih tenang.
+      </p>
+
+
+      <div class="hero-buttons">
+        <button class="primary-btn">⬇ Download Gratis</button>
+        <button class="secondary-btn">🎥 Lihat Demo</button>
       </div>
 
-      <!-- PHONE MOCKUP -->
-      <div class="hero-right">
-        <div class="phone-wrap">
-          <div class="phone-glow"></div>
+    </div>
 
-          <div class="pill-float pf1"><span class="dot"></span> Obat diminum ✓</div>
-          <div class="pill-float pf2"><span class="dot"></span> Reminder aktif</div>
-          <div class="pill-float pf3"><span class="dot"></span> 78% tercapai</div>
+    <!-- RIGHT -->
+    <div class="hero-right">
+
+      <div class="phone-scene">
+
+        <!-- PHONE -->
+        <div class="phone-wrapper">
+
+          <div class="phone-shadow"></div>
 
           <div class="phone">
-            <div class="screen">
-              <div class="screen-header">
+
+            <div class="notch"></div>
+
+            <div class="phone-screen">
+
+              <!-- TOP -->
+              <div class="phone-top">
                 <div>
-                  <div class="screen-greeting">Selamat Siang, 👋</div>
-                  <div class="screen-name">Hizkia Cristian</div>
+                  <div class="hello">Selamat Siang ☀️</div>
+                  <div class="username">Hikzha Cristian</div>
                 </div>
-                <div class="screen-bell">🔔</div>
+                <div class="notif">🔔</div>
               </div>
 
-              <div class="comply-card">
-                <div class="comply-label">Kepatuhan Hari Ini</div>
-                <div class="comply-val">1 dari 2 Selesai</div>
-                <div class="comply-bar"><div class="comply-fill"></div></div>
-                <div class="comply-sub">Ayo selesaikan sesi malam tepat waktu!</div>
+              <!-- CARD -->
+              <div class="hero-card">
+                <div class="hero-label">KEPATUHAN HARI INI</div>
+                <div class="hero-value">1 dari 2 Selesai</div>
+                <div class="hero-line"></div>
+                <div class="hero-desc">Ayo selesaikan sesi malam ya! 🌙</div>
               </div>
 
-              <div class="menu-label">Menu Utama</div>
+              <!-- MENU -->
+              <div class="menu-title">Menu Utama</div>
+
               <div class="menu-grid">
                 <div class="menu-item">
-                  <div class="menu-icon">⏰</div>
-                  <div class="menu-name">Reminder</div>
-                  <div class="menu-sub green">Kelola Pengingat</div>
+                  <div class="menu-icon">🔔</div>
+                  <div class="menu-text">Reminder Kelola</div>
                 </div>
                 <div class="menu-item">
                   <div class="menu-icon">💊</div>
-                  <div class="menu-name">Info Obat</div>
-                  <div class="menu-sub amber">Detail & Panduan</div>
+                  <div class="menu-text">Info Obat</div>
                 </div>
                 <div class="menu-item">
-                  <div class="menu-icon">📊</div>
-                  <div class="menu-name">Riwayat</div>
-                  <div class="menu-sub blue">Kepatuhan Minum</div>
+                  <div class="menu-icon">📈</div>
+                  <div class="menu-text">Riwayat Kepatuhan</div>
                 </div>
                 <div class="menu-item">
-                  <div class="menu-icon">🏃</div>
-                  <div class="menu-name">Rutinitas</div>
-                  <div class="menu-sub purple">Jadwal Aktivitas</div>
+                  <div class="menu-icon">❤️</div>
+                  <div class="menu-text">Rutinitas Sehat</div>
                 </div>
               </div>
 
+              <!-- BOTTOM NAV -->
               <div class="bottom-nav">
-                <div class="bnav-item active">
-                  <span class="bnav-icon">🏠</span>
-                  <span>Beranda</span>
-                </div>
-                <div class="bnav-item">
-                  <div class="bnav-plus">+</div>
-                </div>
-                <div class="bnav-item">
-                  <span class="bnav-icon">👤</span>
-                  <span>Profil</span>
-                </div>
+                <div class="nav-item active">🏠</div>
+                <div class="add-btn">+</div>
+                <div class="nav-item">👤</div>
               </div>
+
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- FEATURES -->
-    <section class="features">
-      <div class="section-head">
-        <div class="section-tag">✨ Fitur Unggulan</div>
-        <h2 class="section-title">Kenapa Harus Pil Time?</h2>
-      </div>
-      <div class="feat-grid">
-        <div class="feat-card">
-          <div class="feat-icon g">⏰</div>
-          <div class="feat-title">Reminder & Alarm</div>
-          <p class="feat-desc">Atur pengingat minum obat otomatis dengan alarm cerdas agar tidak pernah terlewat satu pun dosis.</p>
-        </div>
-        <div class="feat-card">
-          <div class="feat-icon o">💊</div>
-          <div class="feat-title">Info Obat Lengkap</div>
-          <p class="feat-desc">Akses detail ribuan obat — dosis, efek samping, dan panduan penggunaan yang tepat dan terpercaya.</p>
-        </div>
-        <div class="feat-card">
-          <div class="feat-icon b">📊</div>
-          <div class="feat-title">Riwayat Kepatuhan</div>
-          <p class="feat-desc">Pantau histori minum obat harian dan mingguan dengan grafik yang mudah dipahami.</p>
-        </div>
-        <div class="feat-card">
-          <div class="feat-icon t">🏃</div>
-          <div class="feat-title">Rutinitas Sehat</div>
-          <p class="feat-desc">Bangun jadwal aktivitas sehat yang konsisten dengan dukungan pengingat dan panduan rutin harian.</p>
-        </div>
-      </div>
-    </section>
+        <!-- BG CIRCLE -->
+        <div class="circle-bg"></div>
 
-    <!-- CTA -->
-    <div class="cta-section">
-      <div class="cta-inner">
-        <div class="cta-eyebrow">
-          <span class="cta-eyebrow-dot"></span>
-          Mulai gratis, tanpa kartu kredit
-        </div>
-        <h2 class="cta-title">
-          Kesehatan Kamu<br>
-          Terlalu Berharga<br>
-          untuk <span class="highlight">Dilupakan</span>
-        </h2>
-        <p class="cta-desc">
-          Ribuan orang sudah menjaga kepatuhan minum obat mereka bersama Pil Time.
-          Saatnya kamu bergabung dan mulai hidup lebih sehat hari ini.
-        </p>
-        <div class="cta-btns">
-          <router-link to="/install" class="cta-btn-main">📥 Download Sekarang</router-link>
-          <router-link to="/panduan" class="cta-btn-ghost">Lihat Panduan →</router-link>
-        </div>
-        <div class="trust-row">
-          <div class="trust-item">✅ Gratis selamanya</div>
-          <div class="trust-divider"></div>
-          <div class="trust-item">🔒 Data aman & privat</div>
-          <div class="trust-divider"></div>
-          <div class="trust-item">📱 Android & iOS</div>
-        </div>
       </div>
     </div>
 
   </div>
+  <!-- END LANDING -->
+
+  <!-- FEATURES -->
+<div class="feature-list">
+
+  <div class="feature reminder">
+    <div class="icon-3d reminder-icon">
+      🔔
+    </div>
+    <div class="feature-text">
+      <small>01 — REMINDER & ALARM</small>
+      <h3>Tidak akan terlewat satu pun dosis</h3>
+      <p>Alarm pintar untuk membantu pengguna minum obat tepat waktu setiap hari.</p>
+    </div>
+  </div>
+
+  <div class="feature info-obat">
+    <div class="icon-3d info-icon">
+      💊
+    </div>
+    <div class="feature-text">
+      <small>02 — INFO OBAT</small>
+      <h3>Panduan obat di ujung jari</h3>
+      <p>Informasi obat lengkap dan sederhana agar mudah dipahami semua usia.</p>
+    </div>
+  </div>
+
+  <div class="feature riwayat">
+    <div class="icon-3d chart-icon">
+      📊
+    </div>
+    <div class="feature-text">
+      <small>03 — RIWAYAT</small>
+      <h3>Pantau kemajuan setiap hari</h3>
+      <p>Lihat progres kepatuhan obat secara realtime dengan tampilan sederhana.</p>
+    </div>
+  </div>
+
+  <div class="feature rutinitas">
+    <div class="icon-3d heart-icon">
+      ❤️
+    </div>
+    <div class="feature-text">
+      <small>04 — RUTINITAS</small>
+      <h3>Bangun kebiasaan sehat</h3>
+      <p>Bantu pengguna menjaga rutinitas sehat setiap hari dengan mudah.</p>
+    </div>
+  </div>
+
+</div>
+
+
+  <!-- FOOTER -->
+  <footer class="footer">
+
+    <div class="footer-container">
+
+      <!-- LEFT -->
+      <div class="footer-brand">
+
+        <div class="footer-logo">
+          <div class="footer-logo-box">💊</div>
+          <span>Pil<span class="green">Time</span></span>
+        </div>
+
+        <p>
+          PilTime membantu lansia dan keluarga
+          menjaga jadwal minum obat agar tetap
+          teratur, tepat waktu, dan lebih sehat
+          setiap hari.
+        </p>
+
+        <div class="footer-socials">
+          <span>🌐</span>
+          <span>📱</span>
+          <span>✉️</span>
+        </div>
+
+      </div>
+
+      <!-- MENU -->
+      <div class="footer-links">
+
+        <div class="footer-column">
+          <h4>Navigasi</h4>
+          <a href="#">Dashboard</a>
+          <a href="#">Tentang</a>
+          <a href="#">Fitur</a>
+          <a href="#">Panduan</a>
+        </div>
+
+        <div class="footer-column">
+          <h4>Fitur</h4>
+          <a href="#">Reminder Obat</a>
+          <a href="#">Info Obat</a>
+          <a href="#">Riwayat Kepatuhan</a>
+          <a href="#">Rutinitas Sehat</a>
+        </div>
+
+        <div class="footer-column">
+          <h4>Kontak</h4>
+          <a href="#">piltime@gmail.com</a>
+          <a href="#">+62 812-3456-7890</a>
+          <a href="#">Medan, Indonesia</a>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="footer-bottom">
+      <p>© 2026 PilTime. Semua Hak Dilindungi.</p>
+      <div class="footer-bottom-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+
+  </footer>
+
 </template>
 
-<script>
-import NavbarView from './NavbarView.vue'
-
-export default {
-  name: 'LandingView',
-  components: { NavbarView }
-}
-</script>
-
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* ============================
+   NAVBAR
+   ============================ */
+.icon-3d {
+  width: 90px;
+  height: 90px;
 
-.landing-page {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background: #f0faf5;
-  color: #0f172a;
-}
-
-/* ─── HERO ─── */
-.hero {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding: 100px 6% 80px;
-  gap: 60px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* orbs */
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  animation: float 8s ease-in-out infinite;
-}
-.orb1 { width: 500px; height: 500px; background: rgba(22,163,74,0.12); top: -100px; left: -100px; animation-delay: 0s; }
-.orb2 { width: 400px; height: 400px; background: rgba(37,99,235,0.10); bottom: -80px; right: -80px; animation-delay: 3s; }
-.orb3 { width: 300px; height: 300px; background: rgba(13,148,136,0.08); top: 40%; left: 40%; animation-delay: 1.5s; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-20px) scale(1.05); }
-}
-
-/* hero left */
-.hero-left { position: relative; z-index: 2; }
-
-h1 {
-  font-size: 56px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: #0f172a;
-  margin-bottom: 22px;
-  letter-spacing: -1px;
-  animation: fadeUp 0.6s 0.2s ease both;
-}
-h1 .brand {
-  background: linear-gradient(135deg, #16a34a, #2563eb);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.hero-desc {
-  font-size: 17px;
-  line-height: 1.85;
-  color: #475569;
-  margin-bottom: 36px;
-  max-width: 480px;
-  animation: fadeUp 0.6s 0.3s ease both;
-}
-
-.hero-btns {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  animation: fadeUp 0.6s 0.4s ease both;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  color: white;
-  text-decoration: none;
-  padding: 15px 30px;
-  border-radius: 50px;
-  font-size: 15px;
-  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: .3s;
-  box-shadow: 0 8px 24px rgba(22,163,74,0.35);
-}
-.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(22,163,74,0.45); }
-
-.btn-secondary {
-  background: white;
-  color: #0f172a;
-  text-decoration: none;
-  padding: 15px 30px;
-  border-radius: 50px;
-  font-size: 15px;
-  font-weight: 600;
-  border: 1.5px solid rgba(0,0,0,0.1);
-  transition: .3s;
-}
-.btn-secondary:hover { border-color: #16a34a; color: #16a34a; transform: translateY(-3px); }
-
-/* hero right — phone */
-.hero-right {
-  display: flex;
   justify-content: center;
-  align-items: center;
-  position: relative;
-  z-index: 2;
-  animation: fadeLeft 0.8s 0.3s ease both;
+
+  font-size: 34px;
+
+  border-radius: 24px;
+
+  background: linear-gradient(145deg, #ffffff, #eef8f3);
+
+  box-shadow:
+    0 25px 60px rgba(0,0,0,0.12),
+    inset 0 2px 10px rgba(255,255,255,0.9);
+
+  transform: perspective(800px) rotateX(10deg) rotateY(-10deg);
+
+  transition: all 0.4s ease;
 }
 
-.phone-wrap {
-  position: relative;
-  animation: phoneBob 6s ease-in-out infinite;
-}
-@keyframes phoneBob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50%       { transform: translateY(-14px) rotate(-2deg); }
+/* hover premium */
+.feature:hover .icon-3d {
+  transform: perspective(800px) rotateX(0deg) rotateY(0deg)
+    translateY(-10px) scale(1.08);
+
+  box-shadow: 0 40px 90px rgba(0,0,0,0.18);
 }
 
-.phone-glow {
-  position: absolute;
-  width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(22,163,74,0.2) 0%, transparent 70%);
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  pointer-events: none;
-}
+/* warna tiap icon */
+.reminder-icon { color: #ff4d6d; }
+.info-icon     { color: #1D9E75; }
+.chart-icon    { color: #3b82f6; }
+.heart-icon    { color: #ef4444; }
 
-/* floating badges */
-.pill-float {
-  position: absolute;
-  background: white;
-  border-radius: 16px;
-  padding: 10px 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  animation: floatPill 5s ease-in-out infinite;
-}
-.pill-float .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.pf1 { top: 10%; right: -20px; animation-delay: 0s;   color: #16a34a; } .pf1 .dot { background: #16a34a; }
-.pf2 { bottom: 22%; left: -30px; animation-delay: 1.5s; color: #2563eb; } .pf2 .dot { background: #2563eb; }
-.pf3 { top: 50%; right: -40px; animation-delay: 3s;   color: #0d9488; } .pf3 .dot { background: #0d9488; }
-@keyframes floatPill {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-8px); }
-}
-
-/* phone frame */
-.phone {
-  width: 270px; height: 560px;
-  background: #0f172a;
-  border-radius: 44px;
-  padding: 12px;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.06);
-  position: relative;
-}
-.phone::before {
-  content: '';
-  position: absolute;
-  top: 18px; left: 50%;
-  transform: translateX(-50%);
-  width: 90px; height: 28px;
-  background: #0f172a;
-  border-radius: 20px;
-  z-index: 10;
-}
-
-.screen {
-  width: 100%; height: 100%;
-  border-radius: 34px;
-  background: linear-gradient(160deg, #f0faf5 0%, #e0f2fe 100%);
-  overflow: hidden;
-  position: relative;
-}
-
-.screen-header {
-  padding: 42px 18px 14px;
+.navbar {
+  width: 100%;
+  height: 100px;
+  padding: 0 8%;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid #edf1ef;
+  transition: all 0.3s ease;
 }
-.screen-greeting { font-size: 11px; color: #64748b; }
-.screen-name     { font-size: 14px; font-weight: 700; color: #0f172a; }
-.screen-bell     { width: 34px; height: 34px; border-radius: 50%; background: rgba(22,163,74,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px; }
 
-.comply-card {
-  margin: 0 14px 14px;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  border-radius: 20px;
-  padding: 16px;
-  color: white;
-  position: relative;
-  overflow: hidden;
-}
-.comply-card::after { content: ''; position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%; top: -30px; right: -20px; }
-.comply-label { font-size: 10px; font-weight: 600; opacity: .8; text-transform: uppercase; letter-spacing: .5px; }
-.comply-val   { font-size: 22px; font-weight: 800; margin: 4px 0; }
-.comply-bar   { height: 6px; background: rgba(255,255,255,0.25); border-radius: 10px; margin: 8px 0 6px; }
-.comply-fill  { height: 100%; width: 78%; background: white; border-radius: 10px; animation: grow 1.5s 0.8s ease both; transform-origin: left; }
-@keyframes grow { from { width: 0; } to { width: 78%; } }
-.comply-sub { font-size: 10px; opacity: .8; }
-
-.menu-label { padding: 10px 18px 6px; font-size: 12px; font-weight: 700; color: #0f172a; }
-.menu-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px; }
-.menu-item  { background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.menu-icon  { font-size: 22px; margin-bottom: 8px; }
-.menu-name  { font-size: 11px; font-weight: 700; color: #0f172a; }
-.menu-sub   { font-size: 10px; color: #64748b; }
-.menu-sub.green  { color: #16a34a; }
-.menu-sub.amber  { color: #d97706; }
-.menu-sub.blue   { color: #2563eb; }
-.menu-sub.purple { color: #7c3aed; }
-
-.bottom-nav {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: white;
-  border-top: 1px solid rgba(0,0,0,0.06);
+.logo {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  padding: 10px 0 14px;
-  border-radius: 0 0 34px 34px;
+  gap: 14px;
+  font-size: 30px;
+  font-weight: 900;
 }
-.bnav-item        { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; color: #94a3b8; }
-.bnav-item.active { color: #16a34a; }
-.bnav-icon        { font-size: 20px; }
-.bnav-plus        { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #16a34a, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; box-shadow: 0 4px 14px rgba(22,163,74,0.4); margin-top: -12px; }
 
-/* ─── FEATURES ─── */
-.features    { padding: 100px 6%; background: white; }
-.section-head { text-align: center; margin-bottom: 60px; }
-.section-tag  { display: inline-block; background: rgba(22,163,74,0.1); color: #16a34a; padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
-.section-title { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-
-.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
-.feat-card {
-  background: #f8fafc;
-  border-radius: 24px;
-  padding: 32px;
-  transition: .3s;
-  border: 1.5px solid transparent;
-}
-.feat-card:hover { background: white; border-color: rgba(22,163,74,0.2); transform: translateY(-6px); box-shadow: 0 16px 40px rgba(22,163,74,0.1); }
-
-.feat-icon       { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 18px; }
-.feat-icon.g     { background: rgba(22,163,74,0.12); }
-.feat-icon.b     { background: rgba(37,99,235,0.10); }
-.feat-icon.t     { background: rgba(13,148,136,0.10); }
-.feat-icon.o     { background: rgba(234,179,8,0.12); }
-.feat-title      { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
-.feat-desc       { font-size: 14px; line-height: 1.75; color: #475569; }
-
-/* ─── CTA ─── */
-.cta-section {
-  margin: 0 4% 80px;
-  background: linear-gradient(135deg, #0f172a 0%, #14532d 50%, #1e3a8a 100%);
-  border-radius: 32px;
-  padding: 80px 6%;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.cta-section::before {
-  content: ''; position: absolute;
-  width: 500px; height: 500px;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 50%; top: -200px; left: -150px;
-}
-.cta-section::after {
-  content: ''; position: absolute;
-  width: 400px; height: 400px;
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 50%; bottom: -180px; right: -100px;
-}
-.cta-inner { position: relative; z-index: 2; }
-
-.cta-eyebrow {
-  display: inline-flex;
+.logo-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #e9faf3;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.8);
-  padding: 8px 18px;
-  border-radius: 50px;
-  font-size: 13px;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.green {
+  color: #1D9E75;
+}
+
+.nav-links {
+  display: flex;
+  gap: 50px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-size: 18px;
   font-weight: 600;
+  position: relative;
+  transition: 0.3s;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background: #1D9E75;
+  transition: 0.3s;
+}
+
+.nav-links a:hover { color: #1D9E75; }
+.nav-links a:hover::after { width: 100%; }
+
+.login-btn {
+  border: none;
+  background: #1D9E75;
+  color: white;
+  padding: 16px 34px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(29, 158, 117, 0.25);
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(29, 158, 117, 0.35);
+}
+
+
+/* ============================
+   HERO / LANDING
+   ============================ */
+.landing {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  /* Hapus padding atas agar menempel ke navbar */
+  padding: 0 8% 60px; 
+  min-height: auto; /* Hilangkan calc agar tidak memaksa tinggi */
+}
+
+/* LEFT */
+.hero-left {
+  flex: 1;
+  animation: floatHero 6s ease-in-out infinite;
+}
+
+.hero-left > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s ease forwards;
+}
+
+.badge          { animation-delay: 0.1s; }
+.hero-left h1   { animation-delay: 0.2s; }
+.hero-left p    { animation-delay: 0.3s; }
+.hero-stats     { animation-delay: 0.4s; }
+.hero-buttons   { animation-delay: 0.5s; }
+
+.badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #e9faf3, #dff4ea);
+  color: #1D9E75;
+  padding: 10px 18px;
+  border-radius: 30px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(29, 158, 117, 0.1);
+}
+
+.hero-left h1 {
+  font-size: 72px;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: -1px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.8s ease forwards, glowText 3s ease-in-out infinite;
+}
+
+.hero-left p {
+  max-width: 520px;
+  line-height: 1.8;
+  color: #5f736b;
+  font-size: 18px;
   margin-bottom: 28px;
 }
-.cta-eyebrow-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.8); } }
 
-.cta-title {
-  font-size: 48px;
-  font-weight: 800;
+/* STATS */
+.hero-stats {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: white;
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  min-width: 120px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.stat:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+
+.stat h3 {
+  font-size: 20px;
+  color: #1D9E75;
+  margin-bottom: 4px;
+}
+
+.stat span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* BUTTONS */
+.hero-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.primary-btn {
+  background: #1D9E75;
   color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(29, 158, 117, 0.3);
+}
+
+.primary-btn::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: -100%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewX(-20deg);
+  transition: 0.5s;
+}
+
+.primary-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(29, 158, 117, 0.4);
+}
+
+.primary-btn:hover::after { left: 100%; }
+
+.secondary-btn {
+  background: transparent;
+  color: #1D9E75;
+  border: 2px solid #1D9E75;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background: #1D9E75;
+  color: white;
+  transform: translateY(-3px);
+}
+
+/* RIGHT */
+.hero-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+
+/* ============================
+   PHONE MOCKUP
+   ============================ */
+.phone-scene {
+  position: relative;
+  width: 340px;
+  height: 580px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.circle-bg {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  background: linear-gradient(135deg, #eef8f3, #dff4ea);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.phone-wrapper {
+  position: relative;
+  z-index: 2;
+  transform: rotate(6deg);
+  animation: floatPhone 5s ease-in-out infinite;
+}
+
+.phone-shadow {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  filter: blur(40px);
+  transform: translateY(40px) scale(0.9);
+  border-radius: 50px;
+  z-index: -1;
+}
+
+.phone {
+  width: 260px;
+  height: 540px;
+  background: #111827;
+  border-radius: 42px;
+  padding: 10px;
+  position: relative;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+}
+
+.notch {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 24px;
+  background: #020617;
+  border-radius: 30px;
+  z-index: 10;
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background: white;
+  border-radius: 34px;
+  overflow: hidden;
+  padding: 36px 16px 16px;
+  position: relative;
+}
+
+.phone-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
-  letter-spacing: -1px;
+}
+
+.hello {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.username {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.notif {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, #1D9E75, #0F6E56);
+  border-radius: 22px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 15px 35px rgba(29, 158, 117, 0.3);
+}
+
+.hero-label {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 1px;
+}
+
+.hero-value {
+  margin-top: 8px;
+  font-size: 26px;
   line-height: 1.1;
-}
-.cta-title .highlight {
-  background: linear-gradient(135deg, #22c55e, #60a5fa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.cta-desc {
-  font-size: 17px;
-  color: rgba(255,255,255,0.6);
-  max-width: 500px;
-  margin: 0 auto 44px;
-  line-height: 1.85;
+  font-weight: 800;
 }
 
-.cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px; }
-
-.cta-btn-main {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  color: white; text-decoration: none;
-  padding: 17px 36px; border-radius: 50px;
-  font-size: 16px; font-weight: 700;
-  transition: .3s;
-  box-shadow: 0 8px 30px rgba(22,163,74,0.4);
+.hero-line {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  margin: 14px 0;
 }
-.cta-btn-main:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(22,163,74,0.5); }
 
-.cta-btn-ghost {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white; text-decoration: none;
-  padding: 17px 36px; border-radius: 50px;
-  font-size: 16px; font-weight: 600;
-  transition: .3s;
+.hero-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
 }
-.cta-btn-ghost:hover { background: rgba(255,255,255,0.14); transform: translateY(-3px); }
 
-.trust-row   { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
-.trust-item  { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 500; }
-.trust-divider { width: 1px; height: 16px; background: rgba(255,255,255,0.12); }
+.menu-title {
+  margin-top: 18px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
 
-/* ─── ANIMATIONS ─── */
-@keyframes fadeUp   { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeLeft { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 
-/* ─── RESPONSIVE ─── */
-@media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; padding: 100px 5% 60px; text-align: center; }
-  h1 { font-size: 40px; }
-  .hero-desc { margin: 0 auto 36px; }
-  .hero-btns { justify-content: center; }
-  .hero-right { margin-top: 40px; }
-  .pf1, .pf2, .pf3 { display: none; }
-  .section-title { font-size: 30px; }
-  .cta-title { font-size: 32px; }
-  .cta-btns { flex-direction: column; align-items: center; }
+.menu-item {
+  background: white;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.05),
+    inset 0 0 0 1px #f1f5f9;
+  transition: 0.25s ease;
+  cursor: pointer;
+}
+
+.menu-item:hover { transform: translateY(-4px); }
+
+.menu-icon {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.menu-text {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.bottom-nav {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+.nav-item {
+  font-size: 20px;
+  opacity: 0.55;
+}
+
+.nav-item.active { opacity: 1; }
+
+.add-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1D9E75, #0F6E56);
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: -30px;
+  box-shadow: 0 12px 24px rgba(29, 158, 117, 0.35);
+}
+
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 90px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 20px;
+}
+/* =========================
+   ROW LAYOUT (STARTUP PREMIUM ZIGZAG)
+========================= */
+/* =========================
+   ROW LAYOUT (FULL EDGE STYLE)
+========================= */
+.reminder,
+.info-obat,
+.riwayat,
+.rutinitas {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+
+  width: 100%;
+  padding: 60px 8%;
+
+  transition: 0.3s ease;
+}
+
+/* =========================
+   ZIGZAG FULL EDGE
+========================= */
+
+/* KIRI MELEKAT KE KIRI */
+.reminder,
+.riwayat {
+  justify-content: flex-start;
+}
+
+/* KANAN MELEKAT KE KANAN */
+.info-obat,
+.rutinitas {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+}
+
+/* =========================
+   ICON (3D PREMIUM)
+========================= */
+.feature-icon {
+  width: 85px;
+  height: 85px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 32px;
+
+  border-radius: 22px;
+
+  background: linear-gradient(145deg, #ffffff, #f4fbf8);
+
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.10),
+    inset 0 2px 10px rgba(255,255,255,0.9);
+
+  transform: perspective(800px) rotateX(8deg) rotateY(-8deg);
+
+  transition: all 0.4s ease;
+}
+
+/* hover floating */
+.reminder:hover .feature-icon,
+.info-obat:hover .feature-icon,
+.riwayat:hover .feature-icon,
+.rutinitas:hover .feature-icon {
+  transform: perspective(800px) rotateX(0deg) rotateY(0deg)
+    translateY(-10px) scale(1.1);
+  box-shadow: 0 40px 90px rgba(0,0,0,0.18);
+}
+
+/* =========================
+   TEXT
+========================= */
+.feature-text small {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: #1D9E75;
+}
+
+.feature-text h3 {
+  font-size: 26px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 8px 0;
+}
+
+.feature-text p {
+  font-size: 15.5px;
+  color: #5f736b;
+  line-height: 1.8;
+  max-width: 520px;
+}
+
+/* hover text */
+.reminder:hover h3,
+.info-obat:hover h3,
+.riwayat:hover h3,
+.rutinitas:hover h3 {
+  color: #1D9E75;
+  transition: 0.3s ease;
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 768px) {
+  .reminder,
+  .info-obat,
+  .riwayat,
+  .rutinitas {
+    flex-direction: column !important;
+    text-align: center;
+    padding: 40px 6%;
+    gap: 20px;
+  }
+}
+/* ============================
+   FOOTER
+   ============================ */
+.footer {
+  background: #071d17;
+  color: white;
+  padding-top: 80px;
+}
+
+.footer-container {
+  width: 100%;
+  padding: 0 8% 60px;
+  display: flex;
+  justify-content: space-between;
+  gap: 80px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  flex: 1;
+  min-width: 280px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 24px;
+}
+
+.footer-logo-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.footer-brand p {
+  max-width: 420px;
+  line-height: 1.9;
+  color: #b8d7cd;
+  font-size: 16px;
+}
+
+.footer-socials {
+  display: flex;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.footer-socials span {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.footer-socials span:hover {
+  transform: translateY(-4px);
+  background: #1D9E75;
+}
+
+.footer-links {
+  display: flex;
+  gap: 70px;
+  flex-wrap: wrap;
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-column h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.footer-column a {
+  text-decoration: none;
+  color: #b8d7cd;
+  font-size: 15px;
+  transition: 0.25s;
+}
+
+.footer-column a:hover {
+  color: #1D9E75;
+  transform: translateX(4px);
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px 8%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-bottom p {
+  color: #b8d7cd;
+  font-size: 14px;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-bottom-links a {
+  text-decoration: none;
+  color: #b8d7cd;
+  font-size: 14px;
+  transition: 0.25s;
+}
+
+.footer-bottom-links a:hover { color: #1D9E75; }
+
+
+/* ============================
+   ANIMATIONS
+   ============================ */
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glowText {
+  0%, 100% { text-shadow: 0 0 0 rgba(29, 158, 117, 0); }
+  50%       { text-shadow: 0 10px 40px rgba(29, 158, 117, 0.25); }
+}
+
+@keyframes floatHero {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes floatPhone {
+  0%, 100% { transform: rotate(6deg) translateY(0); }
+  50%       { transform: rotate(6deg) translateY(-14px); }
+}
+
+
+/* ============================
+   RESPONSIVE
+   ============================ */
+@media (max-width: 1024px) {
+  .landing {
+    flex-direction: column;
+    padding: 60px 6%;
+    text-align: center;
+  }
+
+  .hero-left { animation: none; }
+  .hero-right { justify-content: center; }
+  .hero-stats { justify-content: center; }
+  .hero-buttons { justify-content: center; }
+  .hero-left p { margin: 0 auto 28px; }
+
+  .hero-left h1 { font-size: 52px; }
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+
+  .hero-left h1 { font-size: 40px; }
+
+  .feature-card,
+  .feature-card.reverse {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .feature-card p { max-width: 100%; }
+
+  .footer-container {
+    flex-direction: column;
+    gap: 50px;
+  }
+
+  .footer-links { gap: 40px; }
+
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>

@@ -1,8 +1,14 @@
 <template>
   <div class="about-page">
 
+    <div class="nav-links">
+  <router-link to="/dashboard">Dashboard</router-link>
+  <router-link to="/tentang">Tentang</router-link> <router-link to="/install">Install</router-link>
+  <router-link to="/panduan">Panduan</router-link>
+</div>
     <!-- NAVBAR -->
     <NavbarView />
+
 
     <!-- HERO SECTION -->
     <section class="hero">
