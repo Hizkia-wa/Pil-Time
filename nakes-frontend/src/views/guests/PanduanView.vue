@@ -109,39 +109,79 @@
 
     </section>
 
-    <!-- PDF SECTION -->
-    <section class="pdf-section">
+<!-- PDF SECTION -->
+<section class="pdf-section">
 
-      <div class="section-title">
-        <span>DOKUMENTASI PDF</span>
-        <h2>Langkah-Langkah Penggunaan</h2>
-      </div>
+  <div class="section-title">
+    <span>DOKUMENTASI PDF</span>
+    <h2>Panduan Penggunaan Aplikasi</h2>
+  </div>
 
-      <div class="pdf-container">
+  <!-- PANDUAN NAKES -->
+  <div class="pdf-box">
 
-        <!-- PDF VIEW -->
-        <iframe
-          src="/pdf/panduan-piltime.pdf"
-          width="100%"
-          height="800px"
-          class="pdf-viewer">
-        </iframe>
+    <h3 class="pdf-title">
+      👨‍⚕️ Panduan Tenaga Kesehatan
+    </h3>
 
-      </div>
+    <div class="pdf-container">
 
-      <div class="download-box">
+      <iframe
+        :src="panduanNakes"
+        width="100%"
+        height="800px"
+        class="pdf-viewer">
+      </iframe>
 
-        <a
-          href="/pdf/panduan-piltime.pdf"
-          download
-          class="download-btn"
-        >
-          📥 Download PDF Panduan
-        </a>
+    </div>
 
-      </div>
+    <div class="download-box">
 
-    </section>
+      <a
+        :href="panduanNakes"
+        download
+        class="download-btn"
+      >
+        📥 Download Panduan Nakes
+      </a>
+
+    </div>
+
+  </div>
+
+  <!-- PANDUAN PASIEN -->
+  <div class="pdf-box">
+
+    <h3 class="pdf-title">
+      🧑‍🤝‍🧑 Panduan Pasien
+    </h3>
+
+    <div class="pdf-container">
+
+      <iframe
+        :src="panduanPasien"
+        width="100%"
+        height="800px"
+        class="pdf-viewer">
+      </iframe>
+
+    </div>
+
+    <div class="download-box">
+
+      <a
+        :href="panduanPasien"
+        download
+        class="download-btn"
+      >
+        📥 Download Panduan Pasien
+      </a>
+
+    </div>
+
+  </div>
+
+</section>
 
   </div>
 </template>
@@ -149,11 +189,22 @@
 <script>
 import NavbarView from './NavbarView.vue'
 
+// IMPORT PDF
+import panduanNakes from './../../assets/pdf/panduannakes.pdf'
+import panduanPasien from './../../assets/pdf/panduanpasien.pdf'
+
 export default {
   name: "PanduanView",
 
   components: {
     NavbarView
+  },
+
+  data() {
+    return {
+      panduanNakes,
+      panduanPasien
+    }
   }
 }
 </script>
@@ -327,6 +378,16 @@ export default {
   padding: 20px;
 
   box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+}
+
+.pdf-box{
+  margin-bottom: 80px;
+}
+
+.pdf-title{
+  font-size: 28px;
+  margin-bottom: 25px;
+  color: #1e293b;
 }
 
 .pdf-viewer{
