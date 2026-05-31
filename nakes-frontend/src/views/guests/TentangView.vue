@@ -292,11 +292,14 @@
 
     </section>
 
+    <FooterView />
+
   </div>
 </template>
 
 <script>
 import NavbarView from './NavbarView.vue'
+import FooterView from './FooterView.vue'
 
 import developer1 from './../../assets/images/developer1.jpeg'
 import developer2 from './../../assets/images/developer2.jpeg'
@@ -308,7 +311,8 @@ export default {
   name: "AboutPage",
 
   components: {
-    NavbarView
+    NavbarView,
+    FooterView
   },
 
   data() {

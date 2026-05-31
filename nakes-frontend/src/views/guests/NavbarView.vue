@@ -1,44 +1,44 @@
 <template>
   <nav class="navbar">
-    
+
+    <!-- BACKGROUND BLUR -->
+    <div class="navbar-glow"></div>
+
     <!-- LOGO -->
     <div class="logo-section">
-      <div
-    class="logo-icon"
-    style="
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 3px solid white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      background: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    "
-  >
-    <img
-      src="./../../assets/images/logo.jpeg"
-      alt="Logo"
-      style="
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      "
-    />
-  </div>
 
-      <h1 class="logo-text">
-        Pil Time
-      </h1>
+      <div class="logo-wrapper">
+
+        <div class="logo-ring"></div>
+
+        <div class="logo-icon">
+          <img
+            src="./../../assets/images/logo.jpeg"
+            alt="Logo"
+          />
+        </div>
+
+      </div>
+
+      <div class="logo-content">
+
+        <h1 class="logo-text">
+          Pil Time
+        </h1>
+
+        <span class="logo-subtitle">
+          Smart Medicine Reminder
+        </span>
+
+      </div>
+
     </div>
 
     <!-- MENU -->
     <ul class="nav-links">
 
       <li>
-        <a href="/">
+        <a href="/" class="active-link">
           Dashboard
         </a>
       </li>
@@ -69,12 +69,16 @@
 
     </ul>
 
-    <!-- MOBILE MENU -->
+    <!-- MOBILE TOGGLE -->
     <div class="menu-toggle" @click="toggleMenu">
-      ☰
+
+      <span></span>
+      <span></span>
+      <span></span>
+
     </div>
 
-    <!-- MOBILE NAV -->
+    <!-- MOBILE MENU -->
     <div class="mobile-menu" :class="{ active: isOpen }">
 
       <a href="/">Dashboard</a>
@@ -93,7 +97,7 @@
 
 <script>
 export default {
-  name: "Navbar",
+  name: "NavbarView",
 
   data() {
     return {
@@ -111,184 +115,391 @@ export default {
 
 <style scoped>
 
-/* RESET */
+/* =========================
+   RESET
+========================= */
+
 *{
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* NAVBAR */
+/* =========================
+   NAVBAR
+========================= */
+
 .navbar{
   width: 100%;
-  height: 85px;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(10px);
+  height: 90px;
 
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 0 8%;
   position: fixed;
   top: 0;
   left: 0;
   z-index: 999;
 
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  padding: 0 8%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: rgba(255,255,255,0.75);
+
+  backdrop-filter: blur(18px);
+
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+
+  box-shadow:
+    0 8px 30px rgba(15,23,42,0.06);
+
+  overflow: hidden;
 }
 
-/* LOGO */
+/* =========================
+   GLOW EFFECT
+========================= */
+
+.navbar-glow{
+  position: absolute;
+
+  width: 300px;
+  height: 300px;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(29,158,117,0.15),
+      transparent 70%
+    );
+
+  top: -120px;
+  left: -100px;
+
+  z-index: -1;
+}
+
+/* =========================
+   LOGO
+========================= */
+
 .logo-section{
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+}
+
+.logo-wrapper{
+  position: relative;
+}
+
+.logo-ring{
+  position: absolute;
+
+  inset: -5px;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1D9E75,
+      #34d399,
+      #0F766E
+    );
+
+  animation: rotateRing 6s linear infinite;
 }
 
 .logo-icon{
-  width: 45px;
-  height: 45px;
+  width: 62px;
+  height: 62px;
 
-  border-radius: 14px;
+  border-radius: 50%;
 
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  overflow: hidden;
 
+  position: relative;
+  z-index: 2;
+
+  border: 3px solid white;
+
+  background: white;
+
+  box-shadow:
+    0 10px 25px rgba(29,158,117,0.25);
+}
+
+.logo-icon img{
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.logo-content{
   display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: white;
-  font-size: 22px;
-
-  box-shadow: 0 5px 15px rgba(37,99,235,0.3);
+  flex-direction: column;
 }
 
 .logo-text{
   font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+
+  color: #0f172a;
+
+  line-height: 1;
 }
 
-/* MENU */
+.logo-subtitle{
+  font-size: 12px;
+  font-weight: 600;
+
+  color: #64748b;
+
+  margin-top: 4px;
+}
+
+/* =========================
+   NAVIGATION
+========================= */
+
 .nav-links{
   display: flex;
   align-items: center;
-  gap: 35px;
+  gap: 38px;
+
   list-style: none;
 }
 
 .nav-links a{
   text-decoration: none;
+
   color: #334155;
-  font-weight: 500;
-  font-size: 16px;
-  transition: 0.3s;
+
+  font-size: 15px;
+  font-weight: 700;
+
   position: relative;
+
+  transition: 0.3s ease;
 }
 
 .nav-links a:hover{
-  color: #2563eb;
+  color: #1D9E75;
 }
 
-/* UNDERLINE EFFECT */
+/* UNDERLINE */
+
 .nav-links a::after{
   content: "";
+
   position: absolute;
+
   left: 0;
-  bottom: -6px;
+  bottom: -8px;
 
   width: 0%;
-  height: 2px;
+  height: 3px;
 
-  background: #2563eb;
-  transition: 0.3s;
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #1D9E75,
+      #34d399
+    );
+
+  transition: 0.35s ease;
 }
 
-.nav-links a:hover::after{
+.nav-links a:hover::after,
+.active-link::after{
   width: 100%;
 }
 
-/* LOGIN BUTTON */
+/* =========================
+   LOGIN BUTTON
+========================= */
+
 .login-btn{
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  padding: 14px 30px;
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1D9E75,
+      #0F766E
+    );
+
   color: white !important;
 
-  padding: 12px 28px;
-  border-radius: 50px;
+  box-shadow:
+    0 12px 30px rgba(29,158,117,0.28);
 
-  transition: 0.3s;
+  transition: 0.35s ease;
 }
 
 .login-btn:hover{
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(37,99,235,0.25);
+  transform:
+    translateY(-4px)
+    scale(1.03);
+
+  box-shadow:
+    0 18px 35px rgba(29,158,117,0.35);
 }
 
 .login-btn::after{
   display: none;
 }
 
-/* MOBILE MENU */
+/* =========================
+   MENU TOGGLE
+========================= */
+
 .menu-toggle{
   display: none;
-  font-size: 30px;
+
+  flex-direction: column;
+  gap: 5px;
+
   cursor: pointer;
-  color: #1e293b;
 }
 
-/* MOBILE NAV */
+.menu-toggle span{
+  width: 28px;
+  height: 3px;
+
+  border-radius: 999px;
+
+  background: #0f172a;
+
+  transition: 0.3s;
+}
+
+/* =========================
+   MOBILE MENU
+========================= */
+
 .mobile-menu{
   position: absolute;
-  top: 85px;
+
+  top: 90px;
   left: 0;
 
   width: 100%;
-  background: white;
+
+  background: rgba(255,255,255,0.96);
+
+  backdrop-filter: blur(18px);
 
   display: flex;
   flex-direction: column;
 
-  padding: 20px;
-
   gap: 20px;
 
-  transform: translateY(-200%);
-  transition: 0.4s;
+  padding: 28px;
 
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
+  transform: translateY(-150%);
+  opacity: 0;
 
-.mobile-menu a{
-  text-decoration: none;
-  color: #334155;
-  font-size: 17px;
-  font-weight: 500;
+  transition: 0.4s ease;
+
+  box-shadow:
+    0 20px 40px rgba(0,0,0,0.08);
 }
 
 .mobile-menu.active{
   transform: translateY(0%);
+  opacity: 1;
+}
+
+.mobile-menu a{
+  text-decoration: none;
+
+  color: #334155;
+
+  font-size: 17px;
+  font-weight: 700;
+
+  transition: 0.3s;
+}
+
+.mobile-menu a:hover{
+  color: #1D9E75;
 }
 
 .mobile-login{
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background:
+    linear-gradient(
+      135deg,
+      #1D9E75,
+      #0F766E
+    );
+
   color: white !important;
 
   text-align: center;
 
-  padding: 14px;
-  border-radius: 15px;
+  padding: 15px;
+
+  border-radius: 18px;
+
+  margin-top: 10px;
 }
 
-/* RESPONSIVE */
-@media(max-width: 900px){
+/* =========================
+   ANIMATION
+========================= */
+
+@keyframes rotateRing{
+
+  0%{
+    transform: rotate(0deg);
+  }
+
+  100%{
+    transform: rotate(360deg);
+  }
+
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width: 950px){
 
   .nav-links{
     display: none;
   }
 
   .menu-toggle{
-    display: block;
+    display: flex;
+  }
+
+}
+
+@media(max-width: 768px){
+
+  .navbar{
+    padding: 0 5%;
+  }
+
+  .logo-text{
+    font-size: 22px;
+  }
+
+  .logo-subtitle{
+    font-size: 10px;
+  }
+
+  .logo-icon{
+    width: 55px;
+    height: 55px;
   }
 
 }

@@ -183,11 +183,14 @@
 
 </section>
 
+    <FooterView />
+
   </div>
 </template>
 
 <script>
 import NavbarView from './NavbarView.vue'
+import FooterView from './FooterView.vue'
 
 // IMPORT PDF
 import panduanNakes from './../../assets/pdf/panduannakes.pdf'
@@ -197,7 +200,8 @@ export default {
   name: "PanduanView",
 
   components: {
-    NavbarView
+    NavbarView,
+    FooterView
   },
 
   data() {

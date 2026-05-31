@@ -210,6 +210,8 @@
 
     </section>
 
+    <FooterView />
+
   </div>
 
 </template>
@@ -217,12 +219,14 @@
 <script>
 
 import NavbarView from './NavbarView.vue'
+import FooterView from './FooterView.vue'
 
 export default {
   name: "InstallView",
 
   components: {
-    NavbarView
+    NavbarView,
+    FooterView
   }
 }
 
