@@ -44,6 +44,7 @@ func InitPostgres() *gorm.DB {
 		&domain.TrackingRutinitas{}, // <--- Tambahan
 		&domain.TrackingJadwal{},    // <--- Tambahan
 		&domain.RiwayatObat{},       // <--- Tambahan
+		&domain.WaWarning{},         // <--- Tambahan
 	); err != nil {
 		panic("Gagal auto-migrate: " + err.Error())
 	}

@@ -41,9 +41,10 @@ type RegisterPasienRequest struct {
 	NIK          string `json:"nik" binding:"required"`
 	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // YYYY-MM-DD
 	TempatLahir  string `json:"tempat_lahir"`
-	Telepon      string `json:"telepon"`
-	JenisKelamin string `json:"jenis_kelamin"`
-	Alamat       string `json:"alamat"`
+	Telepon             string `json:"telepon"`
+	NoTeleponPendamping string `json:"no_telepon_pendamping"`
+	JenisKelamin        string `json:"jenis_kelamin"`
+	Alamat              string `json:"alamat"`
 }
 
 type RegisterPasienResponse struct {

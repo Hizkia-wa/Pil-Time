@@ -9,6 +9,7 @@ type PasienResponseDTO struct {
 	TempatLahir  string `json:"tempat_lahir,omitempty"`
 	Alamat       string `json:"alamat,omitempty"`
 	JenisKelamin string `json:"jenis_kelamin,omitempty"`
-	NoTelepon    string `json:"no_telepon,omitempty"`
-	JumlahObat   int    `json:"jumlah_obat"` // Count of active medicines
+	NoTelepon           string `json:"no_telepon,omitempty"`
+	NoTeleponPendamping string `json:"no_telepon_pendamping,omitempty"`
+	JumlahObat          int    `json:"jumlah_obat"` // Count of active medicines
 }

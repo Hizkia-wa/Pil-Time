@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../services/auth_service.dart';
-import '../../services/notification_service.dart';
-import '../../services/notification_storage_service.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
 import '../../bloc/profile/profile_state.dart';
@@ -30,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _emailCtrl = TextEditingController();
   final _alamatCtrl = TextEditingController();
   final _noTeleponCtrl = TextEditingController();
+  final _noTeleponPendampingCtrl = TextEditingController();
   final _jenisKelaminCtrl = TextEditingController();
   final _tempatLahirCtrl = TextEditingController();
   final _tanggalLahirCtrl = TextEditingController();
@@ -40,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailCtrl.dispose();
     _alamatCtrl.dispose();
     _noTeleponCtrl.dispose();
+    _noTeleponPendampingCtrl.dispose();
     _jenisKelaminCtrl.dispose();
     _tempatLahirCtrl.dispose();
     _tanggalLahirCtrl.dispose();
@@ -493,6 +493,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     _emailCtrl.text = _profileData?['email'] ?? '';
                                     _alamatCtrl.text = _profileData?['alamat'] ?? '';
                                     _noTeleponCtrl.text = _profileData?['no_telepon'] ?? '';
+                                    _noTeleponPendampingCtrl.text = _profileData?['no_telepon_pendamping'] ?? '';
                                     _jenisKelaminCtrl.text = _profileData?['jenis_kelamin'] ?? 'Laki-laki';
                                     _tempatLahirCtrl.text = _profileData?['tempat_lahir'] ?? '';
                                     _tanggalLahirCtrl.text = _profileData?['tanggal_lahir'] ?? '';
@@ -523,6 +524,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
                                   _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
                                   _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
+                                  _buildInfoItem("No. Telepon Pendamping (WA)", _profileData?['no_telepon_pendamping']),
                                 ],
                               ),
                             ),
@@ -549,6 +551,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _buildEditableField("Tempat Lahir", _tempatLahirCtrl),
                                   _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl),
                                   _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone),
+                                  _buildEditableField("No. Telepon Pendamping (WA)", _noTeleponPendampingCtrl, keyboardType: TextInputType.phone),
                                   const SizedBox(height: 24),
                                   Row(
                                     children: [
@@ -627,100 +630,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        dividerColor: Colors.transparent,
-                        splashColor: Colors.transparent,
-                        highlightColor: Colors.transparent,
-                      ),
-                      child: ExpansionTile(
-                        leading: const Icon(
-                          Icons.science_rounded,
-                          color: emerald,
-                          size: 24,
-                        ),
-                        title: const Text(
-                          "Uji Coba & Diagnostik",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: Color(0xFF0F172A),
-                            fontFamily: 'Roboto',
-                          ),
-                        ),
-                        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        children: [
-                          const Text(
-                            "Gunakan tombol di bawah untuk menguji apakah notifikasi pengingat dan suara alarm dapat bekerja dengan baik di HP Anda.",
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: Color(0xFF64748B),
-                              height: 1.4,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          
-                          // Button 1 - Tes Notifikasi
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE8F8F1),
-                              foregroundColor: emerald,
-                              elevation: 0,
-                              minimumSize: const Size(double.infinity, 48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Color(0xFFD1F2E2), width: 1),
-                              ),
-                            ),
-                            onPressed: _triggerTestReminder,
-                            icon: const Icon(Icons.notifications_active_rounded, size: 18),
-                            label: const Text(
-                              "Tes Notifikasi Pengingat",
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          
-                          // Button 2 - Tes Alarm
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFEFF6FF),
-                              foregroundColor: const Color(0xFF1E40AF),
-                              elevation: 0,
-                              minimumSize: const Size(double.infinity, 48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Color(0xFFDBEAFE), width: 1),
-                              ),
-                            ),
-                            onPressed: _triggerTestAlarm,
-                            icon: const Icon(Icons.alarm_rounded, size: 18),
-                            label: const Text(
-                              "Tes Alarm Berdering",
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Container(
-                    decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: const Color(0xFFFEE2E2), width: 1.5),
@@ -761,93 +670,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _triggerTestReminder() async {
-    try {
-      final now = DateTime.now();
-      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      
-      // Simpan ke storage secara persisten agar langsung muncul di screen notifikasi
-      await NotificationStorageService.instance.saveFcmNotification(
-        LocalFcmNotification(
-          id: 'test_reminder_${now.millisecondsSinceEpoch}',
-          title: 'Paracetamol (Uji Coba)',
-          desc: 'Siapkan obat ini. Waktu minum segera tiba.',
-          time: timeStr,
-          type: 'mendatang',
-          jadwalId: 99999,
-          aturan: '1 Tablet, Sesudah Makan',
-        ),
-      );
 
-      await NotificationService.instance.showImmediateNotification(
-        title: '🔔 Siapkan Obat: Paracetamol (Uji Coba)',
-        body: 'Siapkan obat ini. Waktu minum segera tiba.',
-        payload: 'reminder:99999:Paracetamol (Uji Coba)',
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '🔔 Notifikasi pengingat berhasil dikirim secara instan!',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF15BE77),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating),
-      );
-    }
-  }
-
-  Future<void> _triggerTestAlarm() async {
-    try {
-      final now = DateTime.now();
-      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-      // Simpan ke storage secara persisten agar langsung muncul di screen notifikasi
-      await NotificationStorageService.instance.saveFcmNotification(
-        LocalFcmNotification(
-          id: 'test_alarm_${now.millisecondsSinceEpoch}',
-          title: 'Paracetamol (Alarm)',
-          desc: 'Anda melewatkan dosis ini. Catat alasan atau minum sekarang jika masih diperlukan.',
-          time: timeStr,
-          type: 'terlewat',
-          jadwalId: 99999,
-          aturan: '1 Tablet, Sesudah Makan',
-        ),
-      );
-
-      // 1. Tampilkan notifikasi lokal instan (dinonaktifkan agar tidak ada notif biasa yang muncul saat alarm berdering)
-      // await NotificationService.instance.showImmediateNotification(
-      //   title: '🧪 [TEST] Pil Time — Alarm Berdering!',
-      //   body: '💊 Paracetamol (Alarm) — Layar alarm segera terbuka.',
-      //   payload: 'test:Paracetamol (Alarm)',
-      // );
-      // 2. Buka layar alarm berdering langsung secara instan
-      NotificationService.instance.showAlarmScreen('test:Paracetamol (Alarm)');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating),
-      );
-    }
-  }
 
   void _saveProfileChanges() {
     if (!_formKey.currentState!.validate()) return;
@@ -858,6 +681,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'email': _emailCtrl.text.trim(),
       'alamat': _alamatCtrl.text.trim(),
       'no_telepon': _noTeleponCtrl.text.trim(),
+      'no_telepon_pendamping': _noTeleponPendampingCtrl.text.trim(),
       'jenis_kelamin': _jenisKelaminCtrl.text.trim(),
       'tempat_lahir': _tempatLahirCtrl.text.trim(),
       'tanggal_lahir': _tanggalLahirCtrl.text.trim(),

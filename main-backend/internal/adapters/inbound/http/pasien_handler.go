@@ -3,6 +3,7 @@ package http
 import (
 	"backend/internal/dto"
 	"backend/internal/usecase"
+	"backend/pkg/whatsapp"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -167,8 +168,9 @@ func (h *PasienHandler) GetAll(c *gin.Context) {
 			TempatLahir:  p.TempatLahir,
 			Alamat:       p.Alamat,
 			JenisKelamin: p.JenisKelamin,
-			NoTelepon:    p.NoTelepon,
-			JumlahObat:   jumlahObat,
+			NoTelepon:           p.NoTelepon,
+			NoTeleponPendamping: p.NoTeleponPendamping,
+			JumlahObat:          jumlahObat,
 		})
 	}
 
@@ -283,5 +285,41 @@ func (h *PasienHandler) UpdateProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Profil berhasil diperbarui",
+	})
+}
+
+// TestWaWarning menangani simulasi pengiriman peringatan WhatsApp ke pendamping
+func (h *PasienHandler) TestWaWarning(c *gin.Context) {
+	pasienID := c.GetInt("pasien_id")
+	if pasienID <= 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "INVALID_PARAMETER",
+			Message: "pasien_id is required",
+		})
+		return
+	}
+
+	profile, err := h.usecase.GetByID(pasienID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "PROFILE_ERROR",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if profile.NoTeleponPendamping == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "MISSING_COMPANION_PHONE",
+			Message: "Nomor WhatsApp pendamping belum diisi. Silakan isi terlebih dahulu di profil Anda.",
+		})
+		return
+	}
+
+	// Panggil simulator WhatsApp
+	whatsapp.SendWarning(profile.NoTeleponPendamping, profile.Nama, "Obat Uji Coba (Vitamin C)", "08:00")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Simulasi peringatan WhatsApp berhasil dikirim ke pendamping!",
 	})
 }

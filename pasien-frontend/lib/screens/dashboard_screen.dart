@@ -1686,13 +1686,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {},
           ),
 
-          // ADD ROUTINE TAB (CENTER PLUS)
+          // ADD MEDICINE TAB (CENTER PLUS)
           _BottomNavCenterButton(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const RutinitasSehatScreen(initialIndex: 1),
+                  builder: (context) => const RutinitasSehatScreen(initialIndex: 0),
                 ),
               );
             },

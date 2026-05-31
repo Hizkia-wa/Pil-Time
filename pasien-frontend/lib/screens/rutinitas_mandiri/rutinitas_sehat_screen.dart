@@ -146,7 +146,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                         ),
                         const SizedBox(width: 4),
                         const Text(
-                          'Rutinitas Sehat',
+                          '',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

@@ -67,6 +67,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         tanggalLahir: event.registerData['tanggal_lahir'] ?? '',
         tempatLahir: event.registerData['tempat_lahir'] ?? '',
         telepon: event.registerData['telepon'] ?? '',
+        noTeleponPendamping: event.registerData['no_telepon_pendamping'] ?? '',
         jenisKelamin: event.registerData['jenis_kelamin'] ?? 'Laki-laki',
         alamat: event.registerData['alamat'] ?? '',
       );

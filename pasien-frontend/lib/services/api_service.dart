@@ -367,4 +367,29 @@ class ApiService {
       return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
     }
   }
+
+  static Future<Map<String, dynamic>> testWaWarning({
+    required int pasienId,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/pasien/profile/test-wa-warning'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return {'success': true, 'message': body['message'] ?? 'Simulasi WhatsApp berhasil dikirim!'};
+      } else {
+        final errorBody = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': errorBody['message'] ?? errorBody['error'] ?? 'Gagal memicu simulasi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+    }
+  }
 }

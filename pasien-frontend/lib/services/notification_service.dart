@@ -644,26 +644,28 @@ class NotificationService {
     required String title,
     required String body,
     String? payload,
+    bool isAlarm = false,
   }) async {
     if (!_initialized) await initialize();
 
-    const androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDesc,
+    final androidDetails = AndroidNotificationDetails(
+      isAlarm ? _channelId : _reminderChannelId,
+      isAlarm ? _channelName : _reminderChannelName,
+      channelDescription: isAlarm ? _channelDesc : _reminderChannelDesc,
       importance: Importance.high,
       priority: Priority.high,
       icon: 'ic_notification',
-      sound: RawResourceAndroidNotificationSound('alarm_voice'),
+      sound: isAlarm ? const RawResourceAndroidNotificationSound('alarm_voice') : null,
+      playSound: true,
     );
 
-    const notifDetails = NotificationDetails(
+    final notifDetails = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
-        sound: 'alarm_voice.mp3',
+        sound: isAlarm ? 'alarm_voice.mp3' : null,
       ),
     );
 

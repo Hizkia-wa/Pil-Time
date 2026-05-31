@@ -12,8 +12,9 @@ type Pasien struct {
 	TempatLahir     string     `gorm:"column:tempat_lahir"`
 	Alamat          string     `gorm:"column:alamat;type:text"`
 	JenisKelamin    string     `gorm:"column:jenis_kelamin"`
-	NoTelepon       string     `gorm:"column:no_telepon"`
-	ResetCode       *string    `gorm:"column:reset_code"`
+	NoTelepon           string     `gorm:"column:no_telepon"`
+	NoTeleponPendamping string     `gorm:"column:no_telepon_pendamping"`
+	ResetCode           *string    `gorm:"column:reset_code"`
 	ResetCodeExpiry *time.Time `gorm:"column:reset_code_expiry"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime:milli;column:created_at"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime:milli;column:updated_at"`

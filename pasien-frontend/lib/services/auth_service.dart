@@ -91,6 +91,7 @@ class AuthService {
     required String tanggalLahir,
     required String tempatLahir,
     required String telepon,
+    required String noTeleponPendamping,
     required String jenisKelamin,
     required String alamat,
   }) async {
@@ -106,6 +107,7 @@ class AuthService {
           'tanggal_lahir': tanggalLahir,
           'tempat_lahir': tempatLahir,
           'telepon': telepon,
+          'no_telepon_pendamping': noTeleponPendamping,
           'jenis_kelamin': jenisKelamin,
           'alamat': alamat,
         }),

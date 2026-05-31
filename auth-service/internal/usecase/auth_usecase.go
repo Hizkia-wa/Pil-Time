@@ -94,9 +94,10 @@ func (u *AuthUsecase) RegisterPasien(req *dto.RegisterPasienRequest) (*dto.Regis
 		NIK:          req.NIK,
 		TanggalLahir: tanggalLahir,
 		TempatLahir:  req.TempatLahir,
-		NoTelepon:    req.Telepon,
-		JenisKelamin: req.JenisKelamin,
-		Alamat:       req.Alamat,
+		NoTelepon:           req.Telepon,
+		NoTeleponPendamping: req.NoTeleponPendamping,
+		JenisKelamin:        req.JenisKelamin,
+		Alamat:              req.Alamat,
 	}
 
 	if err := u.pasienRepo.Create(pasien); err != nil {

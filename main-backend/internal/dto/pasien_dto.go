@@ -6,8 +6,9 @@ type RegisterPasienRequest struct {
 	NamaLengkap  string `json:"nama_lengkap" binding:"required,max=100"`
 	NIK          string `json:"nik" binding:"required,len=16,numeric"`
 	TanggalLahir string `json:"tanggal_lahir" binding:"required"`
-	Telepon      string `json:"telepon" binding:"required,max=20"`
-	JenisKelamin string `json:"jenis_kelamin" binding:"required,oneof=Laki-laki Perempuan"`
+	Telepon             string `json:"telepon" binding:"required,max=20"`
+	NoTeleponPendamping string `json:"no_telepon_pendamping"`
+	JenisKelamin        string `json:"jenis_kelamin" binding:"required,oneof=Laki-laki Perempuan"`
 	Alamat       string `json:"alamat" binding:"required,max=255"`
 }
 
@@ -28,8 +29,9 @@ type UpdatePasienRequest struct {
 	Nama         string `json:"nama"`
 	Email        string `json:"email"`
 	Alamat       string `json:"alamat"`
-	NoTelepon    string `json:"no_telepon"`
-	JenisKelamin string `json:"jenis_kelamin"`
+	NoTelepon           string `json:"no_telepon"`
+	NoTeleponPendamping string `json:"no_telepon_pendamping"`
+	JenisKelamin        string `json:"jenis_kelamin"`
 	TanggalLahir string `json:"tanggal_lahir"`
 	TempatLahir  string `json:"tempat_lahir"`
 }

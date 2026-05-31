@@ -139,6 +139,7 @@ func main() {
 			pasienAuth.GET("/jadwal", pasienHandler.GetJadwal)
 			pasienAuth.GET("/profile", pasienHandler.GetProfile)
 			pasienAuth.PUT("/profile", pasienHandler.UpdateProfile)
+			pasienAuth.POST("/profile/test-wa-warning", pasienHandler.TestWaWarning)
 
 			// Pasien - Rutinitas
 			pasienAuth.GET("/rutinitas", rutinitasHandler.GetAllForPasien)
@@ -167,6 +168,10 @@ func main() {
 		api.POST("/upload/image", fileHandler.UploadImage)
 		api.POST("/upload/image-base64", fileHandler.UploadBase64Image)
 	}
+
+	// Start background workers
+	warningWorker := usecase.NewWaWarningWorker(db)
+	warningWorker.Start()
 
 	port := os.Getenv("PORT")
 	if port == "" {

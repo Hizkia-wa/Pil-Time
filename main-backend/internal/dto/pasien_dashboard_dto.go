@@ -7,8 +7,9 @@ type PasienDashboardResponse struct {
 	PasienID     int                 `json:"pasien_id"`
 	Nama         string              `json:"nama"`
 	Email        string              `json:"email"`
-	NoTelepon    string              `json:"no_telepon"`
-	JenisKelamin string              `json:"jenis_kelamin"`
+	NoTelepon           string              `json:"no_telepon"`
+	NoTeleponPendamping string              `json:"no_telepon_pendamping"`
+	JenisKelamin        string              `json:"jenis_kelamin"`
 	TanggalLahir string              `json:"tanggal_lahir"`
 	Alamat       string              `json:"alamat"`
 	TodayJadwals []JadwalResponseDTO `json:"today_jadwals"`

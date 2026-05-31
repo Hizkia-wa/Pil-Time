@@ -156,6 +156,10 @@
                     <p class="text-sm font-medium text-slate-900">{{ selectedPasien.no_telepon || '-' }}</p>
                   </div>
                   <div>
+                    <p class="text-xs text-gray-500">NO TELEPON PENDAMPING (WA)</p>
+                    <p class="text-sm font-medium text-slate-900 mt-1">{{ selectedPasien.no_telepon_pendamping || '-' }}</p>
+                  </div>
+                  <div>
                     <p class="text-xs text-gray-500">JENIS KELAMIN</p>
                     <p class="text-sm font-medium text-slate-900">{{ selectedPasien.jenis_kelamin || '-' }}</p>
                   </div>
@@ -245,7 +249,14 @@ export default {
       selectedPasien.value = pasien
     }
 
-
+    const formatWA = (number) => {
+      if (!number) return ''
+      let clean = number.replace(/\D/g, '')
+      if (clean.startsWith('0')) {
+        clean = '62' + clean.slice(1)
+      }
+      return clean
+    }
 
     onMounted(() => {
       pasienStore.fetchPasiens()
@@ -258,7 +269,8 @@ export default {
       filteredPasien,
       selectPasien,
       getInitials,
-      formatDate
+      formatDate,
+      formatWA
     }
   }
 }

@@ -59,9 +59,10 @@ func (u *PasienUsecase) Register(req *dto.RegisterPasienRequest) (*dto.RegisterP
 		Password:     hashedPassword,
 		NIK:          req.NIK,
 		TanggalLahir: tanggalLahir,
-		NoTelepon:    req.Telepon,
-		JenisKelamin: req.JenisKelamin,
-		Alamat:       req.Alamat,
+		NoTelepon:           req.Telepon,
+		NoTeleponPendamping: req.NoTeleponPendamping,
+		JenisKelamin:        req.JenisKelamin,
+		Alamat:              req.Alamat,
 	}
 
 	// Simpan ke database
@@ -283,11 +284,12 @@ func (u *PasienUsecase) GetPasienDashboard(pasienID int) (*dto.PasienDashboardRe
 
 	// Return dashboard response
 	return &dto.PasienDashboardResponse{
-		PasienID:     pasien.PasienID,
-		Nama:         pasien.Nama,
-		Email:        pasien.Email,
-		NoTelepon:    pasien.NoTelepon,
-		JenisKelamin: pasien.JenisKelamin,
+		PasienID:            pasien.PasienID,
+		Nama:                pasien.Nama,
+		Email:               pasien.Email,
+		NoTelepon:           pasien.NoTelepon,
+		NoTeleponPendamping: pasien.NoTeleponPendamping,
+		JenisKelamin:        pasien.JenisKelamin,
 		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
 		Alamat:       pasien.Alamat,
 		TodayJadwals: todayJadwalDTOs,
@@ -360,8 +362,9 @@ func (u *PasienUsecase) GetByID(pasienID int) (*dto.PasienResponseDTO, error) {
 		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
 		TempatLahir:  pasien.TempatLahir,
 		Alamat:       pasien.Alamat,
-		JenisKelamin: pasien.JenisKelamin,
-		NoTelepon:    pasien.NoTelepon,
+		JenisKelamin:        pasien.JenisKelamin,
+		NoTelepon:           pasien.NoTelepon,
+		NoTeleponPendamping: pasien.NoTeleponPendamping,
 	}, nil
 }
 
@@ -383,6 +386,9 @@ func (u *PasienUsecase) UpdateProfile(pasienID int, req *dto.UpdatePasienRequest
 	}
 	if req.NoTelepon != "" {
 		existing.NoTelepon = req.NoTelepon
+	}
+	if req.NoTeleponPendamping != "" {
+		existing.NoTeleponPendamping = req.NoTeleponPendamping
 	}
 	if req.JenisKelamin != "" {
 		existing.JenisKelamin = req.JenisKelamin

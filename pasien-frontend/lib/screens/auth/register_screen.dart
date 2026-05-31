@@ -27,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _tempatLahirController = TextEditingController();
   final _tanggalLahirController = TextEditingController();
   final _teleponController = TextEditingController();
+  final _noTeleponPendampingController = TextEditingController();
   final _alamatController = TextEditingController();
 
   @override
@@ -38,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _tempatLahirController.dispose();
     _tanggalLahirController.dispose();
     _teleponController.dispose();
+    _noTeleponPendampingController.dispose();
     _alamatController.dispose();
     super.dispose();
   }
@@ -143,6 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'tempat_lahir': _tempatLahirController.text,
           'tanggal_lahir': _tanggalLahirController.text,
           'telepon': _teleponController.text,
+          'no_telepon_pendamping': _noTeleponPendampingController.text,
           'jenis_kelamin': _selectedGender!,
           'alamat': _alamatController.text,
         },
@@ -405,6 +408,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 18),
+
+                // No Telepon Pendamping (WA)
+                _buildFieldLabel('NO TELEPON PENDAMPING (WA)'),
+                TextFormField(
+                  controller: _noTeleponPendampingController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Inter',
+                  ),
+                  decoration: _inputDecoration(
+                    hintText: 'Masukkan Nomor WhatsApp Pendamping',
+                    prefixIcon: const Icon(
+                      Icons.contact_phone_rounded,
+                      color: Color(0xFF94A3B8),
+                      size: 20,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nomor telepon pendamping tidak boleh kosong';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 18),
 
