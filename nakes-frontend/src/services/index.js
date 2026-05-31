@@ -1,9 +1,9 @@
 import apiClient from './api'
 import axios from 'axios'
 
-// Auth Service client (port 8081) — login, register, reset password
+// Auth Service client (port 8080) — login, register, reset password
 const authApiClient = axios.create({
-  baseURL: 'http://localhost:8081',
+  baseURL: 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json'
   }

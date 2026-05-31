@@ -54,6 +54,7 @@ func main() {
 	trackingUC := usecase.NewTrackingJadwalUsecase(trackingRepo, jadwalRepo, pasienRepo)
 	rutinitasUC := usecase.NewRutinitasUsecase(rutinitasRepo)
 	resepJadwalUC := usecase.NewResepJadwalUsecase(resepRepo, jadwalObatRepo, jadwalRepo, obatRepo)
+	authUC := usecase.NewAuthUsecase(nakesRepo, pasienRepo)
 
 	// Handlers
 	adminHandler := inboundHttp.NewAdminHandler(adminUC)
@@ -66,12 +67,33 @@ func main() {
 	resepJadwalHandler := inboundHttp.NewResepJadwalHandler(resepJadwalUC)
 	fileHandler := inboundHttp.NewFileHandler()
 	fcmTokenHandler := inboundHttp.NewFcmTokenHandler(fcmTokenRepo)
+	authHandler := inboundHttp.NewAuthHandler(authUC)
 
 	// 3. ROUTER SETUP
 	r := gin.New()
 	r.SetTrustedProxies(nil)
 	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(CORSConfig())
+
+	// Unified Auth Service routes (monolith)
+	auth := r.Group("/auth")
+	{
+		nakes := auth.Group("/nakes")
+		{
+			nakes.POST("/login", authHandler.LoginNakes)
+		}
+
+		pasien := auth.Group("/pasien")
+		{
+			pasien.POST("/register", authHandler.RegisterPasien)
+			pasien.POST("/login", authHandler.LoginPasien)
+			pasien.POST("/forgot-password", authHandler.ForgotPassword)
+			pasien.POST("/verify-reset-code", authHandler.VerifyResetCode)
+			pasien.POST("/reset-password", authHandler.ResetPassword)
+		}
+
+		auth.GET("/validate", authHandler.ValidateToken)
+	}
 
 	// 4. STATIC FILES (PENTING untuk PWA & Uploads)
 	r.Static("/uploads", "./public/uploads")

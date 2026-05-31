@@ -4,7 +4,8 @@ import '../config/app_config.dart';
 import 'auth/register_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final VoidCallback? onCompleted;
+  const OnboardingScreen({super.key, this.onCompleted});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -38,6 +39,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConfig.hasSeenOnboardingKey, true);
+    if (widget.onCompleted != null) {
+      widget.onCompleted!();
+    }
     if (mounted) {
       Navigator.pushReplacement(
         context,

@@ -127,8 +127,13 @@ class _MyAppState extends State<MyApp> {
           // Masih loading SharedPreferences → tampilkan splash
           ? const _SplashScreen()
           : !_hasSeenOnboarding
-              // Belum onboarding → arahkan ke onboarding
-              ? const OnboardingScreen()
+              // Belum onboarding → arahkan ke onboarding dan perbarui state saat selesai
+              ? OnboardingScreen(onCompleted: () {
+                  setState(() {
+                    _hasSeenOnboarding = true;
+                  });
+                  _authBloc.add(AuthCheckRequested());
+                })
               // Sudah onboarding → BlocBuilder menentukan Login atau Dashboard
               : BlocBuilder<AuthBloc, AuthState>(
                   bloc: _authBloc,

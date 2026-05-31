@@ -6,6 +6,7 @@ type LoginPasienRequest struct {
 }
 
 type LoginPasienResponse struct {
+	Token       string `json:"token,omitempty"`
 	PasienID    int    `json:"pasien_id"`
 	Email       string `json:"email"`
 	NamaLengkap string `json:"nama_lengkap"`

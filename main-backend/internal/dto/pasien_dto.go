@@ -10,6 +10,7 @@ type RegisterPasienRequest struct {
 	NoTeleponPendamping string `json:"no_telepon_pendamping"`
 	JenisKelamin        string `json:"jenis_kelamin" binding:"required,oneof=Laki-laki Perempuan"`
 	Alamat       string `json:"alamat" binding:"required,max=255"`
+	TempatLahir         string `json:"tempat_lahir"`
 }
 
 type RegisterPasienResponse struct {
