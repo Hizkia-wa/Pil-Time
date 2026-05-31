@@ -3,9 +3,31 @@
     
     <!-- LOGO -->
     <div class="logo-section">
-      <div class="logo-icon">
-        ⏳
-      </div>
+      <div
+    class="logo-icon"
+    style="
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    "
+  >
+    <img
+      src="./../../assets/images/logo.jpeg"
+      alt="Logo"
+      style="
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      "
+    />
+  </div>
 
       <h1 class="logo-text">
         Pil Time

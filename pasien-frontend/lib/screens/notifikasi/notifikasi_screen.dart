@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
-import '../../services/notification_service.dart';
 import '../../bloc/notifikasi/notifikasi_bloc.dart';
 import '../../bloc/notifikasi/notifikasi_event.dart';
 import '../../bloc/notifikasi/notifikasi_state.dart';
@@ -16,6 +15,8 @@ class NotificationItem {
   final int? jadwalId;
   final String? aturan;
   final bool isAdvanceReminder; // true jika notifikasi 15 menit sebelumnya
+  final String? id; // Nullable untuk FCM/saved ones
+  bool isRead;
 
   NotificationItem({
     required this.title,
@@ -25,7 +26,31 @@ class NotificationItem {
     this.jadwalId,
     this.aturan,
     this.isAdvanceReminder = false,
+    this.id,
+    this.isRead = false,
   });
+
+  String get uniqueKey {
+    if (id != null) return 'fcm_$id';
+    return 'dynamic_${jadwalId}_$time';
+  }
+
+  bool get canDelete {
+    if (type != NotificationType.terlewat) return true;
+    // Notif terlewat bisa dihapus setelah 12 jam dari waktu jadwal
+    try {
+      final now = DateTime.now();
+      final parts = time.split(':');
+      if (parts.length < 2) return true;
+      final jadwalDt = DateTime(
+        now.year, now.month, now.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+      return now.difference(jadwalDt).inHours >= 12;
+    } catch (_) {
+      return true;
+    }
+  }
 }
 
 class NotificationScreen extends StatefulWidget {
@@ -44,7 +69,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    _notifikasiBloc = NotifikasiBloc();
+    _notifikasiBloc = context.read<NotifikasiBloc>();
     _loadSessionAndFetch(mockItem: widget.mockItem);
   }
 
@@ -69,173 +94,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   void dispose() {
-    _notifikasiBloc.close();
     super.dispose();
   }
 
-  // ── Tes notifikasi pengingat biasa (15 menit sebelum) ─────
-  Future<void> _triggerTestReminder() async {
-    try {
-      await NotificationService.instance.scheduleTestReminderNotification(
-        namaObat: 'Paracetamol (Uji Coba)',
-        delaySeconds: 3,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '🔔 Notif pengingat muncul dalam 3 detik. Tap notifikasi untuk masuk ke halaman ini.',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF15BE77),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating),
-      );
-    }
-  }
-
-  // ── Tes alarm berdering (suara alarm_voice, auto buka layar) ─
-  Future<void> _triggerTestAlarm() async {
-    try {
-      await NotificationService.instance.scheduleTestNotification(
-        namaObat: 'Paracetamol (Alarm)',
-        delaySeconds: 3,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.alarm_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '🔊 Alarm berbunyi dalam 3 detik. Layar alarm OTOMATIS muncul setelah bunyi 2×.',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0D9488),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating),
-      );
-    }
-  }
-
-  // ── Panel uji coba notifikasi & alarm ─────────────────────
-  Widget _buildTestPanel() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF15BE77).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.science_rounded,
-                    color: Color(0xFF15BE77),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'UJI COBA SISTEM',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF15BE77),
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                    Text(
-                      'Notifikasi & Alarm',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white12, height: 1),
-            const SizedBox(height: 16),
-
-            // Button 1 – Notif Pengingat
-            _TestButton(
-              icon: Icons.notifications_active_rounded,
-              label: 'Tes Notifikasi Pengingat',
-              sublabel: 'Bunyi chime pendek • Tap notif → masuk halaman ini',
-              color: const Color(0xFF15BE77),
-              onTap: _triggerTestReminder,
-            ),
-            const SizedBox(height: 12),
-
-            // Button 2 – Alarm Berdering
-            _TestButton(
-              icon: Icons.alarm_rounded,
-              label: 'Tes Alarm Berdering',
-              sublabel: 'Suara alarm_voice 2× → layar alarm muncul otomatis',
-              color: const Color(0xFF0D9488),
-              onTap: _triggerTestAlarm,
-            ),
-          ],
-        ),
-      ),
+  void _showNotificationDetail(NotificationItem item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      // BlocProvider.value diperlukan agar BLoC bisa diakses dari dalam modal
+      // karena showModalBottomSheet membuat route baru yang tidak mewarisi context
+      builder: (_) {
+        return BlocProvider.value(
+          value: _notifikasiBloc,
+          child: NotificationDetailWidget(item: item),
+        );
+      },
     );
   }
 
@@ -331,7 +205,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
-            (context, index) => buildCard(visibleNotifications[index]),
+            (listContext, index) => buildCard(listContext, visibleNotifications[index]),
             childCount: visibleNotifications.length,
           ),
         ),
@@ -350,68 +224,99 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: const Text(
-          "Notifikasi",
-          style: TextStyle(
-            color: Color(0xFF1A1A2E),
-            fontWeight: FontWeight.bold,
+    return BlocBuilder<NotifikasiBloc, NotifikasiState>(
+      bloc: _notifikasiBloc,
+      builder: (context, state) {
+        final unreadCount = state is NotifikasiLoaded
+            ? state.allNotifications.where((n) => !n.isRead).length
+            : 0;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F7FA),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+              onPressed: () => Navigator.pop(context),
+            ),
+            centerTitle: true,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Notifikasi",
+                  style: TextStyle(
+                    color: Color(0xFF1A1A2E),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (unreadCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "$unreadCount",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
           ),
-        ),
-      ),
-      body: BlocConsumer<NotifikasiBloc, NotifikasiState>(
-        bloc: _notifikasiBloc,
-        listener: (context, state) {
-          if (state is NotifikasiActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✓ ${state.message}'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          } else if (state is NotifikasiActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.error}'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Panel uji coba selalu tampil di atas
-              SliverToBoxAdapter(child: _buildTestPanel()),
-              _buildSliverContent(state),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
-          );
-        },
-      ),
+          body: BlocConsumer<NotifikasiBloc, NotifikasiState>(
+            bloc: _notifikasiBloc,
+            listener: (context, state) {
+              if (state is NotifikasiActionSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ ${state.message}'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } else if (state is NotifikasiActionFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${state.error}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildSliverContent(state),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget buildCard(NotificationItem item) {
+  Widget buildCard(BuildContext listContext, NotificationItem item) {
     Color color;
     String label;
 
     switch (item.type) {
       case NotificationType.mendatang:
         color = const Color(0xFF22C55E);
-        label = "MENDATANG • ${item.time}";
+        label = item.id != null ? "INFORMASI • ${item.time}" : "MENDATANG • ${item.time}";
         break;
       case NotificationType.terlewat:
         color = const Color(0xFFEF4444);
@@ -423,386 +328,488 @@ class _NotificationScreenState extends State<NotificationScreen> {
         break;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+    return Dismissible(
+      key: Key(item.uniqueKey),
+      direction: item.canDelete ? DismissDirection.endToStart : DismissDirection.none,
+      background: Container(
+        alignment: Alignment.centerRight,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEF4444),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.only(right: 24),
+          child: Icon(
+            Icons.delete_outline_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
       ),
-      child: Row(
-        children: [
-          // GARIS KIRI
-          Container(
-            width: 4,
-            height: 120,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
+      onDismissed: (direction) {
+        _notifikasiBloc.add(DeleteNotification(item: item));
+        ScaffoldMessenger.of(listContext).clearSnackBars();
+        ScaffoldMessenger.of(listContext).showSnackBar(
+          SnackBar(
+            content: Text('Notifikasi "${item.title}" berhasil dihapus'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // LABEL
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-
-                      // ICON
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          item.type == NotificationType.rutinitas
-                              ? Icons.directions_walk
-                              : item.type == NotificationType.terlewat
-                              ? Icons.error_outline
-                              : Icons.notifications,
-                          color: color,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    item.desc,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  buildButton(item, color),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildButton(NotificationItem item, Color color) {
-    if (item.type == NotificationType.mendatang) {
-      // Untuk advance reminder (15 menit sebelum), hanya tampilkan reminder
-      if (item.isAdvanceReminder) {
-        return Container(
-          padding: const EdgeInsets.all(12),
+        );
+      },
+      child: GestureDetector(
+        onTap: () => _showNotificationDetail(item),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: color, size: 18),
-              const SizedBox(width: 8),
+              // GARIS KIRI
+              Container(
+                width: 4,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+  
               Expanded(
-                child: Text(
-                  'Bersiaplah untuk minum obat ini',
-                  style: TextStyle(color: color, fontSize: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // LABEL ROW
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            label,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (!item.isRead)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "BARU",
+                                    style: TextStyle(
+                                      color: color,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+  
+                      const SizedBox(height: 6),
+  
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+  
+                          // ICON
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              item.type == NotificationType.rutinitas
+                                  ? Icons.directions_walk
+                                  : item.type == NotificationType.terlewat
+                                  ? Icons.error_outline
+                                  : Icons.notifications,
+                              color: color,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+  
+                      const SizedBox(height: 6),
+  
+                      Text(
+                        item.desc,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      }
-
-      // Notifikasi jadwal normal
-      return Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _markAsTaken(item),
-              icon: const Icon(Icons.check, size: 16),
-              label: const Text("Siap!"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _deferNotification(item),
-              icon: const Icon(Icons.access_time, size: 16),
-              label: const Text("Tunda 15m"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                foregroundColor: Colors.black54,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (item.type == NotificationType.terlewat) {
-      return Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _showReasonDialog(item),
-              icon: const Icon(Icons.edit),
-              label: const Text("Catat Alasan"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () => _markAsTaken(item),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Minum Sekarang"),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // rutinitas
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.check),
-        label: const Text("Selesai"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
         ),
       ),
     );
   }
 
-  // Fungsi untuk menandai obat sudah diminum
-  void _markAsTaken(NotificationItem item) {
-    if (_pasienId != null) {
-      _notifikasiBloc.add(MarkNotificationAsTaken(item: item, pasienId: _pasienId!));
-    }
-  }
 
-  // Fungsi untuk menunda notifikasi 15 menit
-  void _deferNotification(NotificationItem item) {
-    _notifikasiBloc.add(DeferNotificationEvent(item: item));
-  }
-
-  // Fungsi untuk menampilkan dialog catat alasan
-  void _showReasonDialog(NotificationItem item) {
-    final reasonController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Catat Alasan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Obat: ${item.title}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Jelaskan alasan Anda melewatkan obat ini...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_pasienId != null) {
-                _notifikasiBloc.add(SubmitMissedReasonEvent(
-                  item: item,
-                  reason: reasonController.text,
-                  pasienId: _pasienId!,
-                ));
-              }
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-// HELPER WIDGET \u2014 Tombol uji coba dengan desain premium
-// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-class _TestButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final Color color;
-  final VoidCallback onTap;
+class NotificationDetailWidget extends StatefulWidget {
+  final NotificationItem item;
 
-  const _TestButton({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.color,
-    required this.onTap,
+  const NotificationDetailWidget({
+    super.key,
+    required this.item,
   });
 
   @override
-  State<_TestButton> createState() => _TestButtonState();
+  State<NotificationDetailWidget> createState() => _NotificationDetailWidgetState();
 }
 
-class _TestButtonState extends State<_TestButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
+class _NotificationDetailWidgetState extends State<NotificationDetailWidget> {
+  late final NotifikasiBloc _bloc;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-      lowerBound: 0.94,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-    _scale = _ctrl;
+    _bloc = context.read<NotifikasiBloc>();
+    // Memicu optimistic update markAsRead sesaat setelah frame pertama dimuat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_bloc.isClosed) {
+        _bloc.add(MarkNotificationAsRead(item: widget.item));
+      }
+    });
   }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(_) => _ctrl.reverse();
-  void _onTapUp(_) => _ctrl.forward();
-  void _onTapCancel() => _ctrl.forward();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      onTap: widget.onTap,
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: widget.color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: widget.color.withValues(alpha: 0.35),
-              width: 1.2,
+    final Color themeColor;
+    final IconData headerIcon;
+    switch (widget.item.type) {
+      case NotificationType.mendatang:
+        themeColor = const Color(0xFF15BE77);
+        headerIcon = Icons.notifications_active_rounded;
+        break;
+      case NotificationType.terlewat:
+        themeColor = const Color(0xFFEF4444);
+        headerIcon = Icons.error_outline_rounded;
+        break;
+      case NotificationType.rutinitas:
+        themeColor = const Color(0xFF3B82F6);
+        headerIcon = Icons.directions_walk_rounded;
+        break;
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          child: Row(
+          const SizedBox(height: 20),
+
+          // Header
+          Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.2),
+                  color: themeColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(widget.icon, color: widget.color, size: 18),
+                child: Icon(headerIcon, color: themeColor, size: 28),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.label,
+                      widget.item.type == NotificationType.mendatang
+                          ? (widget.item.id != null ? 'INFORMASI BARU' : 'PENGINGAT AKTIF')
+                          : widget.item.type == NotificationType.terlewat
+                              ? 'JADWAL TERLEWAT'
+                              : 'RUTINITAS SEHAT',
                       style: TextStyle(
-                        color: widget.color,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        color: themeColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      widget.sublabel,
+                      widget.item.title,
                       style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11.5,
-                        height: 1.3,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: widget.color.withValues(alpha: 0.6),
-                size: 20,
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: Colors.black12, height: 1),
+          const SizedBox(height: 20),
+
+          // Description
+          const Text(
+            'Keterangan',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            widget.item.desc,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF475569),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Info Grid / Cards
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.access_time_rounded, color: Colors.blueGrey, size: 18),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Waktu Jadwal',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.item.time,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (widget.item.aturan != null && widget.item.aturan!.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.menu_book_rounded, color: Colors.blueGrey, size: 18),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Aturan Konsumsi',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.item.aturan!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          const SizedBox(height: 28),
+
+          // Action Buttons
+          Row(
+            children: [
+              if (widget.item.canDelete) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // Ambil messenger SEBELUM Navigator.pop agar context masih valid
+                      final messenger = ScaffoldMessenger.of(context);
+                      final title = widget.item.title;
+                      _bloc.add(DeleteNotification(item: widget.item));
+                      Navigator.pop(context);
+                      messenger.clearSnackBars();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Notifikasi "$title" berhasil dihapus'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    label: const Text(
+                      'Hapus',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFFFCA5A5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ] else ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final messenger = ScaffoldMessenger.of(context);
+                      Navigator.pop(context);
+                      messenger.clearSnackBars();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Notifikasi ini baru bisa dihapus 12 jam setelah jadwal terlewat',
+                          ),
+                          duration: Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Color(0xFF475569),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFF94A3B8), size: 20),
+                    label: const Text(
+                      'Terkunci',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: Colors.blueGrey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
 }
-

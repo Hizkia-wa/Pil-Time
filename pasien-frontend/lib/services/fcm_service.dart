@@ -7,6 +7,7 @@ import 'auth_service.dart';
 import 'api_service.dart';
 import 'jadwal_cache_service.dart';
 import 'notification_service.dart';
+import 'notification_storage_service.dart';
 
 // ============================================================
 // BACKGROUND HANDLER — harus top-level function (bukan method)
@@ -15,6 +16,29 @@ import 'notification_service.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM Background] Pesan diterima: ${message.data}');
+
+  // Simpan ke NotificationStorageService
+  final title = message.data['title'] ?? '💊 Jadwal Obat Baru';
+  final body = message.data['body'] ?? 'Nakes menambahkan jadwal obat baru';
+  final type = message.data['type'] ?? 'info';
+  final jadwalId = int.tryParse(message.data['jadwal_id'] ?? '');
+  final now = DateTime.now();
+
+  try {
+    await NotificationStorageService.instance.saveFcmNotification(
+      LocalFcmNotification(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        desc: body,
+        time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+        type: type,
+        jadwalId: jadwalId,
+        aturan: message.data['aturan_konsumsi'],
+      ),
+    );
+  } catch (e) {
+    debugPrint('[FCM Background] Gagal menyimpan ke storage: $e');
+  }
 
   if (message.data['type'] == 'jadwal_baru') {
     // Simpan jadwal ke local cache
@@ -109,6 +133,29 @@ class FcmService {
   Future<void> _onForegroundMessage(RemoteMessage message) async {
     debugPrint('[FCM Foreground] Data: ${message.data}');
 
+    // Simpan ke NotificationStorageService
+    final title = message.data['title'] ?? '💊 Jadwal Obat Baru';
+    final body = message.data['body'] ?? 'Nakes menambahkan jadwal obat baru';
+    final type = message.data['type'] ?? 'info';
+    final jadwalId = int.tryParse(message.data['jadwal_id'] ?? '');
+    final now = DateTime.now();
+
+    try {
+      await NotificationStorageService.instance.saveFcmNotification(
+        LocalFcmNotification(
+          id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          title: title,
+          desc: body,
+          time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+          type: type,
+          jadwalId: jadwalId,
+          aturan: message.data['aturan_konsumsi'],
+        ),
+      );
+    } catch (e) {
+      debugPrint('[FCM Foreground] Gagal menyimpan ke storage: $e');
+    }
+
     if (message.data['type'] == 'jadwal_baru') {
       // Simpan ke cache
       final jadwal = _buildJadwalFromFcmData(message.data);
@@ -126,8 +173,6 @@ class FcmService {
       }
 
       // Tampilkan notifikasi lokal di foreground (FCM tidak auto-display)
-      final title = message.data['title'] ?? '💊 Jadwal Obat Baru';
-      final body = message.data['body'] ?? 'Nakes menambahkan jadwal obat baru';
       await NotificationService.instance.showImmediateNotification(
         title: title,
         body: body,

@@ -25,6 +25,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final todayDateStr =
           '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
       final tempTakenJadwalIds = <int>{};
+      final tempLoggedTodayJadwalIds = <int>{};
 
       // 1. Ambil riwayat kepatuhan untuk mewarnai kalender
       final riwayatResponse = await ApiService.getPasienRiwayat();
@@ -40,11 +41,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             tempRiwayat.putIfAbsent(tanggal, () => []);
             tempRiwayat[tanggal]!.add(status);
 
-            // Jika tanggal adalah hari ini dan status adalah 'Diminum' atau 'Terlambat'
-            if (tanggal == todayDateStr &&
-                (status == 'Diminum' || status == 'Terlambat') &&
-                parsedJadwalId != null) {
-              tempTakenJadwalIds.add(parsedJadwalId);
+            // Jika tanggal adalah hari ini
+            if (tanggal == todayDateStr && parsedJadwalId != null) {
+              tempLoggedTodayJadwalIds.add(parsedJadwalId);
+              if (status == 'Diminum' || status == 'Terlambat') {
+                tempTakenJadwalIds.add(parsedJadwalId);
+              }
             }
           }
         }
@@ -55,6 +57,40 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
       if (response['success']) {
         final dashboard = Dashboard.fromJson(response['data']);
+
+        // Auto-log Terlewat jika sudah lewat 75 menit dan belum pernah dicatat hari ini
+        for (final j in dashboard.todayJadwals) {
+          if (tempLoggedTodayJadwalIds.contains(j.id)) continue;
+
+          try {
+            final parts = j.waktuMinum.split(':');
+            if (parts.length >= 2) {
+              final jadwalDt = DateTime(
+                today.year,
+                today.month,
+                today.day,
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+              );
+              final diffMinutes = today.difference(jadwalDt).inMinutes;
+              if (diffMinutes > 75) {
+                // Log ke backend menggunakan waktu minum asli agar key konstan
+                await ApiService.postRiwayat(
+                  jadwalId: j.id,
+                  status: 'Terlewat',
+                  waktuMinum: j.waktuMinum,
+                );
+                tempLoggedTodayJadwalIds.add(j.id);
+                tempRiwayat.putIfAbsent(todayDateStr, () => []);
+                tempRiwayat[todayDateStr]!.add('Terlewat');
+                debugPrint(
+                    '[DashboardBloc] Auto-logged Terlewat for jadwal #${j.id} (${j.namaObat})');
+              }
+            }
+          } catch (e) {
+            debugPrint('[DashboardBloc] Gagal auto-log Terlewat: $e');
+          }
+        }
 
         // Simpan jadwal ke cache untuk akses offline
         await JadwalCacheService.saveJadwals(
@@ -161,6 +197,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       );
 
       if (result['success']) {
+        // Batalkan alarm/snooze yang sudah dijadwalkan karena sudah diminum
+        NotificationService.instance.cancelJadwal(event.jadwal.id);
+
         final updatedTaken = Set<int>.from(currentState.takenJadwalIds)..add(event.jadwal.id);
         
         // Buat temp copy riwayat harian baru

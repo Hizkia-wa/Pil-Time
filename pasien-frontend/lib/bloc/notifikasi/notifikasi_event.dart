@@ -68,3 +68,30 @@ class AddMockNotification extends NotifikasiEvent {
   @override
   List<Object?> get props => [item];
 }
+
+class MarkNotificationAsRead extends NotifikasiEvent {
+  final NotificationItem item;
+
+  const MarkNotificationAsRead({required this.item});
+
+  @override
+  List<Object?> get props => [item];
+}
+
+class MarkAllNotificationsAsRead extends NotifikasiEvent {
+  final List<NotificationItem> items;
+
+  const MarkAllNotificationsAsRead({required this.items});
+
+  @override
+  List<Object?> get props => [items];
+}
+
+class DeleteNotification extends NotifikasiEvent {
+  final NotificationItem item;
+
+  const DeleteNotification({required this.item});
+
+  @override
+  List<Object?> get props => [item];
+}

@@ -17,6 +17,7 @@ import 'screens/auth/success_screen.dart';
 import 'bloc/auth/auth_bloc.dart';
 import 'bloc/auth/auth_event.dart';
 import 'bloc/auth/auth_state.dart';
+import 'bloc/notifikasi/notifikasi_bloc.dart';
 
 /// Global key untuk navigasi dari mana saja (khususnya untuk Notifikasi)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -52,6 +53,9 @@ class _MyAppState extends State<MyApp> {
   // AuthBloc dibuat di sini supaya hidup selama app berjalan
   // dan bisa diakses oleh SEMUA screen via MaterialApp builder
   late final AuthBloc _authBloc;
+  // NotifikasiBloc juga dibuat sekali di sini agar satu instance
+  // dipakai di seluruh app — termasuk route yang dipush via navigatorKey
+  late final NotifikasiBloc _notifikasiBloc;
   bool _hasSeenOnboarding = false;
   bool _initDone = false;
 
@@ -59,6 +63,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _authBloc = AuthBloc();
+    _notifikasiBloc = NotifikasiBloc();
     _initApp();
 
     // Handle FCM ketika app di foreground:
@@ -90,6 +95,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     _authBloc.close();
+    _notifikasiBloc.close();
     super.dispose();
   }
 
@@ -107,8 +113,13 @@ class _MyAppState extends State<MyApp> {
       // di seluruh app (termasuk yang dipush via Navigator) mendapat
       // akses ke AuthBloc yang sama — tanpa perlu pass manual per-route.
       builder: (context, child) {
-        return BlocProvider<AuthBloc>.value(
-          value: _authBloc,
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: _authBloc),
+            // BlocProvider.value agar semua route (termasuk via navigatorKey)
+            // mendapat instance NotifikasiBloc yang SAMA
+            BlocProvider<NotifikasiBloc>.value(value: _notifikasiBloc),
+          ],
           child: child!,
         );
       },

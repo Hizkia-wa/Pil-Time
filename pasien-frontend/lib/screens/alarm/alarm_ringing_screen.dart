@@ -21,9 +21,15 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   String _namaObat = 'Obat';
   int _jadwalId = 0;
 
+  // ── Kategori Terlambat ──
+  bool _isTerlambat = false;
+  int _sisaMenitToleransi = 15;
+
   // ── Kontrol Pemutaran Suara Kustom & Alarm Sistem ──
   Timer? _customSoundTimer;
   int _playCount = 0;
+  Timer? _autoDismissTimer;
+  String _scheduledTime = '';
 
   @override
   void initState() {
@@ -32,6 +38,12 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
     // Mulai sequence suara: suara kustom 3x → lalu alarm sistem
     _startAlarmSoundSequence();
+
+    // Auto-dismiss setelah 60 detik jika diabaikan oleh user (mati sendiri)
+    _autoDismissTimer = Timer(const Duration(seconds: 60), () {
+      debugPrint('[PilTime] Alarm diabaikan selama 60 detik. Menutup layar alarm otomatis (mati sendiri).');
+      _handleMatikanAlarm(isAutoDismiss: true);
+    });
 
     // Animasi denyut (pulse) untuk lingkaran
     _pulseController = AnimationController(
@@ -74,7 +86,11 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
         debugPrint('[PilTime] Suara kustom selesai 3x. Beralih ke suara alarm sistem (looping)');
         timer.cancel();
         _customSoundTimer = null;
-        FlutterRingtonePlayer().playAlarm();
+        FlutterRingtonePlayer().playAlarm(
+          looping: true,
+          volume: 1.0,
+          asAlarm: true,
+        );
       }
     });
   }
@@ -83,9 +99,34 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     try {
       final parts = widget.payload.split(':');
       if (parts.isNotEmpty) _jadwalId = int.tryParse(parts[0]) ?? 0;
-      if (parts.length > 1) _namaObat = parts.sublist(1).join(':');
+      if (parts.length > 2) {
+        _scheduledTime = parts.last;
+        _namaObat = parts.sublist(1, parts.length - 1).join(':');
+      } else if (parts.length > 1) {
+        _namaObat = parts.last;
+      }
+
+      // Hitung apakah sudah masuk rentang terlambat (60 - 75 menit)
+      if (_scheduledTime.isNotEmpty) {
+        final timeParts = _scheduledTime.split(':');
+        if (timeParts.length == 2) {
+          final now = DateTime.now();
+          final hour = int.tryParse(timeParts[0]) ?? 0;
+          final minute = int.tryParse(timeParts[1]) ?? 0;
+          final scheduledDt = DateTime(now.year, now.month, now.day, hour, minute);
+          
+          final diff = now.difference(scheduledDt).inMinutes;
+          // Rentang waktu Terlambat (60 - 75 menit)
+          if (diff >= 60 && diff <= 75) {
+            _isTerlambat = true;
+            _sisaMenitToleransi = 75 - diff;
+            if (_sisaMenitToleransi < 0) _sisaMenitToleransi = 0;
+          }
+        }
+      }
+
       debugPrint(
-        '[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat',
+        '[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat, Scheduled Time: $_scheduledTime, isTerlambat: $_isTerlambat, sisaMenit: $_sisaMenitToleransi',
       );
     } catch (e) {
       debugPrint('[AlarmRingingScreen] Error parse payload: $e');
@@ -97,33 +138,69 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     _pulseController.dispose();
     _customSoundTimer?.cancel();
     _customSoundTimer = null;
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
     FlutterRingtonePlayer().stop(); // Hentikan semua suara saat layar ditutup
     super.dispose();
   }
 
-  void _handleMatikanAlarm() {
+  void _handleMatikanAlarm({bool isSnooze = false, bool isAutoDismiss = false}) {
     _customSoundTimer?.cancel();
     _customSoundTimer = null;
+    _autoDismissTimer?.cancel();
+    _autoDismissTimer = null;
     FlutterRingtonePlayer().stop(); // Hentikan semua suara alarm
+    
     if (mounted) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      } else {
-        // Fallback: load session dan go to DashboardScreen jika dibuka langsung dari background/killed state
-        AuthService.getPasienSession().then((session) {
-          if (session != null && mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => DashboardScreen(
-                  pasienId: session['pasien_id'],
-                  pasienNama: session['pasien_name'],
+      if (!isSnooze && !isAutoDismiss) {
+        // Tampilkan petunjuk centang secara global dengan SnackBar Premium
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  _isTerlambat ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                  color: Colors.white,
+                  size: 20,
                 ),
-              ),
-              (route) => false,
-            );
-          }
-        });
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isTerlambat
+                        ? 'Alarm dimatikan. Status Anda saat ini TERLAMBAT! Yuk segera centang jadwal "$_namaObat" di dashboard agar tidak berubah jadi Terlewat! ⚠️'
+                        : 'Alarm dimatikan. Yuk centang jadwal minum obat "$_namaObat" di bawah ini agar tercatat! 💊',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: _isTerlambat ? const Color(0xFFEA580C) : const Color(0xFF15BE77), // Orange vs Emerald Green
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
       }
+
+      // Arahkan langsung ke dashboard agar pasien melihat checklist
+      AuthService.getPasienSession().then((session) {
+        if (session != null && mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => DashboardScreen(
+                pasienId: session['pasien_id'],
+                pasienNama: session['pasien_name'],
+              ),
+            ),
+            (route) => false,
+          );
+        }
+      });
     }
   }
 
@@ -131,118 +208,204 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       // Warna background gelap khas alarm
-      backgroundColor: const Color(0xFF0F172A),
-      body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(flex: 2),
-
-            // Icon Lonceng dengan Animasi Pulse
-            ScaleTransition(
-              scale: _pulseAnimation,
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF2BB673).withValues(alpha: 0.2),
-                  border: Border.all(color: const Color(0xFF2BB673), width: 2),
+      backgroundColor: _isTerlambat ? null : const Color(0xFF0F172A),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: _isTerlambat
+            ? const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF2E0A0A), // Deep Burgundy/Crimson Dark
+                    Color(0xFF1A0505),
+                    Color(0xFF0F172A), // Slate Dark
+                  ],
                 ),
-                child: const Icon(
-                  Icons.alarm_on,
-                  size: 80,
-                  color: Color(0xFF2BB673),
+              )
+            : null,
+        child: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
+
+              // Icon Lonceng/Warning dengan Animasi Pulse
+              ScaleTransition(
+                scale: _pulseAnimation,
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (_isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673)).withValues(alpha: 0.2),
+                    border: Border.all(
+                      color: _isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673),
+                      width: 2.5,
+                    ),
+                  ),
+                  child: Icon(
+                    _isTerlambat ? Icons.warning_amber_rounded : Icons.alarm_on,
+                    size: 80,
+                    color: _isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673),
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
 
-            // Waktu Sekarang
-            Text(
-              '${TimeOfDay.now().hour.toString().padLeft(2, '0')}:${TimeOfDay.now().minute.toString().padLeft(2, '0')}',
-              style: const TextStyle(
-                fontSize: 64,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 2,
+              // Waktu Sekarang
+              Text(
+                '${TimeOfDay.now().hour.toString().padLeft(2, '0')}:${TimeOfDay.now().minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                  fontSize: 64,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Nama Obat
-            const Text(
-              'Waktunya Minum Obat!',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              _namaObat,
-              style: const TextStyle(
-                fontSize: 32,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: const Text(
-                'Halo! Yuk, minum obat dulu dan centang daftarnya di halaman utama.',
+              // Nama Obat / Status
+              Text(
+                _isTerlambat ? '⚠️ STATUS TERLAMBAT!' : 'Waktunya Minum Obat!',
                 style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white60,
-                  fontWeight: FontWeight.w400,
-                  height: 1.4,
+                  fontSize: 20,
+                  color: _isTerlambat ? const Color(0xFFF59E0B) : Colors.white70, // Amber warning color
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _namaObat,
+                style: const TextStyle(
+                  fontSize: 32,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
 
-            const Spacer(flex: 3),
-
-            // Tombol Aksi
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFFFF4D4D,
-                    ), // Merah mencolok khas mematikan alarm
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              // Sisa waktu toleransi widget
+              if (_isTerlambat) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+                      width: 1,
                     ),
-                    elevation: 8,
-                    shadowColor: const Color(0xFFFF4D4D).withValues(alpha: 0.5),
                   ),
-                  onPressed: _handleMatikanAlarm,
-                  icon: const Icon(Icons.alarm_off, size: 28),
-                  label: const Text(
-                    'MATIKAN ALARM',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.timer_outlined,
+                        color: Color(0xFFFF9F0A),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sisa Toleransi Waktu: $_sisaMenitToleransi Menit Lagi!',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFFF9F0A),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
+
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _isTerlambat
+                      ? 'PENTING: Waktu minum obat Anda sudah terlambat! Segera matikan alarm dan lakukan pencatatan agar kepatuhan Anda tetap baik!'
+                      : 'Halo! Yuk, minum obat dulu dan centang daftarnya di halaman utama.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _isTerlambat ? const Color(0xFFCBD5E1) : Colors.white60,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-            const Spacer(),
-          ],
+              const Spacer(flex: 3),
+
+              // Tombol Aksi Stacked (Column)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    // 1. Tombol MATIKAN ALARM (Red/Orange, Premium)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                          shadowColor: (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D)).withValues(alpha: 0.3),
+                        ),
+                        onPressed: () => _handleMatikanAlarm(isSnooze: false),
+                        icon: const Icon(Icons.alarm_off_rounded, size: 24),
+                        label: const Text(
+                          'MATIKAN ALARM',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2. Tombol INGATKAN NANTI (SNOOZE 20M)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF94A3B8),
+                          side: const BorderSide(color: Color(0xFF334155), width: 1.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () => _handleMatikanAlarm(isSnooze: true),
+                        icon: const Icon(Icons.snooze_rounded, size: 20),
+                        label: const Text(
+                          'INGATKAN NANTI (SNOOZE 20M)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-  

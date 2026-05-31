@@ -1,11 +1,17 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/notification_storage_service.dart';
 import '../../screens/notifikasi/notifikasi_screen.dart';
 import 'notifikasi_event.dart';
 import 'notifikasi_state.dart';
 
 class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
+  // Cache in-memory untuk kunci yang baru dihapus.
+  // Digunakan untuk memblokir notifikasi yang baru dihapus agar tidak muncul
+  // kembali ketika FetchNotifications berjalan secara bersamaan (race condition).
+  final Set<String> _pendingDeletedKeys = {};
+
   NotifikasiBloc() : super(NotifikasiInitial()) {
     on<FetchNotifications>(_onFetchNotifications);
     on<MarkNotificationAsTaken>(_onMarkNotificationAsTaken);
@@ -13,6 +19,9 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
     on<UndeferNotificationEvent>(_onUndeferNotification);
     on<SubmitMissedReasonEvent>(_onSubmitMissedReason);
     on<AddMockNotification>(_onAddMockNotification);
+    on<MarkNotificationAsRead>(_onMarkNotificationAsRead);
+    on<MarkAllNotificationsAsRead>(_onMarkAllNotificationsAsRead);
+    on<DeleteNotification>(_onDeleteNotification);
   }
 
   bool _isTimeExpired(String waktu) {
@@ -51,6 +60,29 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
     }
   }
 
+  bool _isSameNotification(NotificationItem a, NotificationItem b) {
+    if (a.title != b.title) return false;
+    if (a.type != b.type) return false;
+    if (a.isAdvanceReminder != b.isAdvanceReminder) return false;
+
+    if (a.jadwalId != null && b.jadwalId != null) {
+      return a.jadwalId == b.jadwalId;
+    }
+
+    try {
+      final partsA = a.time.split(':');
+      final partsB = b.time.split(':');
+      if (partsA.length >= 2 && partsB.length >= 2) {
+        final minA = int.parse(partsA[0]) * 60 + int.parse(partsA[1]);
+        final minB = int.parse(partsB[0]) * 60 + int.parse(partsB[1]);
+        final diff = (minA - minB).abs();
+        return diff <= 60;
+      }
+    } catch (_) {}
+
+    return a.time == b.time;
+  }
+
   Future<void> _onFetchNotifications(
     FetchNotifications event,
     Emitter<NotifikasiState> emit,
@@ -68,6 +100,11 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
 
       final notifications = <NotificationItem>[];
       final takenTodayJadwalIds = <int>{};
+      
+      // Ambil data kunci dibaca, FCM, dan terhapus dari SharedPreferences
+      final readKeys = await NotificationStorageService.instance.getReadKeys();
+      final deletedKeys = await NotificationStorageService.instance.getDeletedKeys();
+      final fcmNotifs = await NotificationStorageService.instance.getSavedFcmNotifications();
 
       if (riwayatResponse['success']) {
         final riwayatData = riwayatResponse['data'] as List<dynamic>? ?? [];
@@ -92,6 +129,34 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
             } catch (_) {}
           }
         }
+      }
+
+      // Masukkan FCM push notifications tersimpan
+      for (final fcmNotif in fcmNotifs) {
+        final key = 'fcm_${fcmNotif.id}';
+        // Filter berdasarkan storage (persistant) DAN cache in-memory (race condition guard)
+        if (deletedKeys.contains(key) || _pendingDeletedKeys.contains(key)) continue;
+        final isRead = readKeys.contains(key);
+        
+        NotificationType notifType = NotificationType.mendatang;
+        if (fcmNotif.type == 'terlewat') {
+          notifType = NotificationType.terlewat;
+        } else if (fcmNotif.type == 'rutinitas') {
+          notifType = NotificationType.rutinitas;
+        }
+
+        notifications.add(
+          NotificationItem(
+            id: fcmNotif.id,
+            title: fcmNotif.title,
+            desc: fcmNotif.desc,
+            time: fcmNotif.time,
+            type: notifType,
+            jadwalId: fcmNotif.jadwalId,
+            aturan: fcmNotif.aturan,
+            isRead: isRead,
+          ),
+        );
       }
 
       final dashboardData = dashboardResponse['data'] as Map<String, dynamic>?;
@@ -122,19 +187,23 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
             }
 
             if (_hasTimeArrived(waktu)) {
-              notifications.add(
-                NotificationItem(
-                  title: namaObat,
-                  desc: aturan.isNotEmpty
-                      ? 'Segera diminum sesuai aturan: $aturan'
-                      : 'Segera diminum untuk kesehatan Anda.',
-                  time: waktu,
-                  type: NotificationType.mendatang,
-                  jadwalId: parsedJadwalId,
-                  aturan: aturan,
-                  isAdvanceReminder: false,
-                ),
-              );
+              final key = 'dynamic_${parsedJadwalId}_$waktu';
+              if (!deletedKeys.contains(key)) {
+                notifications.add(
+                  NotificationItem(
+                    title: namaObat,
+                    desc: aturan.isNotEmpty
+                        ? 'Segera diminum sesuai aturan: $aturan'
+                        : 'Segera diminum untuk kesehatan Anda.',
+                    time: waktu,
+                    type: NotificationType.mendatang,
+                    jadwalId: parsedJadwalId,
+                    aturan: aturan,
+                    isAdvanceReminder: false,
+                    isRead: readKeys.contains(key),
+                  ),
+                );
+              }
             }
 
             try {
@@ -155,17 +224,21 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
 
                 if (!_isTimeExpired(advanceTime) &&
                     _hasTimeArrived(advanceTime)) {
-                  notifications.add(
-                    NotificationItem(
-                      title: namaObat,
-                      desc: 'Siapkan obat ini. Waktu minum: $waktu',
-                      time: advanceTime,
-                      type: NotificationType.mendatang,
-                      jadwalId: parsedJadwalId,
-                      aturan: aturan,
-                      isAdvanceReminder: true,
-                    ),
-                  );
+                  final key = 'dynamic_${parsedJadwalId}_$advanceTime';
+                  if (!deletedKeys.contains(key)) {
+                    notifications.add(
+                      NotificationItem(
+                        title: namaObat,
+                        desc: 'Siapkan obat ini. Waktu minum: $waktu',
+                        time: advanceTime,
+                        type: NotificationType.mendatang,
+                        jadwalId: parsedJadwalId,
+                        aturan: aturan,
+                        isAdvanceReminder: true,
+                        isRead: readKeys.contains(key),
+                      ),
+                    );
+                  }
                 }
               }
             } catch (_) {}
@@ -195,27 +268,46 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
                   trackingDate.day == today.day;
 
               if (isToday && status == 'Terlewat') {
-                notifications.add(
-                  NotificationItem(
-                    title: namaObat,
-                    desc:
-                        'Anda melewatkan dosis ini. Catat alasan atau minum sekarang jika masih diperlukan.',
-                    time: waktu,
-                    type: NotificationType.terlewat,
-                    jadwalId: parsedJadwalId,
-                    isAdvanceReminder: false,
-                  ),
-                );
+                final key = 'dynamic_${parsedJadwalId}_$waktu';
+                if (!deletedKeys.contains(key)) {
+                  notifications.add(
+                    NotificationItem(
+                      title: namaObat,
+                      desc:
+                          'Anda melewatkan dosis ini. Catat alasan atau minum sekarang jika masih diperlukan.',
+                      time: waktu,
+                      type: NotificationType.terlewat,
+                      jadwalId: parsedJadwalId,
+                      isAdvanceReminder: false,
+                      isRead: readKeys.contains(key),
+                    ),
+                  );
+                }
               }
             } catch (_) {}
           }
         }
       }
 
-      notifications.sort((a, b) => b.time.compareTo(a.time));
+      // Deduplicate notifications
+      final uniqueNotifications = <NotificationItem>[];
+      for (final notif in notifications) {
+        bool isDuplicate = false;
+        for (final existing in uniqueNotifications) {
+          if (_isSameNotification(notif, existing)) {
+            isDuplicate = true;
+            break;
+          }
+        }
+        if (!isDuplicate) {
+          uniqueNotifications.add(notif);
+        }
+      }
+
+      uniqueNotifications.sort((a, b) => b.time.compareTo(a.time));
 
       emit(NotifikasiLoaded(
-        allNotifications: notifications,
+        allNotifications: uniqueNotifications,
         deferredNotifications: const {},
       ));
     } catch (e) {
@@ -417,10 +509,24 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
             }
           }
 
-          updatedNotifications.sort((a, b) => b.time.compareTo(a.time));
+          final uniqueUpdatedNotifications = <NotificationItem>[];
+          for (final notif in updatedNotifications) {
+            bool isDuplicate = false;
+            for (final existing in uniqueUpdatedNotifications) {
+              if (_isSameNotification(notif, existing)) {
+                isDuplicate = true;
+                break;
+              }
+            }
+            if (!isDuplicate) {
+              uniqueUpdatedNotifications.add(notif);
+            }
+          }
+
+          uniqueUpdatedNotifications.sort((a, b) => b.time.compareTo(a.time));
 
           emit(NotifikasiLoaded(
-            allNotifications: updatedNotifications,
+            allNotifications: uniqueUpdatedNotifications,
             deferredNotifications: deferredNotifications,
           ));
         } else {
@@ -666,10 +772,24 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
             }
           }
 
-          updatedNotifications.sort((a, b) => b.time.compareTo(a.time));
+          final uniqueUpdatedNotifications = <NotificationItem>[];
+          for (final notif in updatedNotifications) {
+            bool isDuplicate = false;
+            for (final existing in uniqueUpdatedNotifications) {
+              if (_isSameNotification(notif, existing)) {
+                isDuplicate = true;
+                break;
+              }
+            }
+            if (!isDuplicate) {
+              uniqueUpdatedNotifications.add(notif);
+            }
+          }
+
+          uniqueUpdatedNotifications.sort((a, b) => b.time.compareTo(a.time));
 
           emit(NotifikasiLoaded(
-            allNotifications: updatedNotifications,
+            allNotifications: uniqueUpdatedNotifications,
             deferredNotifications: deferredNotifications,
           ));
         } else {
@@ -698,8 +818,15 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
     AddMockNotification event,
     Emitter<NotifikasiState> emit,
   ) async {
+    // Jangan tambahkan jika sudah dihapus (cek in-memory cache)
+    if (_pendingDeletedKeys.contains(event.item.uniqueKey)) return;
+
     final currentState = state;
     if (currentState is NotifikasiLoaded) {
+      final isDuplicate = currentState.allNotifications.any((n) => _isSameNotification(n, event.item));
+      if (isDuplicate) {
+        return;
+      }
       final updatedNotifications = List<NotificationItem>.from(currentState.allNotifications)
         ..insert(0, event.item); // taruh paling atas
       emit(currentState.copyWith(allNotifications: updatedNotifications));
@@ -708,6 +835,110 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         allNotifications: [event.item],
         deferredNotifications: const {},
       ));
+    }
+  }
+
+  Future<void> _onMarkNotificationAsRead(
+    MarkNotificationAsRead event,
+    Emitter<NotifikasiState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is NotifikasiLoaded) {
+      // 1. Optimistic Update: Mark as read and emit state immediately to update UI instantly
+      final updatedNotifications = currentState.allNotifications.map((notif) {
+        if (notif.uniqueKey == event.item.uniqueKey) {
+          notif.isRead = true;
+        }
+        return notif;
+      }).toList();
+      
+      emit(currentState.copyWith(allNotifications: updatedNotifications));
+
+      // 2. Perform persistent SharedPreferences write in the background
+      try {
+        await NotificationStorageService.instance.markKeyAsRead(event.item.uniqueKey);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _onMarkAllNotificationsAsRead(
+    MarkAllNotificationsAsRead event,
+    Emitter<NotifikasiState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is NotifikasiLoaded) {
+      final keys = event.items.map((i) => i.uniqueKey).toList();
+      await NotificationStorageService.instance.markAllAsRead(keys);
+      
+      final updatedNotifications = currentState.allNotifications.map((notif) {
+        notif.isRead = true;
+        return notif;
+      }).toList();
+      
+      emit(currentState.copyWith(allNotifications: updatedNotifications));
+    }
+  }
+
+  List<String> _getRelatedKeys(NotificationItem item) {
+    final keys = <String>[item.uniqueKey];
+    if (item.jadwalId == null || item.id != null) {
+      return keys;
+    }
+
+    try {
+      final parts = item.time.split(':');
+      if (parts.length == 2) {
+        int hour = int.parse(parts[0]);
+        int minute = int.parse(parts[1]);
+
+        if (item.isAdvanceReminder) {
+          minute += 15;
+          if (minute >= 60) {
+            minute -= 60;
+            hour += 1;
+            if (hour >= 24) hour = 0;
+          }
+          final actualTime = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          keys.add('dynamic_${item.jadwalId}_$actualTime');
+        } else {
+          minute -= 15;
+          if (minute < 0) {
+            minute += 60;
+            hour -= 1;
+            if (hour < 0) hour = 23;
+          }
+          final advanceTime = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          keys.add('dynamic_${item.jadwalId}_$advanceTime');
+        }
+      }
+    } catch (_) {}
+
+    return keys;
+  }
+
+  Future<void> _onDeleteNotification(
+    DeleteNotification event,
+    Emitter<NotifikasiState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is NotifikasiLoaded) {
+      final relatedKeys = _getRelatedKeys(event.item);
+
+      // Tambahkan ke in-memory cache SEGERA sebelum operasi storage async
+      // agar FetchNotifications yang berjalan bersamaan tidak me-load ulang notifikasi ini
+      _pendingDeletedKeys.addAll(relatedKeys);
+
+      final updatedNotifications = currentState.allNotifications
+          .where((notif) => !relatedKeys.contains(notif.uniqueKey))
+          .toList();
+      
+      emit(currentState.copyWith(allNotifications: updatedNotifications));
+
+      try {
+        for (final key in relatedKeys) {
+          await NotificationStorageService.instance.markKeyAsDeleted(key);
+        }
+      } catch (_) {}
     }
   }
 }
