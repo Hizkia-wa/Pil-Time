@@ -14,9 +14,13 @@ import 'package:frontend_pasien/screens/alarm/alarm_screen.dart';
 import 'package:frontend_pasien/screens/profile/profile.dart';
 import '../services/notification_service.dart';
 import '../services/fcm_service.dart';
+import '../services/notification_storage_service.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../bloc/dashboard/dashboard_event.dart';
 import '../bloc/dashboard/dashboard_state.dart';
+import '../bloc/notifikasi/notifikasi_bloc.dart';
+import '../bloc/notifikasi/notifikasi_event.dart';
+import '../bloc/notifikasi/notifikasi_state.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -43,10 +47,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Track jadwal yang sudah ditandai diminum di sesi ini
   final Set<int> _takenJadwalIds = {};
   bool _notificationPermissionGranted = true;
+  int _unreadNotificationCount = 0;
 
   // Properti Rutinitas Sehat
   List<dynamic> _listRutinitas = [];
   bool _loadingRutinitas = true;
+
+  Future<void> _loadUnreadCount(List<Jadwal> todayJadwals, Set<int> takenJadwalIds) async {
+    try {
+      final riwayatResponse = await ApiService.getPasienRiwayat();
+      final riwayatData = riwayatResponse['success'] ? (riwayatResponse['data'] as List<dynamic>) : [];
+      final count = await NotificationStorageService.instance.getUnreadCount(
+        todayJadwals: todayJadwals.map((j) => j.toJson()).toList(),
+        takenJadwalIds: takenJadwalIds,
+        riwayatData: riwayatData,
+      );
+      if (mounted && _unreadNotificationCount != count) {
+        setState(() {
+          _unreadNotificationCount = count;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -59,6 +81,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // token sudah tersimpan sepenuhnya di SharedPreferences sebelum dibaca
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadRutinitas();
+      context.read<NotifikasiBloc>().add(FetchNotifications(pasienId: widget.pasienId));
+      final currentState = _dashboardBloc.state;
+      if (currentState is DashboardLoaded) {
+        _loadUnreadCount(currentState.dashboard.todayJadwals, currentState.takenJadwalIds);
+      }
     });
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
@@ -86,6 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       pasienNama: widget.pasienNama,
     ));
     _loadRutinitas();
+    context.read<NotifikasiBloc>().add(FetchNotifications(pasienId: widget.pasienId));
   }
 
 
@@ -131,6 +159,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: BlocConsumer<DashboardBloc, DashboardState>(
         bloc: _dashboardBloc,
         listener: (context, state) {
+          if (state is DashboardLoaded) {
+            _loadUnreadCount(state.dashboard.todayJadwals, state.takenJadwalIds);
+            context.read<NotifikasiBloc>().add(FetchNotifications(pasienId: widget.pasienId));
+          }
           if (state is DashboardFailure && state.statusCode == 401) {
             AuthService.logout();
             Navigator.of(context).pushNamedAndRemoveUntil(
@@ -668,35 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           // Notification bell
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => NotificationScreen()),
-              );
-            },
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFECEC),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFFD1D1), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.notifications_active_rounded,
-                color: Color(0xFFFF6B6B),
-                size: 22,
-              ),
-            ),
-          ),
+          const ModernNotificationBell(),
         ],
       ),
     );
@@ -1281,26 +1285,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (now.isBefore(jadwalDt)) return _JadwalStatus.upcoming;
       final diffMinutes = now.difference(jadwalDt).inMinutes;
       if (diffMinutes > 75) return _JadwalStatus.expired;
-      if (diffMinutes <= 30) return _JadwalStatus.onTime;
+      if (diffMinutes <= 60) return _JadwalStatus.onTime;
       return _JadwalStatus.late;
     } catch (_) {
       return _JadwalStatus.upcoming;
-    }
-  }
-
-  Future<void> _autoLogExpiredJadwal(Jadwal jadwal, int pasienId) async {
-    try {
-      final now = DateTime.now();
-      final waktuSekarang = '${now.hour.toString().padLeft(2, '0')}:'
-          '${now.minute.toString().padLeft(2, '0')}';
-      await ApiService.postRiwayat(
-        jadwalId: jadwal.id,
-        status: 'Terlewat',
-        waktuMinum: waktuSekarang,
-      );
-      debugPrint('[Dashboard] Auto-logged Terlewat for jadwal #${jadwal.id} (${jadwal.namaObat})');
-    } catch (e) {
-      debugPrint('[Dashboard] Gagal auto-log Terlewat (non-fatal): $e');
     }
   }
 
@@ -1322,9 +1310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         continue;
       }
       final status = _getJadwalStatus(j.waktuMinum);
-      if (status == _JadwalStatus.expired) {
-        _autoLogExpiredJadwal(j, pasienId);
-      } else {
+      if (status != _JadwalStatus.expired) {
         activeJadwals.add(j);
       }
     }
@@ -1343,7 +1329,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Jadwal Hari Ini',
+                      'Obat Hari Ini',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1843,7 +1829,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text(
-                      'Rutinitas Hari Ini',
+                      'Aktivitas Hari Ini',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1905,7 +1891,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _toggleRutinitasTracking(item, !isDone),
+                  onTap: isDone ? null : () => _toggleRutinitasTracking(item, !isDone),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -1961,7 +1947,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 8),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => _toggleRutinitasTracking(item, !isDone),
+                          onTap: isDone ? null : () => _toggleRutinitasTracking(item, !isDone),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 250),
                             curve: Curves.easeInOut,
@@ -2180,6 +2166,136 @@ class _BottomNavCenterButtonState extends State<_BottomNavCenterButton> with Sin
           ),
         ),
       ),
+    );
+  }
+}
+
+class ModernNotificationBell extends StatefulWidget {
+  const ModernNotificationBell({super.key});
+
+  @override
+  State<ModernNotificationBell> createState() => _ModernNotificationBellState();
+}
+
+class _ModernNotificationBellState extends State<ModernNotificationBell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<NotifikasiBloc, NotifikasiState>(
+      listener: (context, state) {
+        if (state is NotifikasiLoaded) {
+          // Trigger subtle scale micro-animation when unread count updates
+          _controller.forward().then((_) => _controller.reverse());
+        }
+      },
+      builder: (context, state) {
+        final unreadCount = state is NotifikasiLoaded
+            ? state.allNotifications.where((n) => !n.isRead).length
+            : 0;
+
+        return ScaleTransition(
+          scale: _scaleAnimation,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFF1F5F9),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFF475569),
+                    size: 24,
+                  ),
+                ),
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

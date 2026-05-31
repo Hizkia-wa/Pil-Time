@@ -171,6 +171,7 @@ class NotificationService {
         iOS: darwinDetails,
       );
 
+      // 1. Jadwalkan Alarm Utama (Initial)
       await _plugin.zonedSchedule(
         currentNotifId,
         '💊 Waktunya Minum Obat!',
@@ -180,16 +181,96 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        payload: '$jadwalId:$namaObat',
+        payload: '$jadwalId:$namaObat:$timeStr',
         matchDateTimeComponents: DateTimeComponents.time, // Repeat harian
       );
 
       debugPrint(
           '[PilTime] Scheduled alarm #$currentNotifId for $namaObat at $timeStr (WIB)');
 
+      // 2. Jadwalkan Snooze 1 (+20 Menit)
+      final snooze1TZ = scheduledTZ.add(const Duration(minutes: 20));
+      await _plugin.zonedSchedule(
+        currentNotifId + 100,
+        '💊 Pengingat Kedua (Snooze): Waktunya Minum Obat!',
+        '$namaObat — $dosis (Sudah lewat 20 menit)',
+        snooze1TZ,
+        notifDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: '$jadwalId:$namaObat:$timeStr',
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint(
+          '[PilTime] Scheduled Snooze 1 #${currentNotifId + 100} for $namaObat at ${snooze1TZ.hour}:${snooze1TZ.minute} (WIB)');
+
+      // 3. Jadwalkan Snooze 2 (+40 Menit)
+      final snooze2TZ = scheduledTZ.add(const Duration(minutes: 40));
+      await _plugin.zonedSchedule(
+        currentNotifId + 200,
+        '💊 Pengingat Ketiga (Snooze): Waktunya Minum Obat!',
+        '$namaObat — $dosis (Sudah lewat 40 menit)',
+        snooze2TZ,
+        notifDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: '$jadwalId:$namaObat:$timeStr',
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint(
+          '[PilTime] Scheduled Snooze 2 #${currentNotifId + 200} for $namaObat at ${snooze2TZ.hour}:${snooze2TZ.minute} (WIB)');
+
+      // 4. Jadwalkan Warning Terlambat (+60 Menit) - Batas Akhir Kategori Tepat Waktu
+      final terlambatTZ = scheduledTZ.add(const Duration(minutes: 60));
+      final Int64List urgentVibrationPattern = Int64List.fromList([
+        0, 1500, 300, 1500, 300, 1500, 300, 1500,
+      ]);
+      final urgentAndroidDetails = AndroidNotificationDetails(
+        _channelId,
+        'Alarm Sangat Penting (Terlambat)',
+        channelDescription: 'Notifikasi peringatan keterlambatan minum obat',
+        importance: Importance.max,
+        priority: Priority.max,
+        fullScreenIntent: true,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarm_voice'),
+        enableVibration: true,
+        vibrationPattern: urgentVibrationPattern,
+        styleInformation: const BigTextStyleInformation(''),
+        icon: 'ic_notification',
+      );
+      final urgentNotifDetails = NotificationDetails(
+        android: urgentAndroidDetails,
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          sound: 'alarm_voice.mp3',
+        ),
+      );
+
+      await _plugin.zonedSchedule(
+        currentNotifId + 300,
+        '⚠️ Status Terlambat: Segera Minum $namaObat!',
+        'Sudah terlambat 60 menit! Segera minum sebelum status berubah menjadi Terlewat (15 menit lagi)!',
+        terlambatTZ,
+        urgentNotifDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: '$jadwalId:$namaObat:$timeStr',
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint(
+          '[PilTime] Scheduled Terlambat Warning #${currentNotifId + 300} for $namaObat at ${terlambatTZ.hour}:${terlambatTZ.minute} (WIB)');
+
       // ── Auto-show alarm screen dari Dart side (tanpa tap notifikasi) ──
       // Alur: notifikasi muncul → langsung buka AlarmRingingScreen secara otomatis
       final now = tz.TZDateTime.now(tz.getLocation(_timezone));
+      
+      // Auto-show untuk Alarm Utama
       final delayUntilAlarmMs = scheduledTZ.difference(now).inMilliseconds;
       if (delayUntilAlarmMs > 0) {
         _pendingAlarmTimers[currentNotifId]?.cancel();
@@ -197,11 +278,48 @@ class NotificationService {
           Duration(milliseconds: delayUntilAlarmMs),
           () {
             debugPrint('[PilTime] Auto-show alarm secara instan (timer #$currentNotifId)');
-            showAlarmScreen('$jadwalId:$namaObat');
+            showAlarmScreen('$jadwalId:$namaObat:$timeStr');
           },
         );
-        debugPrint(
-            '[PilTime] Auto-open timer: ${delayUntilAlarmMs}ms (instan)');
+      }
+
+      // Auto-show untuk Snooze 1 (+20 Menit)
+      final delayUntilSnooze1Ms = snooze1TZ.difference(now).inMilliseconds;
+      if (delayUntilSnooze1Ms > 0) {
+        _pendingAlarmTimers[currentNotifId + 100]?.cancel();
+        _pendingAlarmTimers[currentNotifId + 100] = Timer(
+          Duration(milliseconds: delayUntilSnooze1Ms),
+          () {
+            debugPrint('[PilTime] Auto-show Snooze 1 secara instan (timer #${currentNotifId + 100})');
+            showAlarmScreen('$jadwalId:$namaObat:$timeStr');
+          },
+        );
+      }
+
+      // Auto-show untuk Snooze 2 (+40 Menit)
+      final delayUntilSnooze2Ms = snooze2TZ.difference(now).inMilliseconds;
+      if (delayUntilSnooze2Ms > 0) {
+        _pendingAlarmTimers[currentNotifId + 200]?.cancel();
+        _pendingAlarmTimers[currentNotifId + 200] = Timer(
+          Duration(milliseconds: delayUntilSnooze2Ms),
+          () {
+            debugPrint('[PilTime] Auto-show Snooze 2 secara instan (timer #${currentNotifId + 200})');
+            showAlarmScreen('$jadwalId:$namaObat:$timeStr');
+          },
+        );
+      }
+
+      // Auto-show untuk Warning Terlambat (+60 Menit)
+      final delayUntilTerlambatMs = terlambatTZ.difference(now).inMilliseconds;
+      if (delayUntilTerlambatMs > 0) {
+        _pendingAlarmTimers[currentNotifId + 300]?.cancel();
+        _pendingAlarmTimers[currentNotifId + 300] = Timer(
+          Duration(milliseconds: delayUntilTerlambatMs),
+          () {
+            debugPrint('[PilTime] Auto-show Warning Terlambat secara instan (timer #${currentNotifId + 300})');
+            showAlarmScreen('$jadwalId:$namaObat:$timeStr');
+          },
+        );
       }
     }
   }
@@ -347,16 +465,40 @@ class NotificationService {
     for (int i = 0; i <= 5; i++) {
       final offset = i * 1000;
       await _plugin.cancel(jadwalId + offset);         // waktu_minum
+      await _plugin.cancel(jadwalId + 100 + offset);   // Snooze 1
+      await _plugin.cancel(jadwalId + 200 + offset);   // Snooze 2
+      await _plugin.cancel(jadwalId + 300 + offset);   // Warning Terlambat
       await _plugin.cancel(jadwalId + 10000 + offset); // reminder_pagi
       await _plugin.cancel(jadwalId + 20000 + offset); // reminder_malam
       await _plugin.cancel(jadwalId + 30000 + offset); // advance_reminder
 
       // Batalkan Dart-side timer juga
       _pendingAlarmTimers.remove(jadwalId + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 100 + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 200 + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 300 + offset)?.cancel();
       _pendingAlarmTimers.remove(jadwalId + 10000 + offset)?.cancel();
       _pendingAlarmTimers.remove(jadwalId + 20000 + offset)?.cancel();
     }
     debugPrint('[PilTime] Cancelled notifications for jadwal #$jadwalId');
+  }
+
+  // ==========================================================
+  // BATALKAN SNOOZE ALARM saja (saat alarm dimatikan manual)
+  // ==========================================================
+  Future<void> cancelSnoozesForJadwal(int jadwalId) async {
+    for (int i = 0; i <= 5; i++) {
+      final offset = i * 1000;
+      await _plugin.cancel(jadwalId + 100 + offset); // Snooze 1
+      await _plugin.cancel(jadwalId + 200 + offset); // Snooze 2
+      await _plugin.cancel(jadwalId + 300 + offset); // Warning Terlambat
+
+      // Batalkan Dart-side timer juga
+      _pendingAlarmTimers.remove(jadwalId + 100 + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 200 + offset)?.cancel();
+      _pendingAlarmTimers.remove(jadwalId + 300 + offset)?.cancel();
+    }
+    debugPrint('[PilTime] Cancelled snooze alarms for jadwal #$jadwalId');
   }
 
   // ==========================================================
@@ -728,6 +870,7 @@ class NotificationService {
         // Format: reminder:jadwalId:namaObat
         final withoutPrefix = payload.substring('reminder:'.length);
         final parts = withoutPrefix.split(':');
+        final jadwalId = parts.isNotEmpty ? int.tryParse(parts[0]) : null;
         final namaObat = parts.length > 1 ? parts.sublist(1).join(':') : 'Obat';
         final now = DateTime.now();
         final timeStr =
@@ -737,6 +880,7 @@ class NotificationService {
           desc: 'Siapkan obat ini. Waktu minum segera tiba.',
           time: timeStr,
           type: NotificationType.mendatang,
+          jadwalId: jadwalId,
           isAdvanceReminder: true,
         );
       } catch (_) {}
@@ -769,9 +913,14 @@ class NotificationService {
           if (id != null) {
             // Batalkan semua kemungkinan offset notifikasi untuk jadwal ini
             for (int i = 0; i <= 5; i++) {
-              _plugin.cancel(id + (i * 1000));
-              _plugin.cancel(id + 10000 + (i * 1000));
-              _plugin.cancel(id + 20000 + (i * 1000));
+              final offset = i * 1000;
+              _plugin.cancel(id + offset);
+              _plugin.cancel(id + 100 + offset);
+              _plugin.cancel(id + 200 + offset);
+              _plugin.cancel(id + 300 + offset);
+              _plugin.cancel(id + 10000 + offset);
+              _plugin.cancel(id + 20000 + offset);
+              _plugin.cancel(id + 30000 + offset);
             }
             if (id == 99999) {
               _plugin.cancel(99999);
