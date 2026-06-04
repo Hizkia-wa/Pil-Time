@@ -13,7 +13,7 @@
       <div class="hero-content">
 
         <span class="badge">
-          📱 Download Aplikasi
+          Download Aplikasi
         </span>
 
         <h1>
@@ -29,7 +29,7 @@
         <div class="button-group">
 
           <a href="/apk/piltime.apk" download class="download-btn">
-            📥 Download APK
+            Download APK
           </a>
 
           <a href="#fitur" class="secondary-btn">
@@ -98,11 +98,11 @@
             </p>
 
             <ul>
-              <li>✔ Reminder Minum Obat Otomatis</li>
-              <li>✔ Riwayat Kepatuhan Harian</li>
-              <li>✔ Informasi & Jadwal Obat</li>
-              <li>✔ Monitoring Kesehatan Pasien</li>
-              <li>✔ UI Sederhana & Mudah Digunakan</li>
+              <li>Reminder Minum Obat Otomatis</li>
+              <li>Riwayat Kepatuhan Harian</li>
+              <li>Informasi &amp; Jadwal Obat</li>
+              <li>Monitoring Kesehatan Pasien</li>
+              <li>UI Sederhana &amp; Mudah Digunakan</li>
             </ul>
 
           </div>
@@ -129,7 +129,9 @@
         <div class="feature-grid">
 
   <div class="feature-card">
-    <div class="icon">⏰</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M12 3a7 7 0 00-7 7v1.5l-.9 1.8A1 1 0 005 15h14a1 1 0 00.9-1.7L19 11.5V10a7 7 0 00-7-7zM9 17a3 3 0 006 0H9z" fill="#1D9E75"/></svg>
+    </div>
     <h3>Reminder Obat</h3>
     <p>
       Sistem pengingat otomatis yang memastikan pasien tidak pernah melewatkan jadwal minum obat,
@@ -138,8 +140,10 @@
   </div>
 
   <div class="feature-card">
-    <div class="icon">💊</div>
-    <h3>Info & Dosis Obat</h3>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><rect x="5" y="3" width="14" height="18" rx="2" stroke="#1D9E75" stroke-width="1.5"/><path d="M8 9h8M8 13h5" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <h3>Info &amp; Dosis Obat</h3>
     <p>
       Menyediakan informasi lengkap tentang nama obat, fungsi, dosis yang tepat,
       serta cara penggunaan yang benar.
@@ -147,7 +151,9 @@
   </div>
 
   <div class="feature-card">
-    <div class="icon">📊</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><polyline points="3,18 8,11 13,14 18,6" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="6" r="2" fill="#1D9E75"/></svg>
+    </div>
     <h3>Riwayat Kepatuhan</h3>
     <p>
       Menyimpan catatan konsumsi obat harian sehingga pasien dan tenaga medis
@@ -156,7 +162,9 @@
   </div>
 
   <div class="feature-card">
-    <div class="icon">🏥</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#1D9E75" stroke-width="1.5"/><path d="M7 8h10M7 12h6" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
     <h3>Monitoring Kesehatan</h3>
     <p>
       Memantau kondisi kesehatan pasien secara digital untuk membantu evaluasi
@@ -165,7 +173,9 @@
   </div>
 
   <div class="feature-card">
-    <div class="icon">🔔</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
     <h3>Notifikasi Pintar</h3>
     <p>
       Notifikasi adaptif berbasis jadwal pasien agar pengingat lebih relevan,
@@ -174,7 +184,9 @@
   </div>
 
   <div class="feature-card">
-    <div class="icon">👨‍⚕️</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="#1D9E75" stroke-width="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
     <h3>Dashboard Tenaga Medis</h3>
     <p>
       Memungkinkan dokter atau perawat memantau kepatuhan pasien secara real-time
@@ -203,7 +215,7 @@
         </p>
 
         <a href="/apk/piltime.apk" download class="download-btn large">
-          🚀 Download Sekarang
+          Download Sekarang
         </a>
 
       </div>
@@ -241,7 +253,7 @@ export default {
 }
 
 .install-page{
-  font-family: "Poppins", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   background: #ffffff;
   color: #0f172a;
 }
@@ -249,57 +261,65 @@ export default {
 /* ================= HERO ================= */
 .hero{
   position: relative;
-  min-height: 100vh;
+  min-height: 72vh;
   display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 120px 20px;
-  background: linear-gradient(135deg, #4ace7b, #74b78d);
+  padding: 140px 20px 100px;
+  background:
+    radial-gradient(circle at top left, #d4f5e8 0%, transparent 35%),
+    radial-gradient(circle at bottom right, #b8edda 0%, transparent 40%),
+    linear-gradient(180deg, #f8fffe 0%, #f0fdf8 100%);
   overflow: hidden;
 }
 
 .overlay{
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.25);
+  display: none;
 }
 
 .hero-content{
   position: relative;
   z-index: 2;
   text-align: center;
-  color: white;
+  color: #0f172a;
   max-width: 850px;
   animation: fadeUp 0.8s ease;
 }
 
 .badge{
   display: inline-block;
-  background: rgba(255,255,255,0.15);
-  padding: 10px 18px;
-  border-radius: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  backdrop-filter: blur(10px);
+  background: rgba(29, 158, 117, 0.1);
+  border: 1px solid rgba(29, 158, 117, 0.25);
+  color: #1D9E75;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   margin-bottom: 20px;
 }
 
 .hero-content h1{
-  font-size: 64px;
-  font-weight: 800;
+  font-size: 62px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.15;
   margin-bottom: 18px;
 }
 
 .hero-content h1 span{
-  color: #fff;
+  color: #1D9E75;
 }
 
 .hero-content p{
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: 19px;
+  line-height: 1.9;
+  color: #374151;
   margin-bottom: 30px;
-  opacity: 0.95;
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ================= BUTTON ================= */
@@ -311,36 +331,38 @@ export default {
 }
 
 .download-btn{
-  background: #fff;
-  color: #16a34a;
+  background: #1D9E75;
+  color: white;
   padding: 14px 30px;
   border-radius: 50px;
   font-weight: 700;
   text-decoration: none;
   transition: 0.3s;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 25px rgba(29,158,117,0.25);
 }
 
 .download-btn:hover{
   transform: translateY(-4px);
-  background: #f0fdf4;
+  background: #0F6E56;
 }
 
 .secondary-btn{
-  border: 2px solid white;
-  color: white;
+  background: transparent;
+  color: #1D9E75;
+  border: 2px solid #1D9E75;
   padding: 14px 30px;
   border-radius: 50px;
+  font-weight: 700;
   text-decoration: none;
-  font-weight: 600;
   transition: 0.3s;
 }
 
 .secondary-btn:hover{
-  background: white;
-  color: #16a34a;
+  background: rgba(29,158,117,0.08);
   transform: translateY(-4px);
 }
+
+
 
 /* ================= SECTION ================= */
 .section{
@@ -362,10 +384,10 @@ export default {
 }
 
 .section-title span{
-  color: #16a34a;
+  color: #1D9E75;
   font-weight: 600;
   letter-spacing: 2px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .section-title h2{
@@ -412,7 +434,7 @@ export default {
   text-align: center;
   margin-bottom: 20px;
   font-weight: 800;
-  color: #16a34a;
+  color: #1D9E75;
 }
 
 /* CARD MOCK */
@@ -442,10 +464,10 @@ export default {
 
 /* ================= TEXT ================= */
 .section-badge{
-  color: #16a34a;
+  color: #1D9E75;
   font-weight: 700;
   letter-spacing: 2px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .app-text h2{
@@ -458,6 +480,7 @@ export default {
   color: #475569;
   line-height: 1.9;
   margin-bottom: 16px;
+  font-size: 19px;
 }
 
 .app-text ul{
@@ -467,7 +490,7 @@ export default {
 
 .app-text li{
   margin-bottom: 12px;
-  font-size: 15px;
+  font-size: 18px;
   color: #334155;
 }
 
@@ -489,7 +512,7 @@ export default {
 
 .feature-card:hover{
   transform: translateY(-8px);
-  box-shadow: 0 18px 40px rgba(22,163,74,0.15);
+  box-shadow: 0 18px 40px rgba(29,158,117,0.15);
 }
 
 .icon{
@@ -498,20 +521,20 @@ export default {
 }
 
 .feature-card h3{
-  color: #16a34a;
+  color: #1D9E75;
   margin-bottom: 10px;
 }
 
 .feature-card p{
   color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 17px;
+  line-height: 1.8;
 }
 
 /* ================= CTA ================= */
 .cta-section{
   padding: 110px 20px;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
+  background: linear-gradient(135deg, #1D9E75, #0F6E56);
   text-align: center;
   color: white;
 }
@@ -528,8 +551,8 @@ export default {
 }
 
 .cta-content p{
-  font-size: 17px;
-  line-height: 1.8;
+  font-size: 19px;
+  line-height: 1.9;
   margin-bottom: 30px;
   opacity: 0.95;
 }

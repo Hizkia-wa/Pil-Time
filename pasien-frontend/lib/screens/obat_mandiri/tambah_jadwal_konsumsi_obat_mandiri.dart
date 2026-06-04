@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
 import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
+import '../../widgets/lansia_time_picker.dart';
 
 class TambahJadwalKonsumsi extends StatefulWidget {
   final dynamic obat;
@@ -153,27 +154,63 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   }
 
   Future<void> _selectTime(int index) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final initialTime = _selectedCustomTimes[index] != null
+        ? TimeOfDay(
+            hour: int.parse(_selectedCustomTimes[index]!.split(':')[0]),
+            minute: int.parse(_selectedCustomTimes[index]!.split(':')[1]),
+          )
+        : TimeOfDay.now();
+
+    final TimeOfDay? picked = await showLansiaTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: const Color(0xFF15BE77),
-            colorScheme: const ColorScheme.light(primary: Color(0xFF15BE77)),
-            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
-          ),
-          child: child!,
-        );
-      },
+      initialTime: initialTime,
     );
     if (picked != null) {
       final String formattedTime =
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+
+      // Cek apakah waktu ini sudah digunakan di slot lain
+      final int? duplicateSlot = _findDuplicateSlot(formattedTime, excludeIndex: index);
+      if (duplicateSlot != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Waktu $formattedTime sudah dipakai di Waktu Ke-${duplicateSlot + 1}. Pilih waktu yang berbeda.',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return; // Tolak pilihan — jangan update state
+      }
+
       setState(() {
         _selectedCustomTimes[index] = formattedTime;
       });
     }
+  }
+
+  /// Kembalikan index slot yang sudah memakai [time], kecuali [excludeIndex].
+  /// Kembalikan null jika tidak ada duplikat.
+  int? _findDuplicateSlot(String time, {required int excludeIndex}) {
+    final requiredCount = _getRequiredPengingat();
+    for (int i = 0; i < requiredCount; i++) {
+      if (i == excludeIndex) continue;
+      if (_selectedCustomTimes[i] == time) return i;
+    }
+    return null;
   }
 
   // --- LOGIKA SIMPAN KE BACKEND ---
@@ -200,6 +237,32 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
           content: Text(
             'Tentukan semua $requiredPengingat waktu pengingat untuk ${_frekuensiCtrl.text}',
           ),
+        ),
+      );
+      return;
+    }
+
+    // Validasi: semua waktu harus unik
+    final uniqueTimes = filledTimes.toSet();
+    if (uniqueTimes.length != filledTimes.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Setiap waktu pengingat harus berbeda. Silakan ubah waktu yang duplikat.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
@@ -457,6 +520,16 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   Widget _buildPengingaatSelector() {
     final requiredCount = _getRequiredPengingat();
 
+    // Identifikasi slot mana saja yang memiliki waktu duplikat
+    final Set<String> seen = {};
+    final Set<String> duplicates = {};
+    for (int i = 0; i < requiredCount; i++) {
+      final t = _selectedCustomTimes[i];
+      if (t != null) {
+        if (!seen.add(t)) duplicates.add(t);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -477,6 +550,18 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
           itemBuilder: (context, index) {
             final time = _selectedCustomTimes[index];
             final hasSelected = time != null;
+            final isDuplicate = hasSelected && duplicates.contains(time);
+
+            final Color borderColor = isDuplicate
+                ? const Color(0xFFEF4444)
+                : hasSelected
+                    ? const Color(0xFF15BE77)
+                    : _cardBorder;
+            final Color iconColor = isDuplicate
+                ? const Color(0xFFEF4444)
+                : hasSelected
+                    ? const Color(0xFF15BE77)
+                    : _textSecondary;
 
             return InkWell(
               onTap: () => _selectTime(index),
@@ -484,18 +569,22 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDuplicate
+                      ? const Color(0xFFFEF2F2)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: hasSelected ? const Color(0xFF15BE77) : _cardBorder,
-                    width: hasSelected ? 1.5 : 1.0,
+                    color: borderColor,
+                    width: (hasSelected || isDuplicate) ? 1.5 : 1.0,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.access_time_rounded,
-                      color: hasSelected ? const Color(0xFF15BE77) : _textSecondary,
+                      isDuplicate
+                          ? Icons.error_outline_rounded
+                          : Icons.access_time_rounded,
+                      color: iconColor,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -506,7 +595,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                             'Waktu Ke-${index + 1}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: hasSelected ? const Color(0xFF15BE77) : _textSecondary,
+                              color: iconColor,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -519,6 +608,17 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                               color: hasSelected ? _textPrimary : _textSecondary.withValues(alpha: 0.7),
                             ),
                           ),
+                          if (isDuplicate) ...[
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Waktu ini duplikat — pilih waktu lain',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

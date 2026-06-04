@@ -45,14 +45,20 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         headers: headers,
       );
 
-      final streakResponse = await http.get(
+      final streakRutinitasResponse = await http.get(
         Uri.parse("$_baseUrl/rutinitas/streak/${event.pasienId}"),
+        headers: headers,
+      );
+
+      final streakObatResponse = await http.get(
+        Uri.parse("$_baseUrl/riwayat/streak/${event.pasienId}"),
         headers: headers,
       );
 
       List<dynamic> listObat = [];
       List<dynamic> listRutinitas = [];
-      int streakHari = 0;
+      int streakRutinitas = 0;
+      int streakObat = 0;
 
       if (obatResponse.statusCode == 200) {
         final obatData = jsonDecode(obatResponse.body);
@@ -64,15 +70,21 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         listRutinitas = rutinitasData['data'] ?? [];
       }
 
-      if (streakResponse.statusCode == 200) {
-        final streakData = jsonDecode(streakResponse.body);
-        streakHari = streakData['current_streak'] ?? 0;
+      if (streakRutinitasResponse.statusCode == 200) {
+        final streakData = jsonDecode(streakRutinitasResponse.body);
+        streakRutinitas = streakData['current_streak'] ?? 0;
+      }
+
+      if (streakObatResponse.statusCode == 200) {
+        final streakData = jsonDecode(streakObatResponse.body);
+        streakObat = streakData['current_streak'] ?? 0;
       }
 
       emit(RutinitasSehatLoaded(
         listObat: listObat,
         listRutinitas: listRutinitas,
-        streakHari: streakHari,
+        streakRutinitas: streakRutinitas,
+        streakObat: streakObat,
       ));
     } catch (e) {
       emit(RutinitasSehatFailure(e.toString()));

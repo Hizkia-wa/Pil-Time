@@ -328,7 +328,7 @@ export default {
         },
         {
           name: "De Pedro Monang Pane",
-          role: "Progremmer",
+          role: "Programmer",
           campus: "Institut Teknologi Del",
           photo: developer2,
           description:
@@ -352,7 +352,7 @@ export default {
         },
         {
           name: "Monalisa Dea Anastasya",
-          role: "Tester Softwate",
+          role: "Tester Software",
           campus: "Institut Teknologi Del",
           photo: developer5,
           description:
@@ -442,14 +442,13 @@ export default {
   height: 58px;
   margin: 0 auto 18px;
   border-radius: 18px;
-  background: linear-gradient(135deg,#16a34a,#22c55e);
+  background: linear-gradient(135deg,#1D9E75,#34d399);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   font-weight: 800;
-
   transition: .3s ease;
 }
 
@@ -475,7 +474,7 @@ export default {
 }
 
 .about-page{
-  font-family: "Poppins", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   background: #ffffff;
   color: #1e293b;
 }
@@ -484,7 +483,7 @@ export default {
 .hero{
   position: relative;
 
-  min-height: 75vh;
+  min-height: 72vh;
 
   display: flex;
   align-items: center;
@@ -495,51 +494,53 @@ export default {
   padding: 140px 20px 100px;
 
   background:
-    radial-gradient(circle at top left,#dcfce7 0%,transparent 35%),
-    radial-gradient(circle at bottom right,#bbf7d0 0%,transparent 35%),
-    linear-gradient(135deg,#16a34a,#22c55e);
+    radial-gradient(circle at top left, #d4f5e8 0%, transparent 35%),
+    radial-gradient(circle at bottom right, #b8edda 0%, transparent 40%),
+    linear-gradient(180deg, #f8fffe 0%, #f0fdf8 100%);
 
   overflow: hidden;
 }
 
 .overlay{
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.2);
+  display: none;
 }
 
 .hero-content{
   position: relative;
   z-index: 2;
   max-width: 850px;
-  color: white;
+  color: #0f172a;
 }
 
 .badge{
   display: inline-block;
-
-  background: rgba(255,255,255,0.15);
-
-  padding: 10px 18px;
-  border-radius: 50px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  margin-bottom: 25px;
-
-  backdrop-filter: blur(10px);
+  background: rgba(29, 158, 117, 0.1);
+  border: 1px solid rgba(29, 158, 117, 0.25);
+  color: #1D9E75;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
 }
 
+
+
 .hero-content h1{
-  font-size: 72px;
-  margin-bottom: 25px;
-  font-weight: 800;
+  font-size: 62px;
+  margin-bottom: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.15;
 }
 
 .hero-content p{
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.9;
+  color: #374151;
+  max-width: 700px;
+  margin: 0 auto;
 }
 
 /* SECTION */
@@ -562,7 +563,7 @@ export default {
 }
 
 .section-title span{
-  color: #16a34a;
+  color: #1D9E75;
   font-weight: 600;
   letter-spacing: 2px;
 }
@@ -582,10 +583,10 @@ export default {
 }
 
 .content-box p{
-  line-height: 2;
+  line-height: 2.1;
   color: #64748b;
   margin-bottom: 20px;
-  font-size: 17px;
+  font-size: 19px;
 }
 
 /* FEATURES */
@@ -613,22 +614,20 @@ export default {
 .feature-line{
   width: 70px;
   height: 6px;
-
   border-radius: 20px;
-
-  background: linear-gradient(135deg,#16a34a,#22c55e);
-
+  background: linear-gradient(135deg,#1D9E75,#34d399);
   margin-bottom: 25px;
 }
 
 .feature-card h3{
   margin-bottom: 15px;
-  color: #16a34a;
+  color: #1D9E75;
 }
 
 .feature-card p{
   color: #64748b;
-  line-height: 1.8;
+  line-height: 1.9;
+  font-size: 17px;
 }
 
 /* BENEFIT */
@@ -675,7 +674,8 @@ export default {
 
 .benefit-card p{
   color: #64748b;
-  line-height: 1.8;
+  line-height: 1.9;
+  font-size: 17px;
 }
 
 /* GRID DEVELOPER */
@@ -720,10 +720,10 @@ export default {
 }
 
 .developer-info span{
-  color: #16a34a;
+  color: #1D9E75;
   font-weight: 600;
   letter-spacing: 1px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .developer-info h3{
@@ -734,13 +734,13 @@ export default {
 .developer-info h4{
   color: #64748b;
   margin-bottom: 10px;
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .developer-info p{
   color: #64748b;
-  line-height: 1.7;
-  font-size: 14px;
+  line-height: 1.8;
+  font-size: 17px;
 }
 
 /* TABLET */
@@ -812,8 +812,9 @@ export default {
 
 .partner-info p{
   color: #64748b;
-  line-height: 1.9;
+  line-height: 2;
   margin-bottom: 20px;
+  font-size: 18px;
 }
 
 .latar-wrapper{

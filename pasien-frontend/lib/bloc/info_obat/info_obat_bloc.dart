@@ -28,7 +28,7 @@ class InfoObatBloc extends Bloc<InfoObatEvent, InfoObatState> {
           .map((item) => ObatDetail.fromJson(item as Map<String, dynamic>))
           .toList();
 
-      // Group medicines by tanggalMulai
+      // Group medicines by tanggalMulai (include all active medicines, including mandiri)
       final Map<String, List<ObatDetail>> grouped = {};
       for (var obat in obats) {
         if (obat.status.toLowerCase() == 'aktif') {

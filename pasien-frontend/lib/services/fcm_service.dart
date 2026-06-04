@@ -172,12 +172,18 @@ class FcmService {
         );
       }
 
-      // Tampilkan notifikasi lokal di foreground (FCM tidak auto-display)
-      await NotificationService.instance.showImmediateNotification(
-        title: title,
-        body: body,
-        payload: message.data['jadwal_id'],
-      );
+      // Tampilkan notifikasi lokal di foreground (FCM tidak auto-display).
+      // Jika AlarmRingingScreen sedang aktif, notifikasi ini akan tampil silent
+      // (masuk ke tray tanpa pop-up) — dihandle otomatis oleh showImmediateNotification.
+      if (!NotificationService.instance.isAlarmScreenActive) {
+        await NotificationService.instance.showImmediateNotification(
+          title: title,
+          body: body,
+          payload: message.data['jadwal_id'],
+        );
+      } else {
+        debugPrint('[FCM Foreground] AlarmScreen aktif \u2014 notifikasi jadwal_baru di-silent (tidak pop-up).');
+      }
     }
   }
 

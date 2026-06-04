@@ -131,7 +131,7 @@ export default {
 
 .navbar{
   width: 100%;
-  height: 90px;
+  height: 88px;
 
   position: fixed;
   top: 0;
@@ -144,16 +144,16 @@ export default {
   align-items: center;
   justify-content: space-between;
 
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.92);
 
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(20px);
 
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(29,158,117,0.08);
 
   box-shadow:
-    0 8px 30px rgba(15,23,42,0.06);
+    0 4px 24px rgba(15,23,42,0.07);
 
-  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* =========================
@@ -275,9 +275,9 @@ export default {
 .nav-links a{
   text-decoration: none;
 
-  color: #334155;
+  color: #374151;
 
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
 
   position: relative;
@@ -324,21 +324,23 @@ export default {
 ========================= */
 
 .login-btn{
-  padding: 14px 30px;
+  padding: 15px 32px;
 
-  border-radius: 18px;
+  border-radius: 14px;
 
   background:
     linear-gradient(
       135deg,
       #1D9E75,
-      #0F766E
+      #0F6E56
     );
 
   color: white !important;
 
+  font-size: 16px;
+
   box-shadow:
-    0 12px 30px rgba(29,158,117,0.28);
+    0 10px 28px rgba(29,158,117,0.3);
 
   transition: 0.35s ease;
 }
@@ -387,7 +389,7 @@ export default {
 .mobile-menu{
   position: absolute;
 
-  top: 90px;
+  top: 88px;
   left: 0;
 
   width: 100%;
@@ -420,7 +422,7 @@ export default {
 .mobile-menu a{
   text-decoration: none;
 
-  color: #334155;
+  color: #374151;
 
   font-size: 17px;
   font-weight: 700;

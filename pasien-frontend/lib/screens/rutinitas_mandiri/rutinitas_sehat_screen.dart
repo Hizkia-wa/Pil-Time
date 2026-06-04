@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import 'tambah_rutinitas_screen.dart';
 import '../obat_mandiri/tambah_jadwal_konsumsi_obat_mandiri.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
@@ -24,7 +25,8 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
 
   List<dynamic> _listObat = [];
   List<dynamic> _listRutinitas = [];
-  int _streakHari = 0;
+  int _streakRutinitas = 0;
+  int _streakObat = 0;
   bool _isLoading = true;
   int? _pasienId;
   late TabController _tabController;
@@ -92,9 +94,11 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                 setState(() {
                   _listObat = state.listObat;
                   _listRutinitas = state.listRutinitas;
-                  _streakHari = state.streakHari;
+                  _streakRutinitas = state.streakRutinitas;
+                  _streakObat = state.streakObat;
                   _isLoading = false;
                 });
+                _scheduleRutinitasAlarms(state.listRutinitas);
               } else if (state is RutinitasSehatFailure) {
                 setState(() {
                   _isLoading = false;
@@ -280,7 +284,7 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            "$_streakHari Hari Beruntun!",
+            "${_tabController.index == 0 ? _streakObat : _streakRutinitas} Hari Beruntun!",
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -927,6 +931,32 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
 
     if (confirm == true && mounted) {
       _rutinitasBloc.add(DeleteRutinitasSehat(id: item['id']));
+    }
+  }
+
+  Future<void> _scheduleRutinitasAlarms(List<dynamic> routines) async {
+    try {
+      await NotificationService.instance.cancelAllRoutineAlarms();
+      for (final item in routines) {
+        final status = item['today_status'] ?? 'none';
+        final isDone = status == 'done';
+        final id = item['id'];
+        final nama = item['nama_rutinitas'] ?? '';
+        final waktu = item['waktu_reminder'] ?? '';
+        final deskripsi = item['deskripsi'] ?? '';
+        if (id != null && waktu.isNotEmpty) {
+          await NotificationService.instance.scheduleRutinitasNotification(
+            notifId: id,
+            namaRutinitas: nama,
+            waktuReminder: waktu,
+            rutinitasId: id,
+            deskripsi: deskripsi,
+            startFromTomorrow: isDone,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[RutinitasAlarm] Error scheduling: $e');
     }
   }
 }

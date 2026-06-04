@@ -16,12 +16,15 @@ class DashboardLoaded extends DashboardState {
   final Dashboard dashboard;
   final Map<String, List<String>> riwayatByDate;
   final Set<int> takenJadwalIds;
+  /// Key: "${jadwalId}_${waktu}" — untuk tracking per-slot obat mandiri
+  final Set<String> takenMandiriSlots;
   final bool isMarking;
 
   const DashboardLoaded({
     required this.dashboard,
     required this.riwayatByDate,
     required this.takenJadwalIds,
+    this.takenMandiriSlots = const {},
     this.isMarking = false,
   });
 
@@ -29,18 +32,20 @@ class DashboardLoaded extends DashboardState {
     Dashboard? dashboard,
     Map<String, List<String>>? riwayatByDate,
     Set<int>? takenJadwalIds,
+    Set<String>? takenMandiriSlots,
     bool? isMarking,
   }) {
     return DashboardLoaded(
       dashboard: dashboard ?? this.dashboard,
       riwayatByDate: riwayatByDate ?? this.riwayatByDate,
       takenJadwalIds: takenJadwalIds ?? this.takenJadwalIds,
+      takenMandiriSlots: takenMandiriSlots ?? this.takenMandiriSlots,
       isMarking: isMarking ?? this.isMarking,
     );
   }
 
   @override
-  List<Object?> get props => [dashboard, riwayatByDate, takenJadwalIds, isMarking];
+  List<Object?> get props => [dashboard, riwayatByDate, takenJadwalIds, takenMandiriSlots, isMarking];
 }
 
 class DashboardFailure extends DashboardState {

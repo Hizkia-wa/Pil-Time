@@ -14,16 +14,18 @@ class RutinitasSehatLoading extends RutinitasState {}
 class RutinitasSehatLoaded extends RutinitasState {
   final List<dynamic> listObat;
   final List<dynamic> listRutinitas;
-  final int streakHari;
+  final int streakRutinitas;
+  final int streakObat;
 
   const RutinitasSehatLoaded({
     required this.listObat,
     required this.listRutinitas,
-    required this.streakHari,
+    required this.streakRutinitas,
+    required this.streakObat,
   });
 
   @override
-  List<Object?> get props => [listObat, listRutinitas, streakHari];
+  List<Object?> get props => [listObat, listRutinitas, streakRutinitas, streakObat];
 }
 
 class RutinitasSehatFailure extends RutinitasState {

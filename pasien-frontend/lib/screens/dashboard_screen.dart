@@ -21,6 +21,7 @@ import '../bloc/dashboard/dashboard_state.dart';
 import '../bloc/notifikasi/notifikasi_bloc.dart';
 import '../bloc/notifikasi/notifikasi_event.dart';
 import '../bloc/notifikasi/notifikasi_state.dart';
+import '../services/permission_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -46,6 +47,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Track jadwal yang sudah ditandai diminum di sesi ini
   final Set<int> _takenJadwalIds = {};
+  // Track slot waktu obat mandiri yang sudah ditandai (key: "jadwalId_waktu")
+  final Set<String> _takenMandiriSlots = {};
   bool _notificationPermissionGranted = true;
   int _unreadNotificationCount = 0;
 
@@ -86,6 +89,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (currentState is DashboardLoaded) {
         _loadUnreadCount(currentState.dashboard.todayJadwals, currentState.takenJadwalIds);
       }
+      // Minta izin alarm (overlay + battery) saat pertama kali masuk dashboard
+      PermissionService.instance.requestAlarmPermissions(context);
     });
     // Init FCM service: daftarkan token ke backend (fire-and-forget)
     FcmService.instance.initialize();
@@ -120,7 +125,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Log jadwal sebagai 'Diminum' ke backend tracking API
   Future<void> _markAsTaken(Jadwal jadwal, int pasienId) async {
-    final status = _getJadwalStatus(jadwal.waktuMinum);
+    // Obat mandiri tidak memiliki waktu minum tunggal, langsung bisa dichecklist
+    if (jadwal.kategoriObat != 'Mandiri') {
+      final status = _getJadwalStatus(jadwal.waktuMinum);
+      if (status == _JadwalStatus.upcoming) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul ${jadwal.waktuMinum}.',
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFFEA580C), // Orange warning color
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    _dashboardBloc.add(MarkAsTaken(jadwal: jadwal, pasienId: pasienId));
+  }
+
+  /// Log slot mandiri sebagai 'Diminum'
+  Future<void> _markMandiriSlotAsTaken(Jadwal jadwal, int pasienId, String waktuSlot) async {
+    final status = _getJadwalStatus(waktuSlot);
     if (status == _JadwalStatus.upcoming) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,13 +173,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul ${jadwal.waktuMinum}.',
+                    'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul $waktuSlot.',
                     style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
                   ),
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFFEA580C), // Orange warning color
+            backgroundColor: const Color(0xFFEA580C),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -149,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    _dashboardBloc.add(MarkAsTaken(jadwal: jadwal, pasienId: pasienId));
+    _dashboardBloc.add(MarkMandiriSlotAsTaken(jadwal: jadwal, pasienId: pasienId, waktuSlot: waktuSlot));
   }
 
   @override
@@ -273,6 +315,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final dashboard = state.dashboard;
             _takenJadwalIds.clear();
             _takenJadwalIds.addAll(state.takenJadwalIds);
+            _takenMandiriSlots.clear();
+            _takenMandiriSlots.addAll(state.takenMandiriSlots);
             _riwayatByDate = state.riwayatByDate;
 
             return SafeArea(
@@ -315,10 +359,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- PROGRESS TRACKER CARD (NEW & PREMIUM) ---
   Widget _buildProgressCard(List<Jadwal> todayJadwals) {
-    // Saring jadwal yang aktif
+    // Saring jadwal yang aktif (termasuk mandiri)
     final activeToday = todayJadwals.where((j) => j.status.toLowerCase() == 'aktif').toList();
-    final totalToday = activeToday.length;
-    final takenToday = activeToday.where((j) => _takenJadwalIds.contains(j.id)).length;
+    
+    int totalToday = 0;
+    int takenToday = 0;
+
+    for (final j in activeToday) {
+      if (j.kategoriObat == 'Mandiri') {
+        final slots = j.waktuMinum.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        totalToday += slots.length;
+        for (final slot in slots) {
+          if (_takenMandiriSlots.contains('${j.id}_$slot')) {
+            takenToday++;
+          }
+        }
+      } else {
+        totalToday++;
+        if (_takenJadwalIds.contains(j.id)) {
+          takenToday++;
+        }
+      }
+    }
+
     final progress = totalToday > 0 ? takenToday / totalToday : 0.0;
 
     String quote;
@@ -736,7 +799,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 iconBg: const Color(0xFFFFECEC),
                 iconColor: const Color(0xFFFF6B6B),
                 label: 'Reminder & Alarm',
-                subLabel: 'Kelola Pengingat',
+                subLabel: 'Jadwal Pengingat',
                 subLabelColor: const Color(0xFFFF6B6B),
                 onTap: () {
                   Navigator.push(
@@ -767,7 +830,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.bar_chart_rounded,
                 iconBg: const Color(0xFFEFF6FF),
                 iconColor: const Color(0xFF2F80ED), // Secondary Blue dari Style Guide
-                label: 'Riwayat',
+                label: 'Riwayat Kepatuhan',
                 subLabel: 'Kepatuhan Minum',
                 subLabelColor: const Color(0xFF2F80ED),
                 onTap: () {
@@ -783,16 +846,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.fitness_center_rounded,
                 iconBg: const Color(0xFFFAF5FF),
                 iconColor: const Color(0xFF9C27B0),
-                label: 'Rutinitas Sehat',
+                label: 'Aktivitas Sehat',
                 subLabel: 'Jadwal Aktivitas',
                 subLabelColor: const Color(0xFF9C27B0),
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const RutinitasSehatScreen(),
                     ),
                   );
+                  _loadRutinitas();
+                  _dashboardBloc.add(FetchDashboard(
+                    pasienId: widget.pasienId,
+                    pasienNama: widget.pasienNama,
+                  ));
                 },
               ),
             ],
@@ -948,6 +1016,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _hasJadwalOnDate(DateTime date, List<Jadwal> jadwals) {
     final dateOnly = DateTime(date.year, date.month, date.day);
     for (final j in jadwals) {
+      if (j.kategoriObat == 'Mandiri') continue;
       if (j.tanggalMulai.isEmpty || j.tanggalSelesai.isEmpty) continue;
       try {
         final mulai = DateTime.parse(j.tanggalMulai);
@@ -1302,11 +1371,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final dayName = dayNames[now.weekday - 1];
     final dateStr = '$dayName, ${now.day} ${monthNames[now.month - 1]} ${now.year}';
 
-    // Pisahkan jadwal aktif vs expired
+    // Pisahkan obat biasa (non-mandiri) vs obat mandiri
     final activeJadwals = <Jadwal>[];
+    final mandiriJadwals = <Jadwal>[];
+
     for (final j in jadwals) {
+      if (j.kategoriObat == 'Mandiri') {
+        if (j.status.toLowerCase() == 'aktif') {
+          mandiriJadwals.add(j);
+        }
+        continue;
+      }
+      // Obat yang sudah diminum tidak perlu ditampilkan lagi
       if (_takenJadwalIds.contains(j.id)) {
-        activeJadwals.add(j);
         continue;
       }
       final status = _getJadwalStatus(j.waktuMinum);
@@ -1370,7 +1447,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
-          if (activeJadwals.isEmpty)
+          if (activeJadwals.isEmpty && mandiriJadwals.isEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(32),
@@ -1427,17 +1504,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
               pasienId: pasienId,
             ),
           ),
+
+          // Bagian Obat Mandiri
+          if (mandiriJadwals.isNotEmpty) ..._buildMandiriSection(mandiriJadwals, pasienId),
         ],
       ),
     );
   }
 
+  /// Bangun section obat mandiri dengan header dan kartu tersendiri per slot waktu
+  List<Widget> _buildMandiriSection(List<Jadwal> mandiriJadwals, int pasienId) {
+    final widgets = <Widget>[];
+    int totalSlots = 0;
+
+    for (final jadwal in mandiriJadwals) {
+      final slots = jadwal.waktuMinum.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      totalSlots += slots.length;
+
+      // Urutkan slot berdasarkan waktu
+      slots.sort();
+
+      for (final slot in slots) {
+        widgets.add(_buildJadwalCard(
+          jadwal: jadwal,
+          pasienId: pasienId,
+          isMandiri: true,
+          mandiriSlotTime: slot,
+        ));
+      }
+    }
+
+    return [
+      Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Obat Mandiri Hari Ini',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+                fontFamily: 'Roboto',
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$totalSlots Jadwal',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFF97316),
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      ...widgets,
+    ];
+  }
+
   Widget _buildJadwalCard({
     required Jadwal jadwal,
     required int pasienId,
+    bool isMandiri = false,
+    String? mandiriSlotTime,
   }) {
-    final isTaken = _takenJadwalIds.contains(jadwal.id);
-    final status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(jadwal.waktuMinum);
+    final bool isTaken;
+    final _JadwalStatus status;
+
+    if (isMandiri && mandiriSlotTime != null) {
+      isTaken = _takenMandiriSlots.contains('${jadwal.id}_$mandiriSlotTime');
+      status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(mandiriSlotTime);
+    } else {
+      isTaken = _takenJadwalIds.contains(jadwal.id);
+      status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(jadwal.waktuMinum);
+    }
 
     final Color statusColor;
     final Color statusBg;
@@ -1449,6 +1599,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       statusBg = const Color(0xFFE8F8F1);
       statusLabel = 'Sudah Diminum';
       statusIcon = Icons.check_circle_rounded;
+    } else if (isMandiri) {
+      // Obat mandiri: tampilkan warna orange untuk aktif, abu-abu untuk akan datang
+      if (status == _JadwalStatus.upcoming) {
+        statusColor = const Color(0xFF64748B);
+        statusBg = const Color(0xFFF1F5F9);
+        statusLabel = 'Akan Datang';
+        statusIcon = Icons.schedule_rounded;
+      } else if (status == _JadwalStatus.late) {
+        statusColor = const Color(0xFFF97316);
+        statusBg = const Color(0xFFFFF7ED);
+        statusLabel = 'Segera Minum';
+        statusIcon = Icons.error_outline_rounded;
+      } else if (status == _JadwalStatus.expired) {
+        statusColor = const Color(0xFFFF4D4D);
+        statusBg = const Color(0xFFFFECEC);
+        statusLabel = 'Terlewat';
+        statusIcon = Icons.cancel_rounded;
+      } else {
+        statusColor = const Color(0xFFF97316);
+        statusBg = const Color(0xFFFFF7ED);
+        statusLabel = 'Waktunya Minum!';
+        statusIcon = Icons.alarm_on_rounded;
+      }
     } else {
       switch (status) {
         case _JadwalStatus.onTime:
@@ -1498,7 +1671,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isTaken ? null : () => _markAsTaken(jadwal, pasienId),
+          onTap: isTaken
+              ? null
+              : (isMandiri && mandiriSlotTime != null)
+                  ? () => _markMandiriSlotAsTaken(jadwal, pasienId, mandiriSlotTime)
+                  : () => _markAsTaken(jadwal, pasienId),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1565,7 +1742,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  jadwal.waktuMinum,
+                                  isMandiri ? (mandiriSlotTime ?? jadwal.waktuMinum) : jadwal.waktuMinum,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -1608,7 +1785,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 // INTERACTIVE LARGE ACTION BUTTON
                 GestureDetector(
-                  onTap: isTaken ? null : () => _markAsTaken(jadwal, pasienId),
+                  onTap: isTaken
+                      ? null
+                      : (isMandiri && mandiriSlotTime != null)
+                          ? () => _markMandiriSlotAsTaken(jadwal, pasienId, mandiriSlotTime)
+                          : () => _markAsTaken(jadwal, pasienId),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
@@ -1620,7 +1801,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: isTaken 
                             ? const Color(0xFF15BE77) 
                             : status == _JadwalStatus.upcoming
-                                ? const Color(0xFFCBD5E1)
+                                ? const Color(0xFFE2E8F0)
                                 : statusColor,
                         width: 2.5,
                       ),
@@ -1633,11 +1814,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             size: 22,
                           )
                         : Icon(
-                            Icons.check_rounded,
+                            status == _JadwalStatus.upcoming ? Icons.lock_rounded : Icons.check_rounded,
                             color: status == _JadwalStatus.upcoming
                                 ? const Color(0xFFCBD5E1)
                                 : statusColor.withValues(alpha: 0.5),
-                            size: 20,
+                            size: status == _JadwalStatus.upcoming ? 16 : 20,
                           ),
                   ),
                 ),
@@ -1688,13 +1869,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // ADD MEDICINE TAB (CENTER PLUS)
           _BottomNavCenterButton(
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const RutinitasSehatScreen(initialIndex: 0),
                 ),
               );
+              _loadRutinitas();
             },
           ),
 
@@ -1726,6 +1908,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '${months[date.month - 1]} ${date.year}';
   }
 
+  bool _isTimeReached(String waktuReminder) {
+    try {
+      final parts = waktuReminder.split(':');
+      if (parts.length < 2) return true;
+      final hour = int.tryParse(parts[0]) ?? 0;
+      final minute = int.tryParse(parts[1]) ?? 0;
+
+      final now = DateTime.now();
+      if (now.hour > hour) {
+        return true;
+      } else if (now.hour == hour) {
+        return now.minute >= minute;
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _scheduleRutinitasAlarms(List<dynamic> routines) async {
+    try {
+      await NotificationService.instance.cancelAllRoutineAlarms();
+      for (final item in routines) {
+        final status = item['today_status'] ?? 'none';
+        final isDone = status == 'done';
+        final id = item['id'];
+        final nama = item['nama_rutinitas'] ?? '';
+        final waktu = item['waktu_reminder'] ?? '';
+        final deskripsi = item['deskripsi'] ?? '';
+        if (id != null && waktu.isNotEmpty) {
+          await NotificationService.instance.scheduleRutinitasNotification(
+            notifId: id,
+            namaRutinitas: nama,
+            waktuReminder: waktu,
+            rutinitasId: id,
+            deskripsi: deskripsi,
+            startFromTomorrow: isDone,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] Error scheduling routines: $e');
+    }
+  }
+
   Future<void> _loadRutinitas() async {
     if (!mounted) return;
     setState(() => _loadingRutinitas = true);
@@ -1744,6 +1971,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           setState(() {
             _listRutinitas = data['data'] ?? [];
           });
+          _scheduleRutinitasAlarms(_listRutinitas);
         }
       } else {
         debugPrint('[Rutinitas] HTTP ${response.statusCode}: ${response.body}');
@@ -1758,6 +1986,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _toggleRutinitasTracking(dynamic item, bool isChecked) async {
+    final waktu = item['waktu_reminder'] ?? '';
+    var cleanWaktu = waktu.trim();
+    final timeParts = cleanWaktu.split(':');
+    if (timeParts.length > 2) {
+      cleanWaktu = '${timeParts[0]}:${timeParts[1]}';
+    }
+
+    if (isChecked && !_isTimeReached(cleanWaktu)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Belum waktunya! Silakan lakukan aktivitas ini mulai pukul $cleanWaktu.'),
+          backgroundColor: const Color(0xFFF59E0B),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     try {
       final token = await AuthService.getToken();
       final newStatus = isChecked ? 'done' : 'none';
@@ -1778,6 +2026,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() {
           item['today_status'] = newStatus;
         });
+        if (isChecked) {
+          await NotificationService.instance.cancelRutinitas(item['id']);
+        } else {
+          await _scheduleRutinitasAlarms(_listRutinitas);
+        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1870,14 +2123,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           ..._listRutinitas.map((item) {
             final isDone = item['today_status'] == 'done';
-            
+            final waktu = (item['waktu_reminder'] ?? '').trim();
+            final timeParts = waktu.split(':');
+            final cleanWaktu = timeParts.length > 2
+                ? '${timeParts[0]}:${timeParts[1]}'
+                : waktu;
+            final timeReached = _isTimeReached(cleanWaktu);
+            // Checkbox hanya bisa diklik jika waktu sudah tiba DAN belum selesai
+            final canCheck = !isDone && timeReached;
+
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDone ? const Color(0xFFE8F8F1) : const Color(0xFFF1F5F9),
+                  color: isDone
+                      ? const Color(0xFFE8F8F1)
+                      : timeReached
+                          ? const Color(0xFFF1F5F9)
+                          : const Color(0xFFE2E8F0),
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -1891,7 +2156,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: isDone ? null : () => _toggleRutinitasTracking(item, !isDone),
+                  onTap: canCheck
+                      ? () => _toggleRutinitasTracking(item, true)
+                      : !isDone
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
+                                  ),
+                                  backgroundColor: const Color(0xFFF59E0B),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          : null,
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -1901,12 +2181,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: isDone ? const Color(0xFFE8F8F1) : const Color(0xFFF5F3FF),
+                            color: isDone
+                                ? const Color(0xFFE8F8F1)
+                                : timeReached
+                                    ? const Color(0xFFF5F3FF)
+                                    : const Color(0xFFF8FAFC),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.fitness_center_rounded,
-                            color: isDone ? const Color(0xFF15BE77) : const Color(0xFF8B5CF6),
+                            color: isDone
+                                ? const Color(0xFF15BE77)
+                                : timeReached
+                                    ? const Color(0xFF8B5CF6)
+                                    : const Color(0xFFCBD5E1),
                             size: 22,
                           ),
                         ),
@@ -1920,7 +2208,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
-                                  color: isDone ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                                  color: isDone
+                                      ? const Color(0xFF64748B)
+                                      : timeReached
+                                          ? const Color(0xFF0F172A)
+                                          : const Color(0xFF94A3B8),
                                   decoration: isDone ? TextDecoration.lineThrough : null,
                                   fontFamily: 'Roboto',
                                 ),
@@ -1928,12 +2220,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 14),
+                                  Icon(
+                                    isDone
+                                        ? Icons.access_time_rounded
+                                        : timeReached
+                                            ? Icons.access_time_rounded
+                                            : Icons.lock_clock,
+                                    color: isDone
+                                        ? const Color(0xFF64748B)
+                                        : timeReached
+                                            ? const Color(0xFF64748B)
+                                            : const Color(0xFFCBD5E1),
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    item['waktu_reminder'] ?? '00:00',
-                                    style: const TextStyle(
-                                      color: Color(0xFF64748B),
+                                    timeReached || isDone
+                                        ? cleanWaktu.isEmpty ? '00:00' : cleanWaktu
+                                        : 'Tersedia pukul $cleanWaktu',
+                                    style: TextStyle(
+                                      color: isDone
+                                          ? const Color(0xFF64748B)
+                                          : timeReached
+                                              ? const Color(0xFF64748B)
+                                              : const Color(0xFFCBD5E1),
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Inter',
@@ -1945,19 +2255,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        // Checkbox — terkunci jika belum waktunya
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: isDone ? null : () => _toggleRutinitasTracking(item, !isDone),
+                          onTap: canCheck
+                              ? () => _toggleRutinitasTracking(item, true)
+                              : !isDone
+                                  ? () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
+                                          ),
+                                          backgroundColor: const Color(0xFFF59E0B),
+                                          behavior: SnackBarBehavior.floating,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  : null,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 250),
                             curve: Curves.easeInOut,
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: isDone ? const Color(0xFF15BE77) : Colors.white,
+                              color: isDone
+                                  ? const Color(0xFF15BE77)
+                                  : Colors.white,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isDone ? const Color(0xFF15BE77) : const Color(0xFFCBD5E1),
+                                color: isDone
+                                    ? const Color(0xFF15BE77)
+                                    : timeReached
+                                        ? const Color(0xFF8B5CF6).withValues(alpha: 0.4)
+                                        : const Color(0xFFE2E8F0),
                                 width: 2.0,
                               ),
                             ),
@@ -1967,10 +2299,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     color: Colors.white,
                                     size: 20,
                                   )
-                                : const Icon(
-                                    Icons.check_rounded,
-                                    color: Color(0xFFCBD5E1),
-                                    size: 18,
+                                : Icon(
+                                    timeReached ? Icons.check_rounded : Icons.lock_rounded,
+                                    color: timeReached
+                                        ? const Color(0xFF8B5CF6).withValues(alpha: 0.4)
+                                        : const Color(0xFFE2E8F0),
+                                    size: timeReached ? 18 : 14,
                                   ),
                           ),
                         ),

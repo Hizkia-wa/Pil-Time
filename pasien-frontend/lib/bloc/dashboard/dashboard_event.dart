@@ -27,3 +27,20 @@ class MarkAsTaken extends DashboardEvent {
   @override
   List<Object?> get props => [jadwal, pasienId];
 }
+
+/// Event khusus untuk menandai satu slot waktu obat mandiri sebagai diminum
+class MarkMandiriSlotAsTaken extends DashboardEvent {
+  final Jadwal jadwal;
+  final int pasienId;
+  /// Waktu slot spesifik, misal "07:00" atau "13:00"
+  final String waktuSlot;
+
+  const MarkMandiriSlotAsTaken({
+    required this.jadwal,
+    required this.pasienId,
+    required this.waktuSlot,
+  });
+
+  @override
+  List<Object?> get props => [jadwal, pasienId, waktuSlot];
+}

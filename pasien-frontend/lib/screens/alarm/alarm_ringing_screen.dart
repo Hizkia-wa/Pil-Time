@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../dashboard_screen.dart';
 
 class AlarmRingingScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
   String _namaObat = 'Obat';
   int _jadwalId = 0;
+  bool _isRoutine = false;
 
   // ── Kategori Terlambat ──
   bool _isTerlambat = false;
@@ -36,7 +38,13 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     super.initState();
     _parsePayload();
 
-    // Mulai sequence suara: suara kustom 3x → lalu alarm sistem
+    // Beri tahu NotificationService bahwa AlarmScreen sedang aktif.
+    // Ini menekan semua pop-up/heads-up notifikasi baru agar tidak mengganggu.
+    NotificationService.instance.activeAlarmScreensCount++;
+    NotificationService.instance.isAlarmScreenActive = true;
+
+    // Mulai sequence suara: suara kustom 3x → lalu alarm sistem (obat)
+    // atau loop MP3 rutinitas (rutinitas)
     _startAlarmSoundSequence();
 
     // Auto-dismiss setelah 60 detik jika diabaikan oleh user (mati sendiri)
@@ -57,16 +65,23 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   }
 
   void _startAlarmSoundSequence() {
+    // Pilih file audio sesuai tipe alarm:
+    // - Rutinitas → rutinitas_alarm.mp3
+    // - Jadwal Obat → alarm_voice.mp3
+    final audioAsset = _isRoutine
+        ? 'assets/audio/rutinitas_alarm.mp3'
+        : 'assets/audio/alarm_voice.mp3';
+
     _playCount = 1;
-    debugPrint('[PilTime] Memutar suara kustom alarm_voice untuk pertama kali (1/3)');
+    debugPrint('[PilTime] Memutar suara kustom $audioAsset untuk pertama kali (1/3)');
     FlutterRingtonePlayer().play(
-      fromAsset: "assets/audio/alarm_voice.mp3",
+      fromAsset: audioAsset,
       looping: false,
       volume: 1.0,
       asAlarm: true,
     );
 
-    // Timer periodic setiap 4000ms (memberikan durasi penuh agar berkas suara kustom 3.x detik tidak terpotong)
+    // Timer periodic setiap 4000ms
     _customSoundTimer = Timer.periodic(const Duration(milliseconds: 4000), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -75,22 +90,35 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
       if (_playCount < 3) {
         _playCount++;
-        debugPrint('[PilTime] Memutar suara kustom alarm_voice ($_playCount/3)');
+        debugPrint('[PilTime] Memutar suara kustom $audioAsset ($_playCount/3)');
         FlutterRingtonePlayer().play(
-          fromAsset: "assets/audio/alarm_voice.mp3",
+          fromAsset: audioAsset,
           looping: false,
           volume: 1.0,
           asAlarm: true,
         );
       } else {
-        debugPrint('[PilTime] Suara kustom selesai 3x. Beralih ke suara alarm sistem (looping)');
         timer.cancel();
         _customSoundTimer = null;
-        FlutterRingtonePlayer().playAlarm(
-          looping: true,
-          volume: 1.0,
-          asAlarm: true,
-        );
+
+        if (_isRoutine) {
+          // Rutinitas: loop MP3 rutinitas (konsisten, tidak switch ke suara sistem)
+          debugPrint('[PilTime] Suara kustom rutinitas selesai 3x. Loop rutinitas_alarm.mp3.');
+          FlutterRingtonePlayer().play(
+            fromAsset: audioAsset,
+            looping: true,
+            volume: 1.0,
+            asAlarm: true,
+          );
+        } else {
+          // Jadwal Obat: switch ke alarm sistem (looping)
+          debugPrint('[PilTime] Suara kustom obat selesai 3x. Beralih ke suara alarm sistem (looping)');
+          FlutterRingtonePlayer().playAlarm(
+            looping: true,
+            volume: 1.0,
+            asAlarm: true,
+          );
+        }
       }
     });
   }
@@ -98,35 +126,42 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   void _parsePayload() {
     try {
       final parts = widget.payload.split(':');
-      if (parts.isNotEmpty) _jadwalId = int.tryParse(parts[0]) ?? 0;
-      if (parts.length > 2) {
-        _scheduledTime = parts.last;
-        _namaObat = parts.sublist(1, parts.length - 1).join(':');
-      } else if (parts.length > 1) {
-        _namaObat = parts.last;
-      }
+      if (parts.isNotEmpty && parts[0] == 'routine') {
+        _isRoutine = true;
+        if (parts.length > 1) _jadwalId = int.tryParse(parts[1]) ?? 0;
+        if (parts.length > 2) _namaObat = parts[2];
+        if (parts.length > 3) _scheduledTime = parts[3];
+      } else {
+        if (parts.isNotEmpty) _jadwalId = int.tryParse(parts[0]) ?? 0;
+        if (parts.length > 2) {
+          _scheduledTime = parts.last;
+          _namaObat = parts.sublist(1, parts.length - 1).join(':');
+        } else if (parts.length > 1) {
+          _namaObat = parts.last;
+        }
 
-      // Hitung apakah sudah masuk rentang terlambat (60 - 75 menit)
-      if (_scheduledTime.isNotEmpty) {
-        final timeParts = _scheduledTime.split(':');
-        if (timeParts.length == 2) {
-          final now = DateTime.now();
-          final hour = int.tryParse(timeParts[0]) ?? 0;
-          final minute = int.tryParse(timeParts[1]) ?? 0;
-          final scheduledDt = DateTime(now.year, now.month, now.day, hour, minute);
-          
-          final diff = now.difference(scheduledDt).inMinutes;
-          // Rentang waktu Terlambat (60 - 75 menit)
-          if (diff >= 60 && diff <= 75) {
-            _isTerlambat = true;
-            _sisaMenitToleransi = 75 - diff;
-            if (_sisaMenitToleransi < 0) _sisaMenitToleransi = 0;
+        // Hitung apakah sudah masuk rentang terlambat (60 - 75 menit)
+        if (_scheduledTime.isNotEmpty) {
+          final timeParts = _scheduledTime.split(':');
+          if (timeParts.length == 2) {
+            final now = DateTime.now();
+            final hour = int.tryParse(timeParts[0]) ?? 0;
+            final minute = int.tryParse(timeParts[1]) ?? 0;
+            final scheduledDt = DateTime(now.year, now.month, now.day, hour, minute);
+            
+            final diff = now.difference(scheduledDt).inMinutes;
+            // Rentang waktu Terlambat (60 - 75 menit)
+            if (diff >= 60 && diff <= 75) {
+              _isTerlambat = true;
+              _sisaMenitToleransi = 75 - diff;
+              if (_sisaMenitToleransi < 0) _sisaMenitToleransi = 0;
+            }
           }
         }
       }
 
       debugPrint(
-        '[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat: $_namaObat, Scheduled Time: $_scheduledTime, isTerlambat: $_isTerlambat, sisaMenit: $_sisaMenitToleransi',
+        '[AlarmRingingScreen] Parsed Jadwal ID: $_jadwalId, Nama Obat/Aktivitas: $_namaObat, Scheduled Time: $_scheduledTime, isTerlambat: $_isTerlambat, sisaMenit: $_sisaMenitToleransi, isRoutine: $_isRoutine',
       );
     } catch (e) {
       debugPrint('[AlarmRingingScreen] Error parse payload: $e');
@@ -135,6 +170,13 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
   @override
   void dispose() {
+    // Beritahu NotificationService bahwa AlarmScreen sudah tidak aktif
+    // (menggunakan counter agar aman saat transisi antar AlarmScreen berurutan).
+    NotificationService.instance.activeAlarmScreensCount--;
+    if (NotificationService.instance.activeAlarmScreensCount <= 0) {
+      NotificationService.instance.isAlarmScreenActive = false;
+      NotificationService.instance.activeAlarmScreensCount = 0;
+    }
     _pulseController.dispose();
     _customSoundTimer?.cancel();
     _customSoundTimer = null;
@@ -159,16 +201,20 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
             content: Row(
               children: [
                 Icon(
-                  _isTerlambat ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                  _isRoutine
+                      ? Icons.check_circle_outline_rounded
+                      : (_isTerlambat ? Icons.warning_amber_rounded : Icons.info_outline_rounded),
                   color: Colors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _isTerlambat
-                        ? 'Alarm dimatikan. Status Anda saat ini TERLAMBAT! Yuk segera centang jadwal "$_namaObat" di dashboard agar tidak berubah jadi Terlewat! ⚠️'
-                        : 'Alarm dimatikan. Yuk centang jadwal minum obat "$_namaObat" di bawah ini agar tercatat! 💊',
+                    _isRoutine
+                        ? 'Alarm dimatikan. Yuk centang rutinitas "$_namaObat" di dashboard agar tercatat! 🏃'
+                        : (_isTerlambat
+                            ? 'Alarm dimatikan. Status Anda saat ini TERLAMBAT! Yuk segera centang jadwal "$_namaObat" di dashboard agar tidak berubah jadi Terlewat! ⚠️'
+                            : 'Alarm dimatikan. Yuk centang jadwal minum obat "$_namaObat" di bawah ini agar tercatat! 💊'),
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
@@ -179,7 +225,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 ),
               ],
             ),
-            backgroundColor: _isTerlambat ? const Color(0xFFEA580C) : const Color(0xFF15BE77), // Orange vs Emerald Green
+            backgroundColor: _isRoutine
+                ? const Color(0xFF15BE77)
+                : (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFF15BE77)), // Orange vs Emerald Green
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 6),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -187,20 +235,32 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
         );
       }
 
-      // Arahkan langsung ke dashboard agar pasien melihat checklist
-      AuthService.getPasienSession().then((session) {
-        if (session != null && mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => DashboardScreen(
-                pasienId: session['pasien_id'],
-                pasienNama: session['pasien_name'],
+      // Cek apakah masih ada alarm lain yang mengantre
+      final nextAlarmPayload = NotificationService.instance.showNextAlarm();
+      if (nextAlarmPayload != null) {
+        // Ganti layar saat ini dengan layar alarm yang baru dari antrean
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => AlarmRingingScreen(payload: nextAlarmPayload),
+            settings: const RouteSettings(name: '/alarm-ringing'),
+          ),
+        );
+      } else {
+        // Jika antrean kosong, arahkan langsung ke dashboard agar pasien melihat checklist
+        AuthService.getPasienSession().then((session) {
+          if (session != null && mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => DashboardScreen(
+                  pasienId: session['pasien_id'],
+                  pasienNama: session['pasien_name'],
+                ),
               ),
-            ),
-            (route) => false,
-          );
-        }
-      });
+              (route) => false,
+            );
+          }
+        });
+      }
     }
   }
 
@@ -238,16 +298,24 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: (_isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673)).withValues(alpha: 0.2),
+                    color: (_isRoutine 
+                        ? const Color(0xFF15BE77)
+                        : (_isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673))).withValues(alpha: 0.2),
                     border: Border.all(
-                      color: _isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673),
+                      color: _isRoutine 
+                          ? const Color(0xFF15BE77)
+                          : (_isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673)),
                       width: 2.5,
                     ),
                   ),
                   child: Icon(
-                    _isTerlambat ? Icons.warning_amber_rounded : Icons.alarm_on,
+                    _isRoutine 
+                        ? Icons.directions_run_rounded 
+                        : (_isTerlambat ? Icons.warning_amber_rounded : Icons.alarm_on),
                     size: 80,
-                    color: _isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673),
+                    color: _isRoutine 
+                        ? const Color(0xFF15BE77)
+                        : (_isTerlambat ? const Color(0xFFEF4444) : const Color(0xFF2BB673)),
                   ),
                 ),
               ),
@@ -269,7 +337,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
               // Nama Obat / Status
               Text(
-                _isTerlambat ? '⚠️ STATUS TERLAMBAT!' : 'Waktunya Minum Obat!',
+                _isRoutine
+                    ? 'Waktunya Aktivitas Sehat!'
+                    : (_isTerlambat ? '⚠️ STATUS TERLAMBAT!' : 'Waktunya Minum Obat!'),
                 style: TextStyle(
                   fontSize: 20,
                   color: _isTerlambat ? const Color(0xFFF59E0B) : Colors.white70, // Amber warning color
@@ -327,9 +397,11 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
-                  _isTerlambat
-                      ? 'PENTING: Waktu minum obat Anda sudah terlambat! Segera matikan alarm dan lakukan pencatatan agar kepatuhan Anda tetap baik!'
-                      : 'Halo! Yuk, minum obat dulu dan centang daftarnya di halaman utama.',
+                  _isRoutine
+                      ? 'Halo! Yuk, lakukan aktivitas sehat ini dan centang daftarnya di halaman utama.'
+                      : (_isTerlambat
+                          ? 'PENTING: Waktu minum obat Anda sudah terlambat! Segera matikan alarm dan lakukan pencatatan agar kepatuhan Anda tetap baik!'
+                          : 'Halo! Yuk, minum obat dulu dan centang daftarnya di halaman utama.'),
                   style: TextStyle(
                     fontSize: 14,
                     color: _isTerlambat ? const Color(0xFFCBD5E1) : Colors.white60,
@@ -352,13 +424,18 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                       height: 54,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D),
+                          backgroundColor: _isRoutine
+                              ? const Color(0xFF15BE77)
+                              : (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D)),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 4,
-                          shadowColor: (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D)).withValues(alpha: 0.3),
+                          shadowColor: (_isRoutine
+                                  ? const Color(0xFF15BE77)
+                                  : (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFFFF4D4D)))
+                              .withValues(alpha: 0.3),
                         ),
                         onPressed: () => _handleMatikanAlarm(isSnooze: false),
                         icon: const Icon(Icons.alarm_off_rounded, size: 24),
@@ -372,32 +449,34 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
 
                     // 2. Tombol INGATKAN NANTI (SNOOZE 20M)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF94A3B8),
-                          side: const BorderSide(color: Color(0xFF334155), width: 1.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                    if (!_isRoutine) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF94A3B8),
+                            side: const BorderSide(color: Color(0xFF334155), width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
-                        ),
-                        onPressed: () => _handleMatikanAlarm(isSnooze: true),
-                        icon: const Icon(Icons.snooze_rounded, size: 20),
-                        label: const Text(
-                          'INGATKAN NANTI (SNOOZE 20M)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                          onPressed: () => _handleMatikanAlarm(isSnooze: true),
+                          icon: const Icon(Icons.snooze_rounded, size: 20),
+                          label: const Text(
+                            'INGATKAN NANTI (SNOOZE 20M)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

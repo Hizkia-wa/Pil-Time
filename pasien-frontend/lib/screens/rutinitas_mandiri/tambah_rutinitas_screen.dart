@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
 import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
+import '../../widgets/lansia_time_picker.dart';
 
 class TambahRutinitasScreen extends StatefulWidget {
   final dynamic rutinitas;
@@ -138,18 +139,9 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
   }
 
   Future<void> _pickTime({required bool isMulai}) async {
-    final picked = await showTimePicker(
+    final picked = await showLansiaTimePicker(
       context: context,
       initialTime: isMulai ? _waktuMulai : _waktuSelesai,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: _green,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (picked == null) return;
     setState(() {

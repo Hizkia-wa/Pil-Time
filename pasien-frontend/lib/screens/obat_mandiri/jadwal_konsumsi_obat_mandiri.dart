@@ -7,9 +7,9 @@ import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
 
 class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
-  final int streakHari;
+  final int streakObat;
 
-  const JadwalKonsumsiObatMandiriStyled({super.key, required this.streakHari});
+  const JadwalKonsumsiObatMandiriStyled({super.key, required this.streakObat});
 
   @override
   State<JadwalKonsumsiObatMandiriStyled> createState() =>
@@ -136,7 +136,7 @@ class _JadwalKonsumsiObatMandiriStyledState
           ),
           const SizedBox(height: 6),
           Text(
-            "${widget.streakHari} Hari",
+            "${widget.streakObat} Hari",
             style: const TextStyle(
               fontSize: 34,
               fontWeight: FontWeight.bold,
