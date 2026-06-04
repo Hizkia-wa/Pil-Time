@@ -134,7 +134,7 @@ const fillForm = () => {
     form.value.imageFile = null
     
     if (props.initialData.gambar) {
-      previewUrl.value = `http://localhost:8080${props.initialData.gambar}`
+      previewUrl.value = `https://pil-time-pam-production.up.railway.app${props.initialData.gambar}`
     } else {
       previewUrl.value = null
     }

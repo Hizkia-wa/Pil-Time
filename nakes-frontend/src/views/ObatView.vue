@@ -102,7 +102,7 @@ onMounted(() => {
 const getImageUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  const baseUrl = 'http://localhost:8080'
+  const baseUrl = 'https://pil-time-pam-production.up.railway.app'
   return `${baseUrl}${path}`
 }
 

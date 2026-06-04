@@ -3,7 +3,7 @@ import axios from 'axios'
 
 // Auth Service client (port 8080) — login, register, reset password
 const authApiClient = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: 'https://pil-time-pam-production.up.railway.app',
   headers: {
     'Content-Type': 'application/json'
   }

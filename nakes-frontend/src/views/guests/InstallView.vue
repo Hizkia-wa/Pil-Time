@@ -200,27 +200,6 @@
 
     </section>
 
-    <!-- CTA -->
-    <section class="cta-section">
-
-      <div class="container cta-content">
-
-        <h2>
-          Mulai Lebih Disiplin Minum Obat
-        </h2>
-
-        <p>
-          Unduh Pil Time sekarang dan jaga kesehatanmu dengan lebih mudah,
-          teratur, dan terkontrol setiap hari.
-        </p>
-
-        <a href="/apk/piltime.apk" download class="download-btn large">
-          Download Sekarang
-        </a>
-
-      </div>
-
-    </section>
 
     <FooterView />
 
@@ -592,11 +571,33 @@ export default {
   .app-text h2{
     font-size: 30px;
   }
+
+  .phone-mockup {
+    transform: scale(0.9);
+  }
 }
 
 @media(max-width: 600px){
   .feature-grid{
     grid-template-columns: 1fr;
+  }
+}
+
+@media(max-width: 480px){
+  .hero-content h1{
+    font-size: 36px;
+  }
+
+  .app-text h2{
+    font-size: 26px;
+  }
+
+  .phone-mockup {
+    transform: scale(0.8);
+  }
+
+  .cta-content h2 {
+    font-size: 32px;
   }
 }
 

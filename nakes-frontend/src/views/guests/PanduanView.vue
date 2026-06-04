@@ -31,111 +31,6 @@
 
     </section>
 
-    <!-- VIDEO TUTORIAL -->
-    <section class="tutorial-section">
-
-      <div class="section-header">
-        <span class="section-tag">VIDEO TUTORIAL</span>
-        <h2 class="section-title">Cara Menggunakan Pil Time</h2>
-        <p class="section-subtitle">Tonton video panduan di bawah ini untuk memulai menggunakan aplikasi Pil Time dengan benar</p>
-      </div>
-
-      <!-- VIDEO PLACEHOLDER / EMBED -->
-      <div class="video-container">
-        <!-- Ganti src dengan link YouTube resmi Pil Time ketika tersedia -->
-        <div class="video-placeholder">
-          <div class="vp-icon">▶</div>
-          <div class="vp-text">
-            <strong>Video Tutorial Pil Time</strong>
-            <span>Video panduan akan segera tersedia. Silakan gunakan panduan PDF di bawah ini untuk sementara waktu.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP CARDS -->
-      <div class="tutorial-description">
-
-        <div class="tutorial-card">
-          <div class="step-num">1</div>
-          <div class="step-content">
-            <h3>Install & Buka Aplikasi</h3>
-            <p>
-              Unduh dan install aplikasi Pil Time dari halaman
-              <a href="/install">Install</a>. Buka aplikasi dan pilih
-              "Daftar" jika belum memiliki akun, atau "Masuk" jika sudah terdaftar.
-            </p>
-          </div>
-        </div>
-
-        <div class="tutorial-card">
-          <div class="step-num">2</div>
-          <div class="step-content">
-            <h3>Atur Jadwal Minum Obat</h3>
-            <p>
-              Tambahkan jadwal obat Anda: nama obat, dosis, waktu minum
-              (pagi/siang/malam), dan durasi pengobatan. Sistem akan
-              menyimpan jadwal dan mengaktifkan alarm otomatis.
-            </p>
-          </div>
-        </div>
-
-        <div class="tutorial-card">
-          <div class="step-num">3</div>
-          <div class="step-content">
-            <h3>Terima & Konfirmasi Alarm</h3>
-            <p>
-              Ketika waktunya tiba, alarm dan notifikasi akan berbunyi.
-              Konfirmasi bahwa Anda telah minum obat dengan menekan
-              tombol "Sudah Diminum" agar riwayat tercatat.
-            </p>
-          </div>
-        </div>
-
-        <div class="tutorial-card">
-          <div class="step-num">4</div>
-          <div class="step-content">
-            <h3>Pantau Riwayat Kepatuhan</h3>
-            <p>
-              Lihat laporan kepatuhan harian dan mingguan Anda di menu
-              Riwayat. Tenaga kesehatan juga dapat memantau progress
-              pasien melalui dashboard nakes secara real-time.
-            </p>
-          </div>
-        </div>
-
-      </div>
-
-    </section>
-
-    <!-- FAQ SECTION -->
-    <section class="faq-section">
-
-      <div class="section-header">
-        <span class="section-tag">FAQ</span>
-        <h2 class="section-title">Pertanyaan yang Sering Ditanyakan</h2>
-      </div>
-
-      <div class="faq-list">
-
-        <div
-          class="faq-item"
-          v-for="(item, index) in faqs"
-          :key="index"
-          :class="{ open: openFaq === index }"
-          @click="toggleFaq(index)"
-        >
-          <div class="faq-question">
-            <span>{{ item.q }}</span>
-            <div class="faq-icon">{{ openFaq === index ? '−' : '+' }}</div>
-          </div>
-          <div class="faq-answer" v-show="openFaq === index">
-            <p>{{ item.a }}</p>
-          </div>
-        </div>
-
-      </div>
-
-    </section>
 
     <!-- PDF SECTION -->
     <section class="pdf-section">
@@ -231,6 +126,36 @@
           Download Pil Time Gratis
         </a>
       </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section class="faq-section">
+
+      <div class="section-header">
+        <span class="section-tag">FAQ</span>
+        <h2 class="section-title">Pertanyaan yang Sering Ditanyakan</h2>
+      </div>
+
+      <div class="faq-list">
+
+        <div
+          class="faq-item"
+          v-for="(item, index) in faqs"
+          :key="index"
+          :class="{ open: openFaq === index }"
+          @click="toggleFaq(index)"
+        >
+          <div class="faq-question">
+            <span>{{ item.q }}</span>
+            <div class="faq-icon">{{ openFaq === index ? '−' : '+' }}</div>
+          </div>
+          <div class="faq-answer" v-show="openFaq === index">
+            <p>{{ item.a }}</p>
+          </div>
+        </div>
+
+      </div>
+
     </section>
 
     <FooterView />
@@ -827,6 +752,28 @@ export default {
     font-size: 28px;
   }
 
+}
+
+@media (max-width: 480px) {
+  .hero-content h1 {
+    font-size: 32px;
+  }
+
+  .section-title {
+    font-size: 26px;
+  }
+
+  .vp-text strong {
+    font-size: 18px;
+  }
+
+  iframe {
+    height: 300px;
+  }
+
+  .cta-section h2 {
+    font-size: 24px;
+  }
 }
 
 </style>

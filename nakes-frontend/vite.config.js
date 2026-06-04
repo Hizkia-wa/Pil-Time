@@ -78,7 +78,7 @@ export default defineConfig({
 
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://pil-time-pam-production.up.railway.app',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api/v1')
       }

@@ -93,7 +93,7 @@
             
             <div class="flex items-start gap-4 border-b border-slate-200 pb-4">
               <div class="w-16 h-16 rounded-xl bg-white overflow-hidden border border-slate-200 flex-shrink-0 shadow-sm flex items-center justify-center">
-                <img v-if="selectedObatGambar" :src="'http://localhost:8080' + selectedObatGambar" class="w-full h-full object-cover" />
+                <img v-if="selectedObatGambar" :src="'https://pil-time-pam-production.up.railway.app' + selectedObatGambar" class="w-full h-full object-cover" />
                 <span v-else class="text-3xl">💊</span>
               </div>
               <div class="flex-1 min-w-0">

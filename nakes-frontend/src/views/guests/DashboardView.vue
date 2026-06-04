@@ -1162,6 +1162,24 @@ const goToPanduan = () => {
     gap: 16px;
   }
 
+  .phone-scene {
+    transform: scale(0.8);
+  }
+
+}
+
+@media (max-width: 480px) {
+  .hero-left h1 {
+    font-size: 32px;
+  }
+  
+  .phone-scene {
+    transform: scale(0.65);
+  }
+
+  .section-title {
+    font-size: 26px;
+  }
 }
 
 </style>

@@ -1004,12 +1004,39 @@ export default {
   }
 
   .developer-photo{
-    height: 320px;
+    width: 120px;
+    height: 120px;
   }
 
   .partner-card{
     grid-template-columns: 1fr;
   }
 
+  .latar-wrapper {
+    grid-template-columns: 1fr;
+  }
+  
+  .hero-right {
+    margin-top: 40px;
+  }
+
+  .phone {
+    transform: scale(0.85);
+  }
+
+}
+
+@media(max-width: 480px) {
+  .hero-content h1{
+    font-size: 36px;
+  }
+
+  .section-title h2{
+    font-size: 28px;
+  }
+
+  .phone {
+    transform: scale(0.7);
+  }
 }
 </style>
