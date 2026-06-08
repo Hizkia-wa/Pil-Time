@@ -633,47 +633,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // TOMBOL TEST WA WARNING
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4), // Hijau sangat muda
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFDCFCE7), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF15BE77).withValues(alpha: 0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: ListTile(
-                      leading: const Icon(Icons.notifications_active_rounded, color: Color(0xFF15BE77)),
-                      title: const Text(
-                        "Test Notifikasi WA",
-                        style: TextStyle(
-                          color: Color(0xFF15BE77), 
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                      subtitle: const Text(
-                        "Kirim pesan simulasi ke pendamping",
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      onTap: _testWaWarning,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+
 
                   Container(
                     decoration: BoxDecoration(
@@ -719,54 +679,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 
 
-  Future<void> _testWaWarning() async {
-    try {
-      final token = await AuthService.getToken();
-      if (token == null) {
-        DialogHelper.showErrorDialog(
-          context: context,
-          title: 'Gagal',
-          message: 'Sesi Anda telah berakhir. Silakan login kembali.',
-        );
-        return;
-      }
-
-      DialogHelper.showLoadingDialog(context, 'Mengirim Pesan...');
-
-      final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/api/pasien/profile/test-wa-warning'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      Navigator.pop(context); // Tutup loading
-
-      if (response.statusCode == 200) {
-        DialogHelper.showSuccessDialog(
-          context: context,
-          title: 'Berhasil',
-          message: 'Pesan simulasi WhatsApp berhasil dikirim ke pendamping Anda.',
-        );
-      } else {
-        final body = jsonDecode(response.body);
-        final errorMessage = body['error'] ?? 'Gagal mengirim pesan simulasi.';
-        DialogHelper.showErrorDialog(
-          context: context,
-          title: 'Gagal',
-          message: errorMessage,
-        );
-      }
-    } catch (e) {
-      Navigator.pop(context); // Tutup loading
-      DialogHelper.showErrorDialog(
-        context: context,
-        title: 'Gagal',
-        message: 'Terjadi kesalahan koneksi. Pastikan Anda terhubung ke internet.',
-      );
-    }
-  }
 
   void _saveProfileChanges() {
     if (!_formKey.currentState!.validate()) return;

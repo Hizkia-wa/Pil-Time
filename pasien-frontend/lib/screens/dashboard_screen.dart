@@ -839,43 +839,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                NotificationService.instance.scheduleTestNotification(
-                  namaObat: 'Test Paracetamol',
-                  delaySeconds: 5,
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Alarm test akan berbunyi dalam 5 detik...'),
-                    backgroundColor: Color(0xFF15BE77),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.notifications_active, color: Colors.white),
-              label: const Text(
-                'Test Alarm (5 Detik)',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEA580C),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-            ),
-          ),
+
         ],
       ),
     );
