@@ -22,6 +22,7 @@ import '../bloc/notifikasi/notifikasi_bloc.dart';
 import '../bloc/notifikasi/notifikasi_event.dart';
 import '../bloc/notifikasi/notifikasi_state.dart';
 import '../services/permission_service.dart';
+import '../utils/dialog_helper.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int pasienId;
@@ -130,27 +131,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final status = _getJadwalStatus(jadwal.waktuMinum);
       if (status == _JadwalStatus.upcoming) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul ${jadwal.waktuMinum}.',
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFFEA580C), // Orange warning color
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              duration: const Duration(seconds: 3),
-            ),
+          final formattedWaktu = _formatWaktuMinum(jadwal.waktuMinum);
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Perhatian',
+            message: 'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul $formattedWaktu.',
+          );
+        }
+        return;
+      }
+      if (status == _JadwalStatus.expired) {
+        if (mounted) {
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Terlewat',
+            message: 'Waktu minum obat ${jadwal.namaObat} sudah terlewat dan tidak bisa diceklis lagi.',
           );
         }
         return;
@@ -165,27 +160,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final status = _getJadwalStatus(waktuSlot);
     if (status == _JadwalStatus.upcoming) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul $waktuSlot.',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEA580C),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        final formattedWaktu = _formatWaktuMinum(waktuSlot);
+        DialogHelper.showErrorDialog(
+          context: context,
+          title: 'Perhatian',
+          message: 'Belum memasuki waktu minum obat ${jadwal.namaObat}! Jadwal Anda adalah pukul $formattedWaktu.',
+        );
+      }
+      return;
+    }
+    if (status == _JadwalStatus.expired) {
+      if (mounted) {
+        DialogHelper.showErrorDialog(
+          context: context,
+          title: 'Terlewat',
+          message: 'Waktu minum obat mandiri ${jadwal.namaObat} sudah terlewat dan tidak bisa diceklis lagi.',
         );
       }
       return;
@@ -212,30 +201,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               (route) => false,
             );
           } else if (state is DashboardMarkingSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text(state.message),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF15BE77),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                duration: const Duration(seconds: 2),
-              ),
+            DialogHelper.showSuccessDialog(
+              context: context,
+              title: 'Berhasil',
+              message: state.message,
             );
           } else if (state is DashboardMarkingFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: Colors.red[400],
-                behavior: SnackBarBehavior.floating,
-              ),
+            DialogHelper.showErrorDialog(
+              context: context,
+              title: 'Gagal',
+              message: state.error,
             );
           }
         },
@@ -336,7 +311,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             if (!_notificationPermissionGranted)
                               _buildPermissionWarningBanner(),
                             _buildMenuUtama(),
-                            _buildCalendarSection(dashboard.allJadwals),
                             _buildJadwalList(dashboard.todayJadwals, dashboard.pasienId),
                             _buildRutinitasHariIniList(),
                             const SizedBox(height: 24),
@@ -865,6 +839,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                NotificationService.instance.scheduleTestNotification(
+                  namaObat: 'Test Paracetamol',
+                  delaySeconds: 5,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Alarm test akan berbunyi dalam 5 detik...'),
+                    backgroundColor: Color(0xFF15BE77),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notifications_active, color: Colors.white),
+              label: const Text(
+                'Test Alarm (5 Detik)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEA580C),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1342,20 +1353,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // --- JADWAL LIST ---
+  String _formatWaktuMinum(String raw) {
+    final slots = raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    final formattedSlots = slots.map((slot) {
+      final numericOnly = slot.replaceAll(RegExp(r'[^0-9]'), '');
+      if (numericOnly.length == 4) {
+        return '${numericOnly.substring(0, 2)}:${numericOnly.substring(2, 4)}';
+      }
+      return slot;
+    });
+    return formattedSlots.join(', ');
+  }
+
   _JadwalStatus _getJadwalStatus(String waktuMinum) {
     try {
       final now = DateTime.now();
-      final parts = waktuMinum.split(':');
-      if (parts.length < 2) return _JadwalStatus.upcoming;
-      final jadwalDt = DateTime(
-        now.year, now.month, now.day,
-        int.parse(parts[0]), int.parse(parts[1]),
-      );
-      if (now.isBefore(jadwalDt)) return _JadwalStatus.upcoming;
-      final diffMinutes = now.difference(jadwalDt).inMinutes;
-      if (diffMinutes > 75) return _JadwalStatus.expired;
-      if (diffMinutes <= 60) return _JadwalStatus.onTime;
-      return _JadwalStatus.late;
+      final formatted = _formatWaktuMinum(waktuMinum);
+      final slots = formatted.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      
+      _JadwalStatus overallStatus = _JadwalStatus.upcoming;
+      
+      for (final slot in slots) {
+        final parts = slot.split(':');
+        if (parts.length < 2) continue;
+        final jadwalDt = DateTime(
+          now.year, now.month, now.day,
+          int.parse(parts[0]), int.parse(parts[1]),
+        );
+        if (now.isBefore(jadwalDt)) continue;
+        final diffMinutes = now.difference(jadwalDt).inMinutes;
+        
+        _JadwalStatus slotStatus;
+        if (diffMinutes > 75) {
+          slotStatus = _JadwalStatus.expired;
+        } else if (diffMinutes <= 60) {
+          slotStatus = _JadwalStatus.onTime;
+        } else {
+          slotStatus = _JadwalStatus.late;
+        }
+        
+        if (slotStatus == _JadwalStatus.onTime || slotStatus == _JadwalStatus.late) {
+          return slotStatus;
+        }
+        if (slotStatus == _JadwalStatus.expired) {
+          overallStatus = _JadwalStatus.expired;
+        }
+      }
+      return overallStatus;
     } catch (_) {
       return _JadwalStatus.upcoming;
     }
@@ -1507,6 +1551,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // Bagian Obat Mandiri
           if (mandiriJadwals.isNotEmpty) ..._buildMandiriSection(mandiriJadwals, pasienId),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -1742,7 +1788,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  isMandiri ? (mandiriSlotTime ?? jadwal.waktuMinum) : jadwal.waktuMinum,
+                                  _formatWaktuMinum(isMandiri ? (mandiriSlotTime ?? jadwal.waktuMinum) : jadwal.waktuMinum),
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -1814,7 +1860,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             size: 22,
                           )
                         : Icon(
-                            status == _JadwalStatus.upcoming ? Icons.lock_rounded : Icons.check_rounded,
+                            status == _JadwalStatus.upcoming 
+                                ? Icons.lock_rounded 
+                                : status == _JadwalStatus.expired 
+                                    ? Icons.close_rounded 
+                                    : Icons.check_rounded,
                             color: status == _JadwalStatus.upcoming
                                 ? const Color(0xFFCBD5E1)
                                 : statusColor.withValues(alpha: 0.5),
@@ -1935,7 +1985,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final isDone = status == 'done';
         final id = item['id'];
         final nama = item['nama_rutinitas'] ?? '';
-        final waktu = item['waktu_reminder'] ?? '';
+        final waktu = _formatWaktuMinum(item['waktu_reminder'] ?? '');
         final deskripsi = item['deskripsi'] ?? '';
         if (id != null && waktu.isNotEmpty) {
           await NotificationService.instance.scheduleRutinitasNotification(
@@ -1986,7 +2036,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _toggleRutinitasTracking(dynamic item, bool isChecked) async {
-    final waktu = item['waktu_reminder'] ?? '';
+    final waktu = _formatWaktuMinum(item['waktu_reminder'] ?? '');
     var cleanWaktu = waktu.trim();
     final timeParts = cleanWaktu.split(':');
     if (timeParts.length > 2) {
@@ -2032,23 +2082,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await _scheduleRutinitasAlarms(_listRutinitas);
         }
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isChecked 
-                ? 'Rutinitas "${item['nama_rutinitas']}" selesai! 🏆' 
-                : 'Rutinitas dibatalkan.'),
-            backgroundColor: const Color(0xFF15BE77),
-            duration: const Duration(seconds: 1),
-          ),
+        DialogHelper.showSuccessDialog(
+          context: context,
+          title: 'Berhasil',
+          message: isChecked 
+                ? 'Rutinitas "${item['nama_rutinitas']}" selesai!' 
+                : 'Rutinitas dibatalkan.',
         );
       } else {
         if (!mounted) return;
         final errorMsg = jsonDecode(response.body)['error'] ?? 'Gagal memperbarui status';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal: $errorMsg'),
-            backgroundColor: Colors.red[400],
-          ),
+        DialogHelper.showErrorDialog(
+          context: context,
+          title: 'Gagal',
+          message: errorMsg,
         );
       }
     } catch (e) {
@@ -2065,7 +2112,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     if (_listRutinitas.isEmpty) {
-      return const SizedBox.shrink(); // Hide if empty to keep it compact
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Aktivitas Hari Ini',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    '0 Aktivitas',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF64748B),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.directions_run_rounded,
+                      color: Color(0xFF94A3B8),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Belum ada aktivitas',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Tambahkan rutinitas sehat Anda untuk hari ini.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13, 
+                      color: Color(0xFF64748B),
+                      fontFamily: 'Inter',
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
     }
 
     return Container(
@@ -2123,7 +2256,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           ..._listRutinitas.map((item) {
             final isDone = item['today_status'] == 'done';
-            final waktu = (item['waktu_reminder'] ?? '').trim();
+            final waktu = _formatWaktuMinum((item['waktu_reminder'] ?? '').trim());
             final timeParts = waktu.split(':');
             final cleanWaktu = timeParts.length > 2
                 ? '${timeParts[0]}:${timeParts[1]}'
@@ -2160,15 +2293,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ? () => _toggleRutinitasTracking(item, true)
                       : !isDone
                           ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
-                                  ),
-                                  backgroundColor: const Color(0xFFF59E0B),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 2),
-                                ),
+                              DialogHelper.showErrorDialog(
+                                context: context,
+                                title: 'Perhatian',
+                                message: 'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
                               );
                             }
                           : null,
@@ -2262,15 +2390,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ? () => _toggleRutinitasTracking(item, true)
                               : !isDone
                                   ? () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
-                                          ),
-                                          backgroundColor: const Color(0xFFF59E0B),
-                                          behavior: SnackBarBehavior.floating,
-                                          duration: const Duration(seconds: 2),
-                                        ),
+                                      DialogHelper.showErrorDialog(
+                                        context: context,
+                                        title: 'Perhatian',
+                                        message: 'Belum waktunya! Rutinitas ini bisa diceklis mulai pukul $cleanWaktu.',
                                       );
                                     }
                                   : null,

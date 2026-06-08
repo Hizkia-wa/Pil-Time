@@ -161,7 +161,7 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 					if existing.DurasiHari != nil {
 						j.JumlahHari = *existing.DurasiHari
 					}
-					
+
 					var times []string
 					if len(req.Pengingat) > 0 {
 						times = req.Pengingat
@@ -171,14 +171,14 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 					sort.Strings(times)
 					j.WaktuMinum = strings.Join(times, ", ")
 					j.FrekuensiPerHari = strconv.Itoa(len(times))
-					
+
 					if existing.DurasiHari != nil && *existing.DurasiHari > 0 {
 						if tMulai, err := time.Parse("2006-01-02", j.TanggalMulai); err == nil {
-							selesai := tMulai.AddDate(0, 0, *existing.DurasiHari - 1)
+							selesai := tMulai.AddDate(0, 0, *existing.DurasiHari-1)
 							j.TanggalSelesai = selesai.Format("2006-01-02")
 						}
 					}
-					
+
 					_, _ = u.jadwalRepo.Update(j.JadwalID, &j)
 				}
 			}
@@ -292,7 +292,7 @@ func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatRes
 	todayStr := tanggalMulai.Format("2006-01-02")
 	tanggalSelesaiStr := ""
 	if req.DurasiHari > 0 {
-		selesai := tanggalMulai.AddDate(0, 0, req.DurasiHari - 1)
+		selesai := tanggalMulai.AddDate(0, 0, req.DurasiHari-1)
 		tanggalSelesaiStr = selesai.Format("2006-01-02")
 	}
 

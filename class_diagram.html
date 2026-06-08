@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Diagram Pil-Time</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            background-color: #f4f4f9;
+        }
+        .diagram-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="diagram-container">
+        <h2>Class Diagram - Pil-Time</h2>
+        <div class="mermaid">
+classDiagram
+    class Obat {
+        - obat_id : int
+        - pasien_id : int
+        - nakes_id : int
+        - nama_obat : string
+        - fungsi : text
+        - aturan_pemakaian : text
+        - pantangan : text
+        - gambar : string
+        - created_at : timestamp
+        - updated_at : timestamp
+        - fetchObatPasien()
+        - listObat()
+        - getDetailObat(id_obat)
+        - searchObat(keyword)
+    }
+
+    class Nakes {
+        - nakes_id : int
+        - nama : string
+        - password : string
+        - nik : string
+        - tempat_lahir : string
+        - tanggal_lahir : date
+        - alamat : text
+        - jenis_kelamin : char
+        - created_at : timestamp
+        - updated_at : timestamp
+        + loginNakes()
+        + logoutNakes()
+        + getDaftarJadwalPasien()
+        + getDetailJadwalPasien(id_pasien)
+        + getDaftarObat()
+        + getDetailPasien(id_pasien)
+    }
+
+    class Rutinitas {
+        - rutinitas_id : int
+        - pasien_id : int
+        - nama_rutinitas : string
+        - deskripsi : text
+        - waktu_reminder : time
+        - tanggal_mulai : date
+        - tanggal_selesai : date
+        - status : string
+        - created_at : timestamp
+        + getJadwalRutinitas()
+        + createJadwalRutinitas(data)
+        + getJadwalById(id)
+        + updateJadwal(data)
+        + deleteRutinitas(id)
+        + listRutinitas()
+    }
+
+    class ResepObat {
+        - resep_obat_id : int
+        - pasien_id : int
+        - obat_id : int
+        - nakes_id : int
+        - dosis : string
+        - tanggal_mulai : date
+        - tanggal_selesai : date
+        - catatan : text
+        - created_at : timestamp
+        - updated_at : timestamp
+        - fetchResepPasien()
+        - createResep(data)
+        - getDetailResep(id_resep)
+        - updateResep(data)
+        - deleteResep(id_resep)
+    }
+
+    class Pasien {
+        - pasien_id : int
+        - nama : string
+        - password : string
+        - nik : string
+        - tempat_lahir : string
+        - tanggal_lahir : date
+        - alamat : text
+        - jenis_kelamin : char
+        - no_telepon : string
+        - created_at : timestamp
+        - updated_at : timestamp
+        - email : string
+        - postRegistrasi()
+        - postLogin()
+        - postLogout()
+        - postVerifyEmail()
+        - postVerifyOTP()
+        - postUpdatePassword()
+        - updateProfil()
+        - getProfil()
+    }
+
+    class Jadwal {
+        - jadwal_id : int
+        - nama_jadwal : string
+        - catatan : text
+        - dosis : string
+        - gambar : string
+        - frekuensi : int
+        - durasi : date
+        - status : string
+        - created_at : timestamp
+        + createJadwalObat(data)
+        + getJadwalById(id_jadwal)
+        + updateJadwal(data)
+        + deleteJadwal(id)
+        - fetchJadwalPasien()
+        + getDetailJadwal()
+    }
+
+    class JadwalObat {
+        - jadwal_obat_id : int
+        - obat_id : int
+        - tracking_obat_id : int
+        - nakes_id : int
+        - jam_minum : time
+        + listJadwalObat()
+        + getJadwalObatByPasien()
+        + validateAndSave(data)
+        + updateJadwalObat(data)
+        + deleteJadwalObat(id)
+    }
+
+    class TrackingRutinitas {
+        - tracking_rutinitas_id : int
+        - pasien_id : int
+        - tanggal : date
+        - status : string
+        - updated_at : timestamp
+        + updateStatusRutinitas()
+        + fetchJadwalRutinitas()
+        + saveStatusRutinitas()
+        + getStatusRutinitas()
+    }
+
+    class TrackingObat {
+        - tracking_obat_id : int
+        - pasien_id : int
+        - nakes_id : int
+        - tanggal : date
+        - status : string
+        - updated_at : timestamp
+        - getMedicationSchedule()
+        - fetchMedicationSchedule()
+        - updateStatus()
+        - saveStatusDiminum()
+        - getStatusMinum()
+    }
+
+    class TrackingJadwal {
+        - tracking_jadwal_id : int
+        - pasien_id : int
+        - tanggal : date
+        - status : string
+        - updated_at : timestamp
+        + getRiwayatKepatuhan()
+        + fetchRiwayatKepatuhan()
+        + listRiwayatKepatuhan()
+        + getDetailRiwayat(id)
+    }
+
+    Pasien "1" -- "*" Obat
+    Nakes "1" -- "*" Obat
+    Pasien "1" o-- "*" ResepObat
+    Nakes "1" -- "*" ResepObat
+    Obat "1" -- "*" ResepObat
+    Pasien "1" -- "*" Rutinitas
+    Pasien "1" o-- "*" Jadwal
+    ResepObat "1" -- "*" JadwalObat
+    Rutinitas "1" -- "*" TrackingRutinitas
+    JadwalObat "1" -- "*" TrackingObat
+    Jadwal "1" -- "*" TrackingJadwal
+    Pasien "1" -- "*" TrackingRutinitas
+    Pasien "1" -- "*" TrackingObat
+    Pasien "1" -- "*" TrackingJadwal
+        </div>
+    </div>
+</body>
+</html>

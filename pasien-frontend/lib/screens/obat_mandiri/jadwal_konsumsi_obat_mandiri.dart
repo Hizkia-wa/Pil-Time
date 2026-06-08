@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
 import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
+import '../../utils/dialog_helper.dart';
 
 class JadwalKonsumsiObatMandiriStyled extends StatefulWidget {
   final int streakObat;
@@ -55,21 +56,19 @@ class _JadwalKonsumsiObatMandiriStyledState
         if (state is RutinitasSehatLoaded) {
           _jadwalList = state.listObat;
         } else if (state is RutinitasActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: const Color(0xFF15BE77),
-            ),
+          DialogHelper.showSuccessDialog(
+            context: context,
+            title: 'Berhasil',
+            message: state.message,
           );
           if (_pasienId != null) {
             _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
           }
         } else if (state is RutinitasActionFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error),
-              backgroundColor: Colors.red[400],
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Gagal',
+            message: state.error,
           );
         }
       },

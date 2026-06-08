@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../screens/riwayat/riwayat_konsumsi_obat.dart';
+import '../../utils/error_handler.dart';
 import 'riwayat_event.dart';
 import 'riwayat_state.dart';
 
@@ -96,7 +97,7 @@ class RiwayatBloc extends Bloc<RiwayatEvent, RiwayatState> {
         emit(RiwayatFailure(errorMsg));
       }
     } catch (e) {
-      emit(RiwayatFailure(e.toString()));
+      emit(RiwayatFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 }

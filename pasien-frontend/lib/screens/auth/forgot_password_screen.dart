@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
-
+import '../../utils/dialog_helper.dart';
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -16,31 +16,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void sendOTP() {
     if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            "Email wajib diisi",
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: 'Email wajib diisi',
       );
       return;
     }
 
     if (!emailController.text.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            'Email harus menggunakan tanda "@"',
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: 'Email harus menggunakan tanda "@"',
       );
       return;
     }
@@ -57,16 +45,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (state is ForgotPasswordSuccess) {
           Navigator.pushNamed(context, '/otp', arguments: state.email);
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                state.error,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Gagal',
+            message: state.error,
           );
         }
       },

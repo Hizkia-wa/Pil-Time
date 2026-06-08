@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/error_handler.dart';
 import '../../services/jadwal_cache_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/dashboard.dart';
@@ -208,7 +210,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           return;
         }
       } catch (_) {}
-      emit(DashboardFailure(error: e.toString()));
+      emit(DashboardFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -275,7 +277,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       }
     } catch (e) {
       emit(currentState.copyWith(isMarking: false));
-      emit(DashboardMarkingFailure(e.toString()));
+      emit(DashboardMarkingFailure(ErrorHandler.getErrorMessage(e)));
       emit(currentState);
     }
   }
@@ -334,7 +336,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       }
     } catch (e) {
       emit(currentState.copyWith(isMarking: false));
-      emit(DashboardMarkingFailure(e.toString()));
+      emit(DashboardMarkingFailure(ErrorHandler.getErrorMessage(e)));
       emit(currentState);
     }
   }

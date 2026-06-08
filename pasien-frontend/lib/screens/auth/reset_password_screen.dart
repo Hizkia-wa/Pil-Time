@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
-
+import '../../utils/dialog_helper.dart';
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -57,16 +57,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         if (state is ResetPasswordSuccess) {
           Navigator.pushReplacementNamed(context, '/success');
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                state.error,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Reset Password Gagal',
+            message: state.error,
           );
         }
       },

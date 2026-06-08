@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
 import '../dashboard_screen.dart';
+import '../../utils/dialog_helper.dart';
 
 class AlarmRingingScreen extends StatefulWidget {
   final String payload; // Format: "jadwalId:namaObat"
@@ -31,6 +33,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   Timer? _customSoundTimer;
   int _playCount = 0;
   Timer? _autoDismissTimer;
+  Timer? _vibrateTimer;
   String _scheduledTime = '';
 
   @override
@@ -47,10 +50,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     // atau loop MP3 rutinitas (rutinitas)
     _startAlarmSoundSequence();
 
-    // Auto-dismiss setelah 60 detik jika diabaikan oleh user (mati sendiri)
-    _autoDismissTimer = Timer(const Duration(seconds: 60), () {
-      debugPrint('[PilTime] Alarm diabaikan selama 60 detik. Menutup layar alarm otomatis (mati sendiri).');
-      _handleMatikanAlarm(isAutoDismiss: true);
+    // HP bergetar terus-menerus (setiap 1 detik) selama alarm menyala
+    _vibrateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      HapticFeedback.vibrate();
     });
 
     // Animasi denyut (pulse) untuk lingkaran
@@ -100,6 +102,12 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
       } else {
         timer.cancel();
         _customSoundTimer = null;
+
+        // Auto-dismiss setelah 60 detik (1 menit) ringtone/loop berbunyi
+        _autoDismissTimer = Timer(const Duration(seconds: 60), () {
+          debugPrint('[PilTime] Alarm diabaikan selama 1 menit. Menutup layar alarm otomatis.');
+          if (mounted) _handleMatikanAlarm(isAutoDismiss: true);
+        });
 
         if (_isRoutine) {
           // Rutinitas: loop MP3 rutinitas (konsisten, tidak switch ke suara sistem)
@@ -182,6 +190,8 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     _customSoundTimer = null;
     _autoDismissTimer?.cancel();
     _autoDismissTimer = null;
+    _vibrateTimer?.cancel();
+    _vibrateTimer = null;
     FlutterRingtonePlayer().stop(); // Hentikan semua suara saat layar ditutup
     super.dispose();
   }
@@ -191,76 +201,54 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     _customSoundTimer = null;
     _autoDismissTimer?.cancel();
     _autoDismissTimer = null;
+    _vibrateTimer?.cancel();
+    _vibrateTimer = null;
     FlutterRingtonePlayer().stop(); // Hentikan semua suara alarm
     
     if (mounted) {
       if (!isSnooze && !isAutoDismiss) {
-        // Tampilkan petunjuk centang secara global dengan SnackBar Premium
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  _isRoutine
-                      ? Icons.check_circle_outline_rounded
-                      : (_isTerlambat ? Icons.warning_amber_rounded : Icons.info_outline_rounded),
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _isRoutine
-                        ? 'Alarm dimatikan. Yuk centang rutinitas "$_namaObat" di dashboard agar tercatat! 🏃'
-                        : (_isTerlambat
-                            ? 'Alarm dimatikan. Status Anda saat ini TERLAMBAT! Yuk segera centang jadwal "$_namaObat" di dashboard agar tidak berubah jadi Terlewat! ⚠️'
-                            : 'Alarm dimatikan. Yuk centang jadwal minum obat "$_namaObat" di bawah ini agar tercatat! 💊'),
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: _isRoutine
-                ? const Color(0xFF15BE77)
-                : (_isTerlambat ? const Color(0xFFEA580C) : const Color(0xFF15BE77)), // Orange vs Emerald Green
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 6),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-
-      // Cek apakah masih ada alarm lain yang mengantre
-      final nextAlarmPayload = NotificationService.instance.showNextAlarm();
-      if (nextAlarmPayload != null) {
-        // Ganti layar saat ini dengan layar alarm yang baru dari antrean
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => AlarmRingingScreen(payload: nextAlarmPayload),
-            settings: const RouteSettings(name: '/alarm-ringing'),
-          ),
+        DialogHelper.showSuccessDialog(
+          context: context,
+          title: 'Alarm Dimatikan',
+          message: _isRoutine
+              ? 'Yuk centang rutinitas "$_namaObat" di dashboard agar tercatat!'
+              : (_isTerlambat
+                  ? 'Status Anda saat ini TERLAMBAT! Yuk segera centang jadwal "$_namaObat" di dashboard agar tidak berubah jadi Terlewat!'
+                  : 'Yuk centang jadwal minum obat "$_namaObat" di bawah ini agar tercatat!'),
+          onClose: _navigateAfterAlarm,
         );
       } else {
-        // Jika antrean kosong, arahkan langsung ke dashboard agar pasien melihat checklist
-        AuthService.getPasienSession().then((session) {
-          if (session != null && mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => DashboardScreen(
-                  pasienId: session['pasien_id'],
-                  pasienNama: session['pasien_name'],
-                ),
-              ),
-              (route) => false,
-            );
-          }
-        });
+        _navigateAfterAlarm();
       }
+    }
+  }
+
+  void _navigateAfterAlarm() {
+    // Cek apakah masih ada alarm lain yang mengantre
+    final nextAlarmPayload = NotificationService.instance.showNextAlarm();
+    if (nextAlarmPayload != null) {
+      // Ganti layar saat ini dengan layar alarm yang baru dari antrean
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => AlarmRingingScreen(payload: nextAlarmPayload),
+          settings: const RouteSettings(name: '/alarm-ringing'),
+        ),
+      );
+    } else {
+      // Jika antrean kosong, arahkan langsung ke dashboard agar pasien melihat checklist
+      AuthService.getPasienSession().then((session) {
+        if (session != null && mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => DashboardScreen(
+                pasienId: session['pasien_id'],
+                pasienNama: session['pasien_name'],
+              ),
+            ),
+            (route) => false,
+          );
+        }
+      });
     }
   }
 
@@ -450,7 +438,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                       ),
                     ),
 
-                    // 2. Tombol INGATKAN NANTI (SNOOZE 20M)
+                    // 2. Tombol TUNDA (INGATKAN 20 MENIT LAGI)
                     if (!_isRoutine) ...[
                       const SizedBox(height: 12),
                       SizedBox(
@@ -465,9 +453,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                             ),
                           ),
                           onPressed: () => _handleMatikanAlarm(isSnooze: true),
-                          icon: const Icon(Icons.snooze_rounded, size: 20),
+                          icon: const Icon(Icons.access_time_rounded, size: 20),
                           label: const Text(
-                            'INGATKAN NANTI (SNOOZE 20M)',
+                            'INGATKAN 20 MENIT LAGI',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

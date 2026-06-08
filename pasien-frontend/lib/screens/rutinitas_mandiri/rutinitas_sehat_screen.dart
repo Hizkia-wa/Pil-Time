@@ -7,6 +7,7 @@ import '../obat_mandiri/tambah_jadwal_konsumsi_obat_mandiri.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
 import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
+import '../../utils/dialog_helper.dart';
 
 class RutinitasSehatScreen extends StatefulWidget {
   final int initialIndex;
@@ -103,19 +104,20 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                 setState(() {
                   _isLoading = false;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: ${state.error}')),
+                DialogHelper.showErrorDialog(
+                  context: context,
+                  title: 'Gagal',
+                  message: state.error,
                 );
               } else if (state is RutinitasActionLoading) {
                 setState(() {
                   _isLoading = true;
                 });
               } else if (state is RutinitasActionSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: const Color(0xFF15BE77),
-                  ),
+                DialogHelper.showSuccessDialog(
+                  context: context,
+                  title: 'Berhasil',
+                  message: state.message,
                 );
                 if (_pasienId != null) {
                   _rutinitasBloc.add(FetchRutinitasSehat(pasienId: _pasienId!));
@@ -124,11 +126,10 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                 setState(() {
                   _isLoading = false;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.error),
-                    backgroundColor: Colors.red[400],
-                  ),
+                DialogHelper.showErrorDialog(
+                  context: context,
+                  title: 'Gagal',
+                  message: state.error,
                 );
               }
             },
@@ -630,8 +631,6 @@ class _RutinitasSehatScreenState extends State<RutinitasSehatScreen>
                       fontSize: 12,
                       fontFamily: 'Inter',
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],

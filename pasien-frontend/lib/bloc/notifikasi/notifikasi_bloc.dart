@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
-import '../../services/notification_service.dart';
+import '../../utils/error_handler.dart';import '../../services/notification_service.dart';
 import '../../services/notification_storage_service.dart';
 import '../../screens/notifikasi/notifikasi_screen.dart';
 import 'notifikasi_event.dart';
@@ -230,7 +230,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
                       NotificationItem(
                         title: namaObat,
                         desc: 'Siapkan obat ini. Waktu minum: $waktu',
-                        time: advanceTime,
+                        time: waktu, // Tampilkan waktu jadwal sebenarnya, bukan advanceTime
                         type: NotificationType.mendatang,
                         jadwalId: parsedJadwalId,
                         aturan: aturan,
@@ -311,7 +311,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         deferredNotifications: const {},
       ));
     } catch (e) {
-      emit(NotifikasiFailure(e.toString()));
+      emit(NotifikasiFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -543,7 +543,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         ));
       }
     } catch (e) {
-      emit(NotifikasiActionFailure(e.toString()));
+      emit(NotifikasiActionFailure(ErrorHandler.getErrorMessage(e)));
       emit(NotifikasiLoaded(
         allNotifications: allNotifications,
         deferredNotifications: deferredNotifications,
@@ -719,7 +719,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
                         NotificationItem(
                           title: namaObat,
                           desc: 'Siapkan obat ini. Waktu minum: $waktu',
-                          time: advanceTime,
+                          time: waktu, // Tampilkan waktu jadwal sebenarnya, bukan advanceTime
                           type: NotificationType.mendatang,
                           jadwalId: parsedJadwalId,
                           aturan: aturan,
@@ -806,7 +806,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         ));
       }
     } catch (e) {
-      emit(NotifikasiActionFailure(e.toString()));
+      emit(NotifikasiActionFailure(ErrorHandler.getErrorMessage(e)));
       emit(NotifikasiLoaded(
         allNotifications: allNotifications,
         deferredNotifications: deferredNotifications,
@@ -846,8 +846,18 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
     if (currentState is NotifikasiLoaded) {
       // 1. Optimistic Update: Mark as read and emit state immediately to update UI instantly
       final updatedNotifications = currentState.allNotifications.map((notif) {
-        if (notif.uniqueKey == event.item.uniqueKey) {
-          notif.isRead = true;
+        if (notif.uniqueKey == event.item.uniqueKey && !notif.isRead) {
+          return NotificationItem(
+            title: notif.title,
+            desc: notif.desc,
+            time: notif.time,
+            type: notif.type,
+            jadwalId: notif.jadwalId,
+            aturan: notif.aturan,
+            isAdvanceReminder: notif.isAdvanceReminder,
+            id: notif.id,
+            isRead: true,
+          );
         }
         return notif;
       }).toList();
@@ -871,7 +881,19 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
       await NotificationStorageService.instance.markAllAsRead(keys);
       
       final updatedNotifications = currentState.allNotifications.map((notif) {
-        notif.isRead = true;
+        if (!notif.isRead) {
+          return NotificationItem(
+            title: notif.title,
+            desc: notif.desc,
+            time: notif.time,
+            type: notif.type,
+            jadwalId: notif.jadwalId,
+            aturan: notif.aturan,
+            isAdvanceReminder: notif.isAdvanceReminder,
+            id: notif.id,
+            isRead: true,
+          );
+        }
         return notif;
       }).toList();
       

@@ -5,6 +5,7 @@ import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../services/location_service.dart';
+import '../../utils/dialog_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -82,29 +83,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _alamatController.text = address;
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF15BE77),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            'Lokasi berhasil ditambahkan!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showSuccessDialog(
+        context: context,
+        title: 'Berhasil',
+        message: 'Lokasi berhasil ditambahkan!',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            error.toString(),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: error.toString(),
       );
     } finally {
       if (mounted) {
@@ -121,16 +110,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (_selectedGender == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            'Pilih jenis kelamin terlebih dahulu',
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: 'Pilih jenis kelamin terlebih dahulu',
       );
       return;
     }
@@ -160,29 +143,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF15BE77),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Registrasi & Login Berhasil!',
-                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showSuccessDialog(
+            context: context,
+            title: 'Registrasi Berhasil',
+            message: 'Registrasi & Login Berhasil!',
+            onClose: () {
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            },
           );
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                state.error,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Registrasi Gagal',
+            message: state.error,
           );
         }
       },
@@ -239,6 +212,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Nama tidak boleh kosong';
                     }
+                    if (!RegExp(r"^[a-zA-Z\s.,'-]+$").hasMatch(value)) {
+                      return 'Nama tidak boleh mengandung angka, emoji, atau simbol';
+                    }
                     return null;
                   },
                 ),
@@ -253,8 +229,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Email tidak boleh kosong';
                     }
-                    if (!value.contains('@')) {
-                      return 'Email harus menggunakan tanda "@"';
+                    if (!RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(value)) {
+                      return 'Format email salah';
                     }
                     return null;
                   },
@@ -332,6 +308,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Tempat lahir tidak boleh kosong';
                     }
+                    if (!RegExp(r"^[a-zA-Z\s.,'-]+$").hasMatch(value)) {
+                      return 'Hanya huruf yang diizinkan';
+                    }
                     return null;
                   },
                 ),
@@ -399,7 +378,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'No telepon kosong';
+                                return 'Nomor telepon tidak boleh kosong';
+                              }
+                              if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                                return 'Hanya boleh angka';
+                              }
+                              if (value.length < 10) {
+                                return 'Minimal 10 digit';
                               }
                               return null;
                             },
@@ -433,6 +418,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Nomor telepon pendamping tidak boleh kosong';
+                    }
+                    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                      return 'Hanya boleh angka';
+                    }
+                    if (value.length < 10) {
+                      return 'Minimal 10 digit';
                     }
                     return null;
                   },
@@ -619,6 +610,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Alamat tidak boleh kosong';
                     }
+                    if (value.trim().length < 10) {
+                      return 'Alamat terlalu pendek, minimal 10 karakter';
+                    }
                     return null;
                   },
                 ),
@@ -754,6 +748,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
       filled: true,
       fillColor: Colors.white,
+      errorMaxLines: 3,
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(

@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../bloc/rutinitas/rutinitas_bloc.dart';
 import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
+import '../../utils/dialog_helper.dart';
 import '../../widgets/lansia_time_picker.dart';
 
 class TambahRutinitasScreen extends StatefulWidget {
@@ -247,19 +248,20 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
               setState(() {
                 _isSaving = false;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: Colors.green,
-                  content: Text(state.message),
-                ),
+              DialogHelper.showSuccessDialog(
+                context: context,
+                title: 'Berhasil',
+                message: state.message,
+                onClose: () => Navigator.pop(context, true),
               );
-              Navigator.pop(context, true);
             } else if (state is RutinitasActionFailure) {
               setState(() {
                 _isSaving = false;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Gagal menyimpan: ${state.error}')),
+              DialogHelper.showErrorDialog(
+                context: context,
+                title: 'Gagal Menyimpan',
+                message: state.error,
               );
             }
           },
@@ -354,7 +356,7 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
         ),
       ),
       validator: (v) =>
-          (v == null || v.isEmpty) ? 'Kasih nama dulu dong' : null,
+          (v == null || v.isEmpty) ? 'Nama rutinitas tidak boleh kosong' : null,
     );
   }
 

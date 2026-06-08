@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../utils/error_handler.dart';
 import '../../models/obat.dart';
 import '../../screens/info_obat/info_obat.dart';
 import 'info_obat_event.dart';
@@ -57,7 +58,7 @@ class InfoObatBloc extends Bloc<InfoObatEvent, InfoObatState> {
 
       emit(InfoObatLoaded(days));
     } catch (e) {
-      emit(InfoObatFailure(e.toString()));
+      emit(InfoObatFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 }

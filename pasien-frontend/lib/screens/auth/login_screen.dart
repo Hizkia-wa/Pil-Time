@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
-
+import '../../utils/dialog_helper.dart';
 class LoginScreen extends StatefulWidget {
   final bool isReturningUser;
   const LoginScreen({super.key, this.isReturningUser = false});
@@ -47,16 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (state is AuthAuthenticated) {
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                state.error,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Login Gagal',
+            message: state.error,
           );
         }
       },
@@ -163,8 +157,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Email tidak boleh kosong';
                     }
-                    if (!value.contains('@')) {
-                      return 'Email harus menggunakan tanda "@"';
+                    if (!RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(value)) {
+                      return 'Format email salah';
                     }
                     return null;
                   },
@@ -200,6 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
                     filled: true,
                     fillColor: Colors.white,
+                    errorMaxLines: 3,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(color: Color(0xFFF1F5F9), width: 1.5),

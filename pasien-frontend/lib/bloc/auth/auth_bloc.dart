@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/error_handler.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -49,7 +50,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(error: result['error'] ?? 'Login gagal'));
       }
     } catch (e) {
-      emit(AuthFailure(error: 'Terjadi kesalahan koneksi: ${e.toString()}'));
+      emit(AuthFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -93,7 +94,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(error: result['error'] ?? 'Registrasi gagal'));
       }
     } catch (e) {
-      emit(AuthFailure(error: 'Terjadi kesalahan koneksi: ${e.toString()}'));
+      emit(AuthFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -119,7 +120,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(error: result['error'] ?? 'Gagal mengirim OTP'));
       }
     } catch (e) {
-      emit(AuthFailure(error: 'Terjadi kesalahan koneksi: ${e.toString()}'));
+      emit(AuthFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -136,7 +137,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(error: result['error'] ?? 'OTP tidak valid'));
       }
     } catch (e) {
-      emit(AuthFailure(error: 'Terjadi kesalahan koneksi: ${e.toString()}'));
+      emit(AuthFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -157,7 +158,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(error: result['error'] ?? 'Gagal mengatur ulang password'));
       }
     } catch (e) {
-      emit(AuthFailure(error: 'Terjadi kesalahan koneksi: ${e.toString()}'));
+      emit(AuthFailure(error: ErrorHandler.getErrorMessage(e)));
     }
   }
 }

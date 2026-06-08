@@ -602,8 +602,6 @@ class _RiwayatKonsumsiObatScreenState extends State<RiwayatKonsumsiObatScreen> {
                           fontWeight: FontWeight.w500,
                           fontFamily: 'Inter',
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

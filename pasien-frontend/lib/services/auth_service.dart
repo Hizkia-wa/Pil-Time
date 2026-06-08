@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../config/app_config.dart';
-
+import '../utils/error_handler.dart';
 class AuthService {
   // URL configuration dari AppConfig
   static const String backendUrl = AppConfig.baseUrl;
@@ -123,7 +123,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -162,7 +162,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 }

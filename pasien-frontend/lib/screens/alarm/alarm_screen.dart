@@ -366,8 +366,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
                             fontFamily: 'Inter',
                             height: 1.4,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 18),
                         Row(
@@ -612,8 +610,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
                     color: Color(0xFF0F172A),
                     fontFamily: 'Roboto',
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Row(

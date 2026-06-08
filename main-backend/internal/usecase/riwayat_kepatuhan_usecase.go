@@ -219,7 +219,12 @@ func (u *TrackingJadwalUsecase) Create(req *dto.CreateTrackingJadwalDTO) (*dto.T
 		return nil, errors.New("jadwal_id dan pasien_id harus disediakan")
 	}
 
-	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	wibLoc, locErr := utils.GetWIBLocation()
+	if locErr != nil {
+		wibLoc = time.FixedZone("WIB", 7*60*60)
+	}
+
+	tanggal, err := time.ParseInLocation("2006-01-02", req.Tanggal, wibLoc)
 	if err != nil {
 		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
 	}
@@ -227,13 +232,13 @@ func (u *TrackingJadwalUsecase) Create(req *dto.CreateTrackingJadwalDTO) (*dto.T
 	// ── AUTO-DETERMINE STATUS via Compliance Checker ──────────────
 	// Status ditentukan server berdasarkan waktu konfirmasi vs jadwal.
 	// Jika WaktuMinum kosong, gunakan time.Now() sebagai waktu konfirmasi.
-	confirmationTime := time.Now()
+	confirmationTime := time.Now().In(wibLoc)
 	if req.WaktuMinum != "" {
 		// Gabungkan tanggal + waktu_minum untuk mendapat timestamp lengkap
 		parsed, parseErr := time.ParseInLocation(
 			"2006-01-02 15:04",
 			req.Tanggal+" "+req.WaktuMinum,
-			time.Local,
+			wibLoc,
 		)
 		if parseErr == nil {
 			confirmationTime = parsed
@@ -244,17 +249,14 @@ func (u *TrackingJadwalUsecase) Create(req *dto.CreateTrackingJadwalDTO) (*dto.T
 	schedStatus := req.Status // fallback ke status dari request
 	jadwal, jadwalErr := u.jadwalRepo.GetByID(req.JadwalID)
 	if jadwalErr == nil && jadwal != nil && jadwal.WaktuMinum != "" {
-		wibLoc, locErr := utils.GetWIBLocation()
-		if locErr == nil {
-			result, checkErr := utils.CheckComplianceFromStrings(
-				req.Tanggal,
-				jadwal.WaktuMinum,
-				confirmationTime,
-				wibLoc,
-			)
-			if checkErr == nil {
-				schedStatus = string(result.Status)
-			}
+		result, checkErr := utils.CheckComplianceFromStrings(
+			req.Tanggal,
+			jadwal.WaktuMinum,
+			confirmationTime,
+			wibLoc,
+		)
+		if checkErr == nil {
+			schedStatus = string(result.Status)
 		}
 	}
 	// ─────────────────────────────────────────────────────────────

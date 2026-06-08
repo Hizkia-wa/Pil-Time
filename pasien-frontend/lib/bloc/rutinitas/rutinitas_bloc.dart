@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../utils/error_handler.dart';
 import 'rutinitas_event.dart';
 import 'rutinitas_state.dart';
 
@@ -87,7 +88,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         streakObat: streakObat,
       ));
     } catch (e) {
-      emit(RutinitasSehatFailure(e.toString()));
+      emit(RutinitasSehatFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -111,7 +112,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(RutinitasActionFailure(errorBody['error'] ?? 'Gagal menambahkan obat'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -135,7 +136,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(RutinitasActionFailure(errorBody['error'] ?? 'Gagal memperbarui obat'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -159,7 +160,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(const RutinitasActionFailure('Gagal menghapus jadwal obat'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -183,7 +184,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(RutinitasActionFailure(errorBody['error'] ?? errorBody['message'] ?? 'Gagal menyimpan rutinitas'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -207,7 +208,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(RutinitasActionFailure(errorBody['error'] ?? errorBody['message'] ?? 'Gagal memperbarui rutinitas'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -231,7 +232,7 @@ class RutinitasBloc extends Bloc<RutinitasEvent, RutinitasState> {
         emit(const RutinitasActionFailure('Gagal menghapus rutinitas'));
       }
     } catch (e) {
-      emit(RutinitasActionFailure(e.toString()));
+      emit(RutinitasActionFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 }

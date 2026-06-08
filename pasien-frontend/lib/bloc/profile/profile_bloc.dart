@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../utils/error_handler.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
@@ -22,7 +23,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         emit(ProfileFailure(response['error'] ?? 'Gagal memuat data profil'));
       }
     } catch (e) {
-      emit(ProfileFailure(e.toString()));
+      emit(ProfileFailure(ErrorHandler.getErrorMessage(e)));
     }
   }
 
@@ -63,7 +64,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         emit(ProfileLoaded(profileData: currentProfileData));
       }
     } catch (e) {
-      emit(ProfileUpdateFailure(e.toString()));
+      emit(ProfileUpdateFailure(ErrorHandler.getErrorMessage(e)));
       emit(ProfileLoaded(profileData: currentProfileData));
     }
   }

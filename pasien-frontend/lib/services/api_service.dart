@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'auth_service.dart';
 import '../config/app_config.dart';
-
+import '../utils/error_handler.dart';
 class ApiService {
   // URL configuration dari AppConfig
   static const String baseUrl = AppConfig.baseUrl;
@@ -46,7 +46,7 @@ class ApiService {
       return {
         'success': false,
         'statusCode': 0,
-        'error': 'Koneksi gagal: ${e.toString()}',
+        'error': ErrorHandler.getErrorMessage(e),
       };
     }
   }
@@ -73,7 +73,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -113,7 +113,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -139,7 +139,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -171,7 +171,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -197,7 +197,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -237,7 +237,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -265,7 +265,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -288,7 +288,7 @@ class ApiService {
         return {'success': false, 'error': data['message'] ?? 'OTP salah'};
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -319,7 +319,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -364,7 +364,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 
@@ -389,7 +389,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {'success': false, 'error': 'Koneksi gagal: ${e.toString()}'};
+      return {'success': false, 'error': ErrorHandler.getErrorMessage(e)};
     }
   }
 }

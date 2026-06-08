@@ -3,10 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../services/auth_service.dart';
+import '../../services/location_service.dart';
+import '../../utils/dialog_helper.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/api_service.dart';
 import '../../bloc/profile/profile_state.dart';
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -230,19 +234,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _profileData = state.profileData;
               _isEditing = false;
               _isSaving = false;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: emerald,
-                ),
+              DialogHelper.showSuccessDialog(
+                context: context,
+                title: 'Pembaruan Berhasil',
+                message: 'Data profil Anda telah berhasil diperbarui.',
               );
             } else if (state is ProfileUpdateFailure) {
               _isSaving = false;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Gagal menyimpan: ${state.error}"),
-                  backgroundColor: Colors.red[400],
-                ),
+              DialogHelper.showErrorDialog(
+                context: context,
+                title: 'Pembaruan Gagal',
+                message: 'Terjadi kesalahan saat menyimpan data profil Anda. Silakan coba lagi.\n\nDetail: ${state.error}',
               );
             } else if (state is ProfileUpdating) {
               _isSaving = true;
@@ -381,26 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                        Positioned(
-                          bottom: 2,
-                          right: 2,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            child: const Icon(Icons.edit_rounded, size: 16, color: emerald),
-                          ),
-                        )
+
                       ],
                     ),
                   ),
@@ -539,19 +522,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 8),
                                   _buildEditableField("Nama Lengkap", _namaCtrl, validator: (v) {
                                     if (v == null || v.isEmpty) return 'Nama tidak boleh kosong';
+                                    if (!RegExp(r"^[a-zA-Z\s.,'-]+$").hasMatch(v)) return 'Nama tidak boleh mengandung angka, emoji, atau simbol';
                                     return null;
                                   }),
                                   _buildEditableField("Email", _emailCtrl, keyboardType: TextInputType.emailAddress, validator: (v) {
                                     if (v == null || v.isEmpty) return 'Email tidak boleh kosong';
-                                    if (!v.contains('@')) return 'Email tidak valid';
+                                    if (!RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(v)) return 'Email tidak valid';
                                     return null;
                                   }),
-                                  _buildEditableField("Alamat", _alamatCtrl, maxLines: 2),
+                                  _buildEditableField("Alamat", _alamatCtrl, maxLines: 2, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Alamat tidak boleh kosong';
+                                    if (v.trim().length < 10) return 'Alamat terlalu pendek, minimal 10 karakter';
+                                    return null;
+                                  }),
                                   _buildDropdownField("Jenis Kelamin", _jenisKelaminCtrl, ['Laki-laki', 'Perempuan']),
-                                  _buildEditableField("Tempat Lahir", _tempatLahirCtrl),
-                                  _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl),
-                                  _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone),
-                                  _buildEditableField("No. Telepon Pendamping (WA)", _noTeleponPendampingCtrl, keyboardType: TextInputType.phone),
+                                  _buildEditableField("Tempat Lahir", _tempatLahirCtrl, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Tempat lahir tidak boleh kosong';
+                                    if (!RegExp(r"^[a-zA-Z\s.,'-]+$").hasMatch(v)) return 'Hanya huruf yang diizinkan';
+                                    return null;
+                                  }),
+                                  _buildDatePickerField("Tanggal Lahir", _tanggalLahirCtrl, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Pilih tanggal lahir';
+                                    return null;
+                                  }),
+                                  _buildEditableField("No. Telepon", _noTeleponCtrl, keyboardType: TextInputType.phone, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Nomor telepon tidak boleh kosong';
+                                    if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Hanya boleh angka';
+                                    if (v.length < 10) return 'Minimal 10 digit';
+                                    return null;
+                                  }),
+                                  _buildEditableField("No. Telepon Pendamping (WA)", _noTeleponPendampingCtrl, keyboardType: TextInputType.phone, validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Nomor telepon pendamping tidak boleh kosong';
+                                    if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Hanya boleh angka';
+                                    if (v.length < 10) return 'Minimal 10 digit';
+                                    return null;
+                                  }),
                                   const SizedBox(height: 24),
                                   Row(
                                     children: [
@@ -627,6 +632,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
+                  // TOMBOL TEST WA WARNING
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4), // Hijau sangat muda
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFDCFCE7), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF15BE77).withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.notifications_active_rounded, color: Color(0xFF15BE77)),
+                      title: const Text(
+                        "Test Notifikasi WA",
+                        style: TextStyle(
+                          color: Color(0xFF15BE77), 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                      subtitle: const Text(
+                        "Kirim pesan simulasi ke pendamping",
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      onTap: _testWaWarning,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   Container(
                     decoration: BoxDecoration(
@@ -671,6 +718,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 
+
+  Future<void> _testWaWarning() async {
+    try {
+      final token = await AuthService.getToken();
+      if (token == null) {
+        DialogHelper.showErrorDialog(
+          context: context,
+          title: 'Gagal',
+          message: 'Sesi Anda telah berakhir. Silakan login kembali.',
+        );
+        return;
+      }
+
+      DialogHelper.showLoadingDialog(context, 'Mengirim Pesan...');
+
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/api/pasien/profile/test-wa-warning'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      Navigator.pop(context); // Tutup loading
+
+      if (response.statusCode == 200) {
+        DialogHelper.showSuccessDialog(
+          context: context,
+          title: 'Berhasil',
+          message: 'Pesan simulasi WhatsApp berhasil dikirim ke pendamping Anda.',
+        );
+      } else {
+        final body = jsonDecode(response.body);
+        final errorMessage = body['error'] ?? 'Gagal mengirim pesan simulasi.';
+        DialogHelper.showErrorDialog(
+          context: context,
+          title: 'Gagal',
+          message: errorMessage,
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Tutup loading
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: 'Terjadi kesalahan koneksi. Pastikan Anda terhubung ke internet.',
+      );
+    }
+  }
 
   void _saveProfileChanges() {
     if (!_formKey.currentState!.validate()) return;
@@ -728,6 +824,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontFamily: 'Inter',
             ),
             decoration: InputDecoration(
+              errorMaxLines: 3,
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -824,8 +921,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildDatePickerField(
     String label,
-    TextEditingController controller,
-  ) {
+    TextEditingController controller, {
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -845,6 +943,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextFormField(
             controller: controller,
             readOnly: true,
+            validator: validator,
             onTap: () async {
               DateTime initialDate = DateTime.now().subtract(const Duration(days: 365 * 20));
               try {
@@ -883,6 +982,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontFamily: 'Inter',
             ),
             decoration: InputDecoration(
+              errorMaxLines: 3,
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
               suffixIcon: const Icon(Icons.calendar_today_rounded, color: Color(0xFF94A3B8), size: 20),
@@ -898,6 +998,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Color(0xFF15BE77), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
               ),
             ),
           ),

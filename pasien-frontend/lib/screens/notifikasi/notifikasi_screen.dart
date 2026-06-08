@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../bloc/notifikasi/notifikasi_bloc.dart';
 import '../../bloc/notifikasi/notifikasi_event.dart';
 import '../../bloc/notifikasi/notifikasi_state.dart';
+import '../../utils/dialog_helper.dart';
 
 enum NotificationType { mendatang, terlewat, rutinitas }
 
@@ -277,20 +278,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
             bloc: _notifikasiBloc,
             listener: (context, state) {
               if (state is NotifikasiActionSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('✓ ${state.message}'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                DialogHelper.showSuccessDialog(
+                  context: context,
+                  title: 'Berhasil',
+                  message: state.message,
                 );
               } else if (state is NotifikasiActionFailure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${state.error}'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                DialogHelper.showErrorDialog(
+                  context: context,
+                  title: 'Gagal',
+                  message: state.error,
                 );
               }
             },
@@ -328,40 +325,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         break;
     }
 
-    return Dismissible(
-      key: Key(item.uniqueKey),
-      direction: item.canDelete ? DismissDirection.endToStart : DismissDirection.none,
-      background: Container(
-        alignment: Alignment.centerRight,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Padding(
-          padding: EdgeInsets.only(right: 24),
-          child: Icon(
-            Icons.delete_outline_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-      ),
-      onDismissed: (direction) {
-        _notifikasiBloc.add(DeleteNotification(item: item));
-        ScaffoldMessenger.of(listContext).clearSnackBars();
-        ScaffoldMessenger.of(listContext).showSnackBar(
-          SnackBar(
-            content: Text('Notifikasi "${item.title}" berhasil dihapus'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-      },
-      child: GestureDetector(
+    return GestureDetector(
         onTap: () => _showNotificationDetail(item),
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -489,7 +453,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -686,8 +649,6 @@ class _NotificationDetailWidgetState extends State<NotificationDetailWidget> {
                         const SizedBox(height: 2),
                         Text(
                           widget.item.aturan!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -711,21 +672,13 @@ class _NotificationDetailWidgetState extends State<NotificationDetailWidget> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // Ambil messenger SEBELUM Navigator.pop agar context masih valid
-                      final messenger = ScaffoldMessenger.of(context);
                       final title = widget.item.title;
                       _bloc.add(DeleteNotification(item: widget.item));
                       Navigator.pop(context);
-                      messenger.clearSnackBars();
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Notifikasi "$title" berhasil dihapus'),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
+                      DialogHelper.showSuccessDialog(
+                        context: context,
+                        title: 'Dihapus',
+                        message: 'Notifikasi "$title" berhasil dihapus',
                       );
                     },
                     icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
@@ -751,18 +704,11 @@ class _NotificationDetailWidgetState extends State<NotificationDetailWidget> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      final messenger = ScaffoldMessenger.of(context);
                       Navigator.pop(context);
-                      messenger.clearSnackBars();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Notifikasi ini baru bisa dihapus 12 jam setelah jadwal terlewat',
-                          ),
-                          duration: Duration(seconds: 3),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: Color(0xFF475569),
-                        ),
+                      DialogHelper.showErrorDialog(
+                        context: context,
+                        title: 'Terkunci',
+                        message: 'Notifikasi ini baru bisa dihapus 12 jam setelah jadwal terlewat',
                       );
                     },
                     icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFF94A3B8), size: 20),

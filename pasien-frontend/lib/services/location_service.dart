@@ -1,6 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+import '../utils/error_handler.dart';
 class LocationService {
   /// Mendapatkan alamat lengkap berbasis koordinat GPS saat ini.
   static Future<String> getCurrentAddress() async {
@@ -61,7 +62,7 @@ class LocationService {
       }
       return 'Alamat tidak ditemukan dari GPS';
     } catch (e) {
-      return Future.error('Gagal melakukan geocoding koordinat: $e');
+      return Future.error('Gagal memuat alamat: ${ErrorHandler.getErrorMessage(e)}');
     }
   }
 }

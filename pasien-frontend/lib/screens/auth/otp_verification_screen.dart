@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
+import '../../utils/dialog_helper.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({super.key});
@@ -60,16 +61,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         otp4.text.isEmpty ||
         otp5.text.isEmpty ||
         otp6.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            "OTP belum lengkap",
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-          ),
-        ),
+      DialogHelper.showErrorDialog(
+        context: context,
+        title: 'Gagal',
+        message: 'OTP belum lengkap',
       );
       return;
     }
@@ -144,28 +139,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             arguments: {'email': state.email, 'code': state.otp},
           );
         } else if (state is ForgotPasswordSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xFF15BE77),
-              behavior: SnackBarBehavior.floating,
-              content: Text(
-                "Kode OTP baru telah dikirim!",
-                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showSuccessDialog(
+            context: context,
+            title: 'Berhasil',
+            message: 'Kode OTP baru telah dikirim!',
           );
           _startTimer();
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                state.error,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
-              ),
-            ),
+          DialogHelper.showErrorDialog(
+            context: context,
+            title: 'Verifikasi Gagal',
+            message: state.error,
           );
         }
       },
