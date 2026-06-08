@@ -844,7 +844,14 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
   ) async {
     final currentState = state;
     if (currentState is NotifikasiLoaded) {
-      // 1. Optimistic Update: Mark as read and emit state immediately to update UI instantly
+      // 1. Tulis ke SharedPreferences TERLEBIH DAHULU agar persisten
+      //    Penting: jika FetchNotifications dipanggil sesaat setelah ini
+      //    (misal dari DashboardLoaded listener), key sudah tersimpan.
+      try {
+        await NotificationStorageService.instance.markKeyAsRead(event.item.uniqueKey);
+      } catch (_) {}
+
+      // 2. Update state in-memory (optimistic UI update)
       final updatedNotifications = currentState.allNotifications.map((notif) {
         if (notif.uniqueKey == event.item.uniqueKey && !notif.isRead) {
           return NotificationItem(
@@ -861,13 +868,8 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         }
         return notif;
       }).toList();
-      
-      emit(currentState.copyWith(allNotifications: updatedNotifications));
 
-      // 2. Perform persistent SharedPreferences write in the background
-      try {
-        await NotificationStorageService.instance.markKeyAsRead(event.item.uniqueKey);
-      } catch (_) {}
+      emit(currentState.copyWith(allNotifications: updatedNotifications));
     }
   }
 
@@ -914,14 +916,7 @@ class NotifikasiBloc extends Bloc<NotifikasiEvent, NotifikasiState> {
         int minute = int.parse(parts[1]);
 
         if (item.isAdvanceReminder) {
-          minute += 15;
-          if (minute >= 60) {
-            minute -= 60;
-            hour += 1;
-            if (hour >= 24) hour = 0;
-          }
-          final actualTime = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-          keys.add('dynamic_${item.jadwalId}_$actualTime');
+          keys.add('dynamic_${item.jadwalId}_${item.time}');
         } else {
           minute -= 15;
           if (minute < 0) {

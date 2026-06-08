@@ -24,26 +24,32 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(DashboardLoading());
     try {
       Map<String, List<String>> tempRiwayat = {};
-      final today = DateTime.now();
+      final today = DateTime.now().toUtc().add(const Duration(hours: 7));
       final todayDateStr =
           '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
       final tempTakenJadwalIds = <int>{};
-      final tempLoggedTodayJadwalIds = <int>{};
+      final tempMissedJadwalIds = <int>{};
       final tempTakenMandiriSlots = <String>{};  // Key: "jadwalId_waktu"
-      // Set untuk menyimpan jadwal_id mandiri yang sudah diambil hari ini (waktu_minum dari riwayat)
-      final Map<int, List<String>> mandiriTodayRiwayat = {};
+      final tempMissedMandiriSlots = <String>{};
+      final mandiriTodayRiwayat = <int, List<String>>{};
+      final mandiriTodayMissed = <int, List<String>>{};
+      final tempLoggedTodayJadwalIds = <int>{};
 
       // 1. Ambil riwayat kepatuhan untuk mewarnai kalender
       final riwayatResponse = await ApiService.getPasienRiwayat();
       if (riwayatResponse['success']) {
         final List<dynamic> data = riwayatResponse['data'] ?? [];
         for (final item in data) {
-          final tanggal = item['tanggal'] as String?;
+          final tanggalRaw = item['tanggal'] as String?;
           final status = item['status'] as String?;
           final jadwalIdStr = item['jadwal_id'];
           final parsedJadwalId = int.tryParse(jadwalIdStr.toString());
 
-          if (tanggal != null && status != null) {
+          if (tanggalRaw != null && status != null) {
+            // Normalisasi tanggal: ambil hanya 10 karakter pertama (YYYY-MM-DD)
+            // Mengantisipasi format ISO seperti "2026-06-08T00:00:00Z"
+            final tanggal = tanggalRaw.length >= 10 ? tanggalRaw.substring(0, 10) : tanggalRaw;
+            
             tempRiwayat.putIfAbsent(tanggal, () => []);
             tempRiwayat[tanggal]!.add(status);
 
@@ -52,11 +58,20 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
               tempLoggedTodayJadwalIds.add(parsedJadwalId);
               if (status == 'Diminum' || status == 'Terlambat') {
                 tempTakenJadwalIds.add(parsedJadwalId);
-                // Simpan waktu_minum untuk rekonstruksi slot mandiri
-                final waktu = item['waktu_minum'] as String? ?? '';
+                // Normalisasi waktu_minum ke format HH:MM (abaikan detik jika ada)
+                final waktuRaw = item['waktu_minum'] as String? ?? '';
+                final waktu = waktuRaw.length >= 5 ? waktuRaw.substring(0, 5) : waktuRaw;
                 if (waktu.isNotEmpty) {
                   mandiriTodayRiwayat.putIfAbsent(parsedJadwalId, () => []);
                   mandiriTodayRiwayat[parsedJadwalId]!.add(waktu);
+                }
+              } else if (status == 'Terlewat') {
+                tempMissedJadwalIds.add(parsedJadwalId);
+                final waktuRaw = item['waktu_minum'] as String? ?? '';
+                final waktu = waktuRaw.length >= 5 ? waktuRaw.substring(0, 5) : waktuRaw;
+                if (waktu.isNotEmpty) {
+                  mandiriTodayMissed.putIfAbsent(parsedJadwalId, () => []);
+                  mandiriTodayMissed[parsedJadwalId]!.add(waktu);
                 }
               }
             }
@@ -71,47 +86,69 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final dashboard = Dashboard.fromJson(response['data']);
 
         // Auto-log Terlewat jika sudah lewat 75 menit dan belum pernah dicatat hari ini (ignore Mandiri)
-        for (final j in dashboard.todayJadwals) {
-          if (j.kategoriObat == 'Mandiri') continue;
-          if (tempLoggedTodayJadwalIds.contains(j.id)) continue;
+        // PENTING: Hanya jalankan auto-log jika data riwayat berhasil dimuat.
+        // Jika gagal, tempLoggedTodayJadwalIds kosong dan bisa menimpa record Diminum di database.
+        if (riwayatResponse['success']) {
+          for (final j in dashboard.todayJadwals) {
+            if (j.kategoriObat == 'Mandiri') continue;
+            if (tempLoggedTodayJadwalIds.contains(j.id)) continue;
 
-          try {
-            final parts = j.waktuMinum.split(':');
-            if (parts.length >= 2) {
-              final jadwalDt = DateTime(
-                today.year,
-                today.month,
-                today.day,
-                int.parse(parts[0]),
-                int.parse(parts[1]),
-              );
-              final diffMinutes = today.difference(jadwalDt).inMinutes;
-              if (diffMinutes > 75) {
-                // Log ke backend menggunakan waktu minum asli agar key konstan
-                await ApiService.postRiwayat(
-                  jadwalId: j.id,
-                  status: 'Terlewat',
-                  waktuMinum: j.waktuMinum,
+            try {
+              final parts = j.waktuMinum.split(':');
+              if (parts.length >= 2) {
+                final jadwalDt = DateTime.utc(
+                  today.year,
+                  today.month,
+                  today.day,
+                  int.parse(parts[0]),
+                  int.parse(parts[1]),
                 );
-                tempLoggedTodayJadwalIds.add(j.id);
-                tempRiwayat.putIfAbsent(todayDateStr, () => []);
-                tempRiwayat[todayDateStr]!.add('Terlewat');
-                debugPrint(
-                    '[DashboardBloc] Auto-logged Terlewat for jadwal #${j.id} (${j.namaObat})');
+                final diffMinutes = today.difference(jadwalDt).inMinutes;
+                if (diffMinutes > 75) {
+                  // Log ke backend menggunakan waktu minum asli agar key konstan
+                  await ApiService.postRiwayat(
+                    jadwalId: j.id,
+                    status: 'Terlewat',
+                    waktuMinum: j.waktuMinum,
+                  );
+                  tempLoggedTodayJadwalIds.add(j.id);
+                  tempMissedJadwalIds.add(j.id);
+                  tempRiwayat.putIfAbsent(todayDateStr, () => []);
+                  tempRiwayat[todayDateStr]!.add('Terlewat');
+                  debugPrint(
+                      '[DashboardBloc] Auto-logged Terlewat for jadwal #${j.id} (${j.namaObat})');
+                }
               }
+            } catch (e) {
+              debugPrint('[DashboardBloc] Gagal auto-log Terlewat: $e');
             }
-          } catch (e) {
-            debugPrint('[DashboardBloc] Gagal auto-log Terlewat: $e');
           }
         }
 
         // Setelah mendapat dashboard, rekonstruksi taken mandiri slots
-        final mandiriJadwalIds = dashboard.todayJadwals
-            .where((j) => j.kategoriObat == 'Mandiri')
-            .map((j) => j.id)
-            .toSet();
-        // Hapus mandiri IDs dari takenJadwalIds (dikelola terpisah via takenMandiriSlots)
+        tempTakenMandiriSlots.clear();
+        tempMissedMandiriSlots.clear();
+        final mandiriJadwalIds = <int>[];
+
+        for (final j in dashboard.todayJadwals) {
+          if (j.kategoriObat == 'Mandiri') {
+            mandiriJadwalIds.add(j.id);
+            if (mandiriTodayRiwayat.containsKey(j.id)) {
+              for (final w in mandiriTodayRiwayat[j.id]!) {
+                tempTakenMandiriSlots.add('${j.id}_$w');
+              }
+            }
+            if (mandiriTodayMissed.containsKey(j.id)) {
+              for (final w in mandiriTodayMissed[j.id]!) {
+                tempMissedMandiriSlots.add('${j.id}_$w');
+              }
+            }
+          }
+        }
+
+        // Hapus mandiri IDs dari takenJadwalIds dan missedJadwalIds (dikelola terpisah via slot)
         tempTakenJadwalIds.removeAll(mandiriJadwalIds);
+        tempMissedJadwalIds.removeAll(mandiriJadwalIds);
         // Bangun mandiri slots dari riwayat hari ini
         for (final j in dashboard.todayJadwals) {
           if (j.kategoriObat != 'Mandiri') continue;
@@ -146,6 +183,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           riwayatByDate: tempRiwayat,
           takenJadwalIds: tempTakenJadwalIds,
           takenMandiriSlots: tempTakenMandiriSlots,
+          missedJadwalIds: tempMissedJadwalIds,
+          missedMandiriSlots: tempMissedMandiriSlots,
+          fromFetch: true,
         ));
       } else {
         // Jika 401: token expired/hilang
@@ -177,6 +217,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             riwayatByDate: tempRiwayat,
             takenJadwalIds: tempTakenJadwalIds,
             takenMandiriSlots: tempTakenMandiriSlots,
+            missedJadwalIds: tempMissedJadwalIds,
+            missedMandiriSlots: tempMissedMandiriSlots,
           ));
         } else {
           emit(DashboardFailure(
@@ -206,6 +248,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             dashboard: offlineDashboard,
             riwayatByDate: const {},
             takenJadwalIds: const {},
+            takenMandiriSlots: const {},
+            missedJadwalIds: const {},
+            missedMandiriSlots: const {},
           ));
           return;
         }
@@ -246,6 +291,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         NotificationService.instance.cancelJadwal(event.jadwal.id);
 
         final updatedTaken = Set<int>.from(currentState.takenJadwalIds)..add(event.jadwal.id);
+        // Hapus dari missed jika sebelumnya terlewat lalu diminum sekarang
+        final updatedMissed = Set<int>.from(currentState.missedJadwalIds)..remove(event.jadwal.id);
         
         // Buat temp copy riwayat harian baru
         final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
@@ -257,6 +304,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           dashboard: currentState.dashboard,
           riwayatByDate: updatedRiwayat,
           takenJadwalIds: updatedTaken,
+          takenMandiriSlots: currentState.takenMandiriSlots,
+          missedJadwalIds: updatedMissed,
+          missedMandiriSlots: currentState.missedMandiriSlots,
           isMarking: false,
         ));
 
@@ -268,6 +318,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           dashboard: currentState.dashboard,
           riwayatByDate: updatedRiwayat,
           takenJadwalIds: updatedTaken,
+          takenMandiriSlots: currentState.takenMandiriSlots,
+          missedJadwalIds: updatedMissed,
+          missedMandiriSlots: currentState.missedMandiriSlots,
           isMarking: false,
         ));
       } else {
@@ -306,6 +359,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
         final slotKey = '${event.jadwal.id}_${event.waktuSlot}';
         final updatedMandiriSlots = Set<String>.from(currentState.takenMandiriSlots)..add(slotKey);
+        // Hapus slot mandiri dari missed jika ada
+        final updatedMissedMandiri = Set<String>.from(currentState.missedMandiriSlots)..remove(slotKey);
 
         final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
         final updatedRiwayat = Map<String, List<String>>.from(currentState.riwayatByDate);
@@ -317,6 +372,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           riwayatByDate: updatedRiwayat,
           takenJadwalIds: currentState.takenJadwalIds,
           takenMandiriSlots: updatedMandiriSlots,
+          missedJadwalIds: currentState.missedJadwalIds,
+          missedMandiriSlots: updatedMissedMandiri,
           isMarking: false,
         ));
 
@@ -327,6 +384,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           riwayatByDate: updatedRiwayat,
           takenJadwalIds: currentState.takenJadwalIds,
           takenMandiriSlots: updatedMandiriSlots,
+          missedJadwalIds: currentState.missedJadwalIds,
+          missedMandiriSlots: updatedMissedMandiri,
           isMarking: false,
         ));
       } else {

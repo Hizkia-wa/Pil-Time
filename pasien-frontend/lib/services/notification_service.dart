@@ -916,19 +916,31 @@ class NotificationService {
     DateTime? confirmationTime,       // default = now
   }) {
     final now = confirmationTime ?? DateTime.now();
-    final parts = scheduledTimeStr.split(':');
-    if (parts.length != 2) return ComplianceStatus.terlewat;
+    final times = scheduledTimeStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (times.isEmpty) return ComplianceStatus.terlewat;
 
-    final hour = int.tryParse(parts[0]) ?? 0;
-    final minute = int.tryParse(parts[1]) ?? 0;
+    ComplianceStatus bestStatus = ComplianceStatus.terlewat;
+    int minAbsDiff = 999999;
 
-    // Bangun scheduledTime di tanggal yang sama dengan konfirmasi
-    final scheduled = DateTime(now.year, now.month, now.day, hour, minute);
+    for (final timeStr in times) {
+      final parts = timeStr.split(':');
+      if (parts.length != 2) continue;
 
-    return checkCompliance(
-      scheduledTime: scheduled,
-      confirmationTime: now,
-    );
+      final hour = int.tryParse(parts[0]) ?? 0;
+      final minute = int.tryParse(parts[1]) ?? 0;
+
+      final scheduled = DateTime(now.year, now.month, now.day, hour, minute);
+      
+      final diff = now.difference(scheduled).inMinutes;
+      final absDiff = diff.abs();
+      
+      if (absDiff < minAbsDiff) {
+        minAbsDiff = absDiff;
+        bestStatus = checkCompliance(scheduledTime: scheduled, confirmationTime: now);
+      }
+    }
+
+    return bestStatus;
   }
 
   // ==========================================================

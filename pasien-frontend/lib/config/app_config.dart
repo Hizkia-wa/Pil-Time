@@ -16,12 +16,12 @@ class AppConfig {
   // static const String authServiceUrl = 'http://172.30.42.29:8080';
 
   // EMULATOR CONFIG (Uncomment ini untuk emulator)
-  // static const String baseUrl = 'http://10.0.2.2:8080';
-  // static const String authServiceUrl = 'http://10.0.2.2:8080';
+  static const String baseUrl = 'http://10.0.2.2:8080';
+  static const String authServiceUrl = 'http://10.0.2.2:8080';
 
   // RAILWAY PRODUCTION CONFIG
-  static const String baseUrl = 'https://pil-time-pam-production.up.railway.app';
-  static const String authServiceUrl = 'https://pil-time-pam-production.up.railway.app';
+  // static const String baseUrl = 'https://pil-time-pam-production.up.railway.app';
+  // static const String authServiceUrl = 'https://pil-time-pam-production.up.railway.app';
 
   // ========== API ENDPOINTS ==========
   static const String authLogin = '$authServiceUrl/auth/pasien/login';

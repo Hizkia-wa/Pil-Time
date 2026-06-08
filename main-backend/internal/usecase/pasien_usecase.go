@@ -54,11 +54,11 @@ func (u *PasienUsecase) Register(req *dto.RegisterPasienRequest) (*dto.RegisterP
 
 	// Buat pasien baru
 	pasien := &domain.Pasien{
-		Nama:                req.NamaLengkap,
-		Email:               req.Email,
-		Password:            hashedPassword,
-		NIK:                 req.NIK,
-		TanggalLahir:        tanggalLahir,
+		Nama:         req.NamaLengkap,
+		Email:        req.Email,
+		Password:     hashedPassword,
+		NIK:          req.NIK,
+		TanggalLahir: tanggalLahir,
 		NoTelepon:           req.Telepon,
 		NoTeleponPendamping: req.NoTeleponPendamping,
 		JenisKelamin:        req.JenisKelamin,
@@ -132,6 +132,7 @@ func (u *PasienUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.For
 
 	// Kirim email dengan kode reset
 	if err := u.emailService.SendResetCode(req.Email, code); err != nil {
+		fmt.Printf("[RESEND ERROR] Gagal mengirim email ke %s: %v\n", req.Email, err)
 		return nil, errors.New("gagal mengirim email reset password")
 	}
 
@@ -290,10 +291,10 @@ func (u *PasienUsecase) GetPasienDashboard(pasienID int) (*dto.PasienDashboardRe
 		NoTelepon:           pasien.NoTelepon,
 		NoTeleponPendamping: pasien.NoTeleponPendamping,
 		JenisKelamin:        pasien.JenisKelamin,
-		TanggalLahir:        pasien.TanggalLahir.Format("2006-01-02"),
-		Alamat:              pasien.Alamat,
-		TodayJadwals:        todayJadwalDTOs,
-		AllJadwals:          jadwalDTOs,
+		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
+		Alamat:       pasien.Alamat,
+		TodayJadwals: todayJadwalDTOs,
+		AllJadwals:   jadwalDTOs,
 	}, nil
 }
 
@@ -355,13 +356,13 @@ func (u *PasienUsecase) GetByID(pasienID int) (*dto.PasienResponseDTO, error) {
 	}
 
 	return &dto.PasienResponseDTO{
-		PasienID:            pasien.PasienID,
-		Nama:                pasien.Nama,
-		Email:               pasien.Email,
-		NIK:                 pasien.NIK,
-		TanggalLahir:        pasien.TanggalLahir.Format("2006-01-02"),
-		TempatLahir:         pasien.TempatLahir,
-		Alamat:              pasien.Alamat,
+		PasienID:     pasien.PasienID,
+		Nama:         pasien.Nama,
+		Email:        pasien.Email,
+		NIK:          pasien.NIK,
+		TanggalLahir: pasien.TanggalLahir.Format("2006-01-02"),
+		TempatLahir:  pasien.TempatLahir,
+		Alamat:       pasien.Alamat,
 		JenisKelamin:        pasien.JenisKelamin,
 		NoTelepon:           pasien.NoTelepon,
 		NoTeleponPendamping: pasien.NoTeleponPendamping,

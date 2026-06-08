@@ -48,8 +48,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Track jadwal yang sudah ditandai diminum di sesi ini
   final Set<int> _takenJadwalIds = {};
+  final Set<int> _missedJadwalIds = {};
   // Track slot waktu obat mandiri yang sudah ditandai (key: "jadwalId_waktu")
   final Set<String> _takenMandiriSlots = {};
+  final Set<String> _missedMandiriSlots = {};
   bool _notificationPermissionGranted = true;
   int _unreadNotificationCount = 0;
 
@@ -191,8 +193,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         bloc: _dashboardBloc,
         listener: (context, state) {
           if (state is DashboardLoaded) {
+            _riwayatByDate = state.riwayatByDate;
+            _takenJadwalIds.clear();
+            _takenJadwalIds.addAll(state.takenJadwalIds);
+            _missedJadwalIds.clear();
+            _missedJadwalIds.addAll(state.missedJadwalIds);
+            _takenMandiriSlots.clear();
+            _takenMandiriSlots.addAll(state.takenMandiriSlots);
+            _missedMandiriSlots.clear();
+            _missedMandiriSlots.addAll(state.missedMandiriSlots);
             _loadUnreadCount(state.dashboard.todayJadwals, state.takenJadwalIds);
-            context.read<NotifikasiBloc>().add(FetchNotifications(pasienId: widget.pasienId));
+            // Hanya trigger FetchNotifications saat full reload dashboard (bukan saat marking obat)
+            // Ini mencegah race condition yang menyebabkan isRead notifikasi reset
+            if (state.fromFetch) {
+              context.read<NotifikasiBloc>().add(FetchNotifications(pasienId: widget.pasienId));
+            }
           }
           if (state is DashboardFailure && state.statusCode == 401) {
             AuthService.logout();
@@ -290,8 +305,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final dashboard = state.dashboard;
             _takenJadwalIds.clear();
             _takenJadwalIds.addAll(state.takenJadwalIds);
+            _missedJadwalIds.clear();
+            _missedJadwalIds.addAll(state.missedJadwalIds);
             _takenMandiriSlots.clear();
             _takenMandiriSlots.addAll(state.takenMandiriSlots);
+            _missedMandiriSlots.clear();
+            _missedMandiriSlots.addAll(state.missedMandiriSlots);
             _riwayatByDate = state.riwayatByDate;
 
             return SafeArea(
@@ -1331,7 +1350,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   _JadwalStatus _getJadwalStatus(String waktuMinum) {
     try {
-      final now = DateTime.now();
+      final nowWib = DateTime.now().toUtc().add(const Duration(hours: 7));
       final formatted = _formatWaktuMinum(waktuMinum);
       final slots = formatted.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
       
@@ -1340,12 +1359,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       for (final slot in slots) {
         final parts = slot.split(':');
         if (parts.length < 2) continue;
-        final jadwalDt = DateTime(
-          now.year, now.month, now.day,
+        final jadwalDt = DateTime.utc(
+          nowWib.year, nowWib.month, nowWib.day,
           int.parse(parts[0]), int.parse(parts[1]),
         );
-        if (now.isBefore(jadwalDt)) continue;
-        final diffMinutes = now.difference(jadwalDt).inMinutes;
+        if (nowWib.isBefore(jadwalDt)) continue;
+        final diffMinutes = nowWib.difference(jadwalDt).inMinutes;
         
         _JadwalStatus slotStatus;
         if (diffMinutes > 75) {
@@ -1392,6 +1411,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       // Obat yang sudah diminum tidak perlu ditampilkan lagi
       if (_takenJadwalIds.contains(j.id)) {
+        continue;
+      }
+      // Obat yang terlewat (missedJadwalIds) tetap ditampilkan dengan icon silang
+      if (_missedJadwalIds.contains(j.id)) {
+        activeJadwals.add(j);
         continue;
       }
       final status = _getJadwalStatus(j.waktuMinum);
@@ -1589,15 +1613,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String? mandiriSlotTime,
   }) {
     final bool isTaken;
+    final bool isMissed;
     final _JadwalStatus status;
 
     if (isMandiri && mandiriSlotTime != null) {
       isTaken = _takenMandiriSlots.contains('${jadwal.id}_$mandiriSlotTime');
-      status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(mandiriSlotTime);
+      isMissed = _missedMandiriSlots.contains('${jadwal.id}_$mandiriSlotTime');
+      status = isTaken ? _JadwalStatus.onTime : (isMissed ? _JadwalStatus.expired : _getJadwalStatus(mandiriSlotTime));
     } else {
       isTaken = _takenJadwalIds.contains(jadwal.id);
-      status = isTaken ? _JadwalStatus.onTime : _getJadwalStatus(jadwal.waktuMinum);
+      isMissed = _missedJadwalIds.contains(jadwal.id);
+      status = isTaken ? _JadwalStatus.onTime : (isMissed ? _JadwalStatus.expired : _getJadwalStatus(jadwal.waktuMinum));
     }
+
+    final bool isExpiredOrMissed = isMissed || status == _JadwalStatus.expired;
 
     final Color statusColor;
     final Color statusBg;
@@ -1681,7 +1710,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isTaken
+          onTap: isTaken || status == _JadwalStatus.upcoming || isExpiredOrMissed
               ? null
               : (isMandiri && mandiriSlotTime != null)
                   ? () => _markMandiriSlotAsTaken(jadwal, pasienId, mandiriSlotTime)
@@ -1795,7 +1824,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 // INTERACTIVE LARGE ACTION BUTTON
                 GestureDetector(
-                  onTap: isTaken
+                  onTap: isTaken || status == _JadwalStatus.upcoming || isExpiredOrMissed
                       ? null
                       : (isMandiri && mandiriSlotTime != null)
                           ? () => _markMandiriSlotAsTaken(jadwal, pasienId, mandiriSlotTime)
@@ -1806,16 +1835,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: isTaken ? const Color(0xFF15BE77) : Colors.white,
+                      shape: BoxShape.circle,
+                      color: isTaken 
+                          ? const Color(0xFF15BE77) 
+                          : isExpiredOrMissed 
+                              ? const Color(0xFFFF4D4D)
+                              : Colors.white,
                       border: Border.all(
-                        color: isTaken 
-                            ? const Color(0xFF15BE77) 
+                        color: isTaken || isExpiredOrMissed
+                            ? Colors.transparent
                             : status == _JadwalStatus.upcoming
                                 ? const Color(0xFFE2E8F0)
                                 : statusColor,
                         width: 2.5,
                       ),
-                      shape: BoxShape.circle,
                     ),
                     child: isTaken
                         ? const Icon(
@@ -1823,17 +1856,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.white,
                             size: 22,
                           )
-                        : Icon(
-                            status == _JadwalStatus.upcoming 
-                                ? Icons.lock_rounded 
-                                : status == _JadwalStatus.expired 
-                                    ? Icons.close_rounded 
+                        : isExpiredOrMissed
+                            ? const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              )
+                            : Icon(
+                                status == _JadwalStatus.upcoming 
+                                    ? Icons.lock_rounded 
                                     : Icons.check_rounded,
-                            color: status == _JadwalStatus.upcoming
-                                ? const Color(0xFFCBD5E1)
-                                : statusColor.withValues(alpha: 0.5),
-                            size: status == _JadwalStatus.upcoming ? 16 : 20,
-                          ),
+                                color: status == _JadwalStatus.upcoming
+                                    ? const Color(0xFFCBD5E1)
+                                    : statusColor.withValues(alpha: 0.5),
+                                size: status == _JadwalStatus.upcoming ? 16 : 20,
+                              ),
                   ),
                 ),
               ],
@@ -1929,11 +1966,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final hour = int.tryParse(parts[0]) ?? 0;
       final minute = int.tryParse(parts[1]) ?? 0;
 
-      final now = DateTime.now();
-      if (now.hour > hour) {
+      final nowWib = DateTime.now().toUtc().add(const Duration(hours: 7));
+      if (nowWib.hour > hour) {
         return true;
-      } else if (now.hour == hour) {
-        return now.minute >= minute;
+      } else if (nowWib.hour == hour) {
+        return nowWib.minute >= minute;
       }
       return false;
     } catch (_) {

@@ -1,25 +1,19 @@
 package email
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"net/smtp"
-	"os"
+	"io"
+	"net/http"
 )
 
 type EmailService struct {
-	smtpHost       string
-	smtpPort       string
-	senderEmail    string
-	senderPassword string
+	// Variabel SMTP tidak akan dipakai lagi, kita langsung pakai Resend API
 }
 
 func NewEmailService() *EmailService {
-	return &EmailService{
-		smtpHost:       os.Getenv("SMTP_HOST"),
-		smtpPort:       os.Getenv("SMTP_PORT"),
-		senderEmail:    os.Getenv("SENDER_EMAIL"),
-		senderPassword: os.Getenv("SENDER_PASSWORD"),
-	}
+	return &EmailService{}
 }
 
 func (e *EmailService) SendResetCode(recipientEmail, resetCode string) error {
@@ -61,18 +55,40 @@ func (e *EmailService) SendResetCode(recipientEmail, resetCode string) error {
 </html>
 	`, resetCode)
 
-	// SMTP configuration
-	auth := smtp.PlainAuth("", e.senderEmail, e.senderPassword, e.smtpHost)
-	addr := fmt.Sprintf("%s:%s", e.smtpHost, e.smtpPort)
+	resendAPIKey := "re_4LPFvZP2_9r1FpcT8DDAybXrDK2CNeSj2"
+	
+	payload := map[string]interface{}{
+		// Wajib menggunakan onboarding@resend.dev jika domain belum diverifikasi di Resend
+		"from":    "Pil Time <onboarding@resend.dev>",
+		"to":      []string{recipientEmail},
+		"subject": subject,
+		"html":    body,
+	}
 
-	// Send email
-	err := smtp.SendMail(
-		addr,
-		auth,
-		e.senderEmail,
-		[]string{recipientEmail},
-		[]byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\nMIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n%s", recipientEmail, subject, body)),
-	)
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("gagal memproses payload email: %v", err)
+	}
 
-	return err
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("gagal membuat request email: %v", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+resendAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("koneksi ke Resend gagal: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("resend error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
 }

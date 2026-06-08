@@ -115,7 +115,7 @@ func (u *JadwalUsecase) CreateJadwal(req *dto.CreateJadwalDTO) (*dto.JadwalRespo
 				}
 			}
 			if req.TipeDurasi == "hari" && req.JumlahHari > 0 {
-				selesai := mulai.AddDate(0, 0, req.JumlahHari-1)
+				selesai := mulai.AddDate(0, 0, req.JumlahHari - 1)
 				tanggalSelesai = selesai.Format("2006-01-02")
 			}
 		}

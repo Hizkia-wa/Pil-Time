@@ -33,6 +33,23 @@ class NotificationItem {
 
   String get uniqueKey {
     if (id != null) return 'fcm_$id';
+    if (isAdvanceReminder) {
+      try {
+        final parts = time.split(':');
+        if (parts.length == 2) {
+          int hour = int.parse(parts[0]);
+          int minute = int.parse(parts[1]);
+          minute -= 15;
+          if (minute < 0) {
+            minute += 60;
+            hour -= 1;
+            if (hour < 0) hour = 23;
+          }
+          final advanceTime = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          return 'dynamic_${jadwalId}_$advanceTime';
+        }
+      } catch (_) {}
+    }
     return 'dynamic_${jadwalId}_$time';
   }
 
