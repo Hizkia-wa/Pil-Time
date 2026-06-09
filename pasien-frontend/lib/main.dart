@@ -81,7 +81,9 @@ class _MyAppState extends State<MyApp> {
     // Cek onboarding terlebih dahulu, BARU dispatch AuthCheckRequested
     // sehingga BlocBuilder sudah terpasang ketika state berubah → tidak ada race condition
     final prefs = await SharedPreferences.getInstance();
-    _hasSeenOnboarding = prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
+    // TODO: Revert this temporary bypass for testing
+    // _hasSeenOnboarding = prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
+    _hasSeenOnboarding = true;
 
     if (mounted) {
       setState(() => _initDone = true);

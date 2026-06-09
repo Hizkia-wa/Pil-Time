@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -30,13 +31,15 @@ void notificationBackgroundHandler(NotificationResponse response) {
   }
 }
 
-class NotificationService {
+class NotificationService with WidgetsBindingObserver {
   // ── Singleton ──────────────────────────────────────────────
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  static const MethodChannel _alarmChannel = MethodChannel('com.piltime.app/alarm');
 
   bool _initialized = false;
 
@@ -56,19 +59,19 @@ class NotificationService {
 
 
   // ── Konstanta Channel Android ──────────────────────────────
-  static const String _channelId = 'pil_time_alarm_v4';
+  static const String _channelId = 'pil_time_alarm_v6';
   static const String _channelName = 'Alarm Minum Obat';
   static const String _channelDesc =
       'Notifikasi pengingat jadwal minum obat Pil Time';
 
-  static const String _reminderChannelId = 'pil_time_reminders';
+  static const String _reminderChannelId = 'pil_time_reminders_v2';
   static const String _reminderChannelName = 'Pengingat Obat';
   static const String _reminderChannelDesc =
       'Notifikasi pengingat biasa sebelum minum obat Pil Time';
 
-  // Channel khusus alarm rutinitas sehat (suara berbeda dari alarm obat)
-  // Gunakan v3 agar Android membuat channel baru dengan setting silent
-  static const String _rutinitasChannelId = 'pil_time_rutinitas_v3';
+  // Channel khusus alarm rutinitas sehat
+  // Gunakan v5 agar Android membuat channel baru dengan setting suara yang benar
+  static const String _rutinitasChannelId = 'pil_time_rutinitas_v5';
   static const String _rutinitasChannelName = 'Pengingat Rutinitas Sehat';
   static const String _rutinitasChannelDesc =
       'Notifikasi pengingat jadwal rutinitas/aktivitas sehat Pil Time';
@@ -116,7 +119,15 @@ class NotificationService {
     await _requestPermissions();
 
     _initialized = true;
+    WidgetsBinding.instance.addObserver(this);
     debugPrint('[PilTime] NotificationService initialized ✓');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkNativeAlarmPayload();
+    }
   }
 
   // ==========================================================
@@ -156,6 +167,8 @@ class NotificationService {
         // ID unik untuk setiap waktu (offset 1000 untuk setiap waktu tambahan)
         final currentNotifId = notifId + (i * 1000);
 
+        final now = tz.TZDateTime.now(tz.getLocation(_timezone));
+
         // Pola Getaran Agresif (Panjang dan berulang)
         final Int64List vibrationPattern = Int64List.fromList([
           0,
@@ -175,10 +188,13 @@ class NotificationService {
           priority: Priority.max,
           fullScreenIntent: true, // Tampil over lock screen
           ongoing: false,
-          playSound: false,
-          enableVibration: false,
+          playSound: true,        // <-- Diaktifkan sebagai fallback jika app terbunuh
+          enableVibration: true,  // <-- Diaktifkan sebagai fallback
+          vibrationPattern: vibrationPattern,
+          additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT (Looping alarm)
           styleInformation: const BigTextStyleInformation(''),
           icon: 'ic_notification',
+          sound: const RawResourceAndroidNotificationSound('alarm_voice'),
         );
 
         const darwinDetails = DarwinNotificationDetails(
@@ -193,102 +209,115 @@ class NotificationService {
           iOS: darwinDetails,
         );
 
-        // 1. Jadwalkan Alarm Utama (Initial)
-        await _plugin.zonedSchedule(
-          currentNotifId,
-          '💊 Waktunya Minum Obat!',
-          '$namaObat — $dosis',
-          scheduledTZ,
-          notifDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: '$jadwalId:$namaObat:$timeStr',
-          matchDateTimeComponents: DateTimeComponents.time, // Repeat harian
-        );
+        // 1. Jadwalkan Alarm Utama (Initial) - Hanya jika belum lewat
+        if (scheduledTZ.isAfter(now)) {
+          await _plugin.zonedSchedule(
+            currentNotifId,
+            '💊 Waktunya Minum Obat!',
+            '$namaObat — $dosis',
+            scheduledTZ,
+            notifDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            payload: '$jadwalId:$namaObat:$timeStr',
+            matchDateTimeComponents: DateTimeComponents.time, // Repeat harian
+          );
+          await _setNativeAlarm(currentNotifId, scheduledTZ, '$jadwalId:$namaObat:$timeStr');
+          debugPrint(
+              '[PilTime] Scheduled alarm #$currentNotifId for $namaObat at $timeStr (WIB)');
+        }
 
-        debugPrint(
-            '[PilTime] Scheduled alarm #$currentNotifId for $namaObat at $timeStr (WIB)');
-
-        // 2. Jadwalkan Snooze 1 (+20 Menit)
+        // 2. Jadwalkan Snooze 1 (+20 Menit) - Hanya jika belum lewat
         final snooze1TZ = scheduledTZ.add(const Duration(minutes: 20));
-        await _plugin.zonedSchedule(
-          currentNotifId + 100,
-          '💊 Pengingat Kedua (Snooze): Waktunya Minum Obat!',
-          '$namaObat — $dosis (Sudah lewat 20 menit)',
-          snooze1TZ,
-          notifDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: '$jadwalId:$namaObat:$timeStr',
-          matchDateTimeComponents: DateTimeComponents.time,
-        );
-        debugPrint(
-            '[PilTime] Scheduled Snooze 1 #${currentNotifId + 100} for $namaObat at ${snooze1TZ.hour}:${snooze1TZ.minute} (WIB)');
+        if (snooze1TZ.isAfter(now)) {
+          await _plugin.zonedSchedule(
+            currentNotifId + 100,
+            '💊 Pengingat Kedua (Snooze): Waktunya Minum Obat!',
+            '$namaObat — $dosis (Sudah lewat 20 menit)',
+            snooze1TZ,
+            notifDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            payload: '$jadwalId:$namaObat:$timeStr',
+            matchDateTimeComponents: DateTimeComponents.time,
+          );
+          await _setNativeAlarm(currentNotifId + 100, snooze1TZ, '$jadwalId:$namaObat:$timeStr');
+          debugPrint(
+              '[PilTime] Scheduled Snooze 1 #${currentNotifId + 100} for $namaObat at ${snooze1TZ.hour}:${snooze1TZ.minute} (WIB)');
+        }
 
-        // 3. Jadwalkan Snooze 2 (+40 Menit)
+        // 3. Jadwalkan Snooze 2 (+40 Menit) - Hanya jika belum lewat
         final snooze2TZ = scheduledTZ.add(const Duration(minutes: 40));
-        await _plugin.zonedSchedule(
-          currentNotifId + 200,
-          '💊 Pengingat Ketiga (Snooze): Waktunya Minum Obat!',
-          '$namaObat — $dosis (Sudah lewat 40 menit)',
-          snooze2TZ,
-          notifDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: '$jadwalId:$namaObat:$timeStr',
-          matchDateTimeComponents: DateTimeComponents.time,
-        );
-        debugPrint(
-            '[PilTime] Scheduled Snooze 2 #${currentNotifId + 200} for $namaObat at ${snooze2TZ.hour}:${snooze2TZ.minute} (WIB)');
+        if (snooze2TZ.isAfter(now)) {
+          await _plugin.zonedSchedule(
+            currentNotifId + 200,
+            '💊 Pengingat Ketiga (Snooze): Waktunya Minum Obat!',
+            '$namaObat — $dosis (Sudah lewat 40 menit)',
+            snooze2TZ,
+            notifDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            payload: '$jadwalId:$namaObat:$timeStr',
+            matchDateTimeComponents: DateTimeComponents.time,
+          );
+          await _setNativeAlarm(currentNotifId + 200, snooze2TZ, '$jadwalId:$namaObat:$timeStr');
+          debugPrint(
+              '[PilTime] Scheduled Snooze 2 #${currentNotifId + 200} for $namaObat at ${snooze2TZ.hour}:${snooze2TZ.minute} (WIB)');
+        }
 
         // 4. Jadwalkan Warning Terlambat (+60 Menit) - Batas Akhir Kategori Tepat Waktu
         final terlambatTZ = scheduledTZ.add(const Duration(minutes: 60));
-        final Int64List urgentVibrationPattern = Int64List.fromList([
-          0, 1500, 300, 1500, 300, 1500, 300, 1500,
-        ]);
-        final urgentAndroidDetails = AndroidNotificationDetails(
-          _channelId,
-          'Alarm Sangat Penting (Terlambat)',
-          channelDescription: 'Notifikasi peringatan keterlambatan minum obat',
-          importance: Importance.max,
-          priority: Priority.max,
-          fullScreenIntent: true,
-          playSound: false,
-          enableVibration: false,
-          styleInformation: const BigTextStyleInformation(''),
-          icon: 'ic_notification',
-        );
-        final urgentNotifDetails = NotificationDetails(
-          android: urgentAndroidDetails,
-          iOS: const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            sound: 'alarm_voice.mp3',
-          ),
-        );
+        if (terlambatTZ.isAfter(now)) {
+          final Int64List urgentVibrationPattern = Int64List.fromList([
+            0, 1500, 300, 1500, 300, 1500, 300, 1500,
+          ]);
+          final urgentAndroidDetails = AndroidNotificationDetails(
+            _channelId,
+            'Alarm Sangat Penting (Terlambat)',
+            channelDescription: 'Notifikasi peringatan keterlambatan minum obat',
+            importance: Importance.max,
+            priority: Priority.max,
+            fullScreenIntent: true,
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: urgentVibrationPattern,
+            additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT (Looping alarm)
+            styleInformation: const BigTextStyleInformation(''),
+            icon: 'ic_notification',
+            sound: const RawResourceAndroidNotificationSound('alarm_voice'),
+          );
+          final urgentNotifDetails = NotificationDetails(
+            android: urgentAndroidDetails,
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              sound: 'alarm_voice.mp3',
+            ),
+          );
 
-        await _plugin.zonedSchedule(
-          currentNotifId + 300,
-          '⚠️ Status Terlambat: Segera Minum $namaObat!',
-          'Sudah terlambat 60 menit! Segera minum sebelum status berubah menjadi Terlewat (15 menit lagi)!',
-          terlambatTZ,
-          urgentNotifDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: '$jadwalId:$namaObat:$timeStr',
-          matchDateTimeComponents: DateTimeComponents.time,
-        );
-        debugPrint(
-            '[PilTime] Scheduled Terlambat Warning #${currentNotifId + 300} for $namaObat at ${terlambatTZ.hour}:${terlambatTZ.minute} (WIB)');
+          await _plugin.zonedSchedule(
+            currentNotifId + 300,
+            '⚠️ Status Terlambat: Segera Minum $namaObat!',
+            'Sudah terlambat 60 menit! Segera minum sebelum status berubah menjadi Terlewat (15 menit lagi)!',
+            terlambatTZ,
+            urgentNotifDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            payload: '$jadwalId:$namaObat:$timeStr',
+            matchDateTimeComponents: DateTimeComponents.time,
+          );
+          await _setNativeAlarm(currentNotifId + 300, terlambatTZ, '$jadwalId:$namaObat:$timeStr');
+          debugPrint(
+              '[PilTime] Scheduled Terlambat Warning #${currentNotifId + 300} for $namaObat at ${terlambatTZ.hour}:${terlambatTZ.minute} (WIB)');
+        }
 
         // ── Auto-show alarm screen dari Dart side (tanpa tap notifikasi) ──
         // Alur: notifikasi muncul → langsung buka AlarmRingingScreen secara otomatis
-        final now = tz.TZDateTime.now(tz.getLocation(_timezone));
         
         // Auto-show untuk Alarm Utama
         final delayUntilAlarmMs = scheduledTZ.difference(now).inMilliseconds;
@@ -297,6 +326,10 @@ class NotificationService {
           _pendingAlarmTimers[currentNotifId] = Timer(
             Duration(milliseconds: delayUntilAlarmMs),
             () {
+              if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+                debugPrint('[PilTime] App is not resumed, ignoring Dart Timer auto-show for timer #$currentNotifId');
+                return;
+              }
               debugPrint('[PilTime] Auto-show alarm secara instan (timer #$currentNotifId)');
               showAlarmScreen('$jadwalId:$namaObat:$timeStr');
             },
@@ -310,6 +343,7 @@ class NotificationService {
           _pendingAlarmTimers[currentNotifId + 100] = Timer(
             Duration(milliseconds: delayUntilSnooze1Ms),
             () {
+              if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
               debugPrint('[PilTime] Auto-show Snooze 1 secara instan (timer #${currentNotifId + 100})');
               showAlarmScreen('$jadwalId:$namaObat:$timeStr');
             },
@@ -323,6 +357,7 @@ class NotificationService {
           _pendingAlarmTimers[currentNotifId + 200] = Timer(
             Duration(milliseconds: delayUntilSnooze2Ms),
             () {
+              if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
               debugPrint('[PilTime] Auto-show Snooze 2 secara instan (timer #${currentNotifId + 200})');
               showAlarmScreen('$jadwalId:$namaObat:$timeStr');
             },
@@ -336,6 +371,7 @@ class NotificationService {
           _pendingAlarmTimers[currentNotifId + 300] = Timer(
             Duration(milliseconds: delayUntilTerlambatMs),
             () {
+              if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
               debugPrint('[PilTime] Auto-show Warning Terlambat secara instan (timer #${currentNotifId + 300})');
               showAlarmScreen('$jadwalId:$namaObat:$timeStr');
             },
@@ -377,11 +413,11 @@ class NotificationService {
       // ID unik untuk rutinitas (offset 100000)
       final routineNotifId = notifId + 100000;
 
-      // Rutinitas: notifikasi SILENT di sisi Android karena suaranya dihandle
-      // sepenuhnya oleh Dart (FlutterRingtonePlayer di AlarmRingingScreen).
-      // fullScreenIntent WAJIB true agar bisa membangunkan layar (wake lock).
-      // Karena Importance.max, notifikasi akan popup heads-up (namun akan segera
-      // dihapus/cancel oleh Dart saat AlarmRingingScreen terbuka).
+      // Rutinitas: notifikasi fallback OS dihidupkan untuk antisipasi heads-up
+      final Int64List routineVibrationPattern = Int64List.fromList([
+        0, 1000, 500, 1000, 500, 1000, 500,
+      ]);
+      
       final androidDetails = AndroidNotificationDetails(
         _rutinitasChannelId,
         _rutinitasChannelName,
@@ -390,12 +426,15 @@ class NotificationService {
         priority: Priority.max,
         fullScreenIntent: true,
         ongoing: false,
-        playSound: false,             // ← Suara dihandle Dart, bukan Android
-        enableVibration: false,       // ← Hindari tabrakan getaran
+        playSound: true,             // <-- Aktifkan suara fallback OS
+        enableVibration: true,       // <-- Aktifkan getar fallback
+        vibrationPattern: routineVibrationPattern,
+        additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT (Looping alarm)
         styleInformation: BigTextStyleInformation(
           deskripsi.isNotEmpty ? deskripsi : 'Saatnya melakukan rutinitas sehat Anda!',
         ),
         icon: 'ic_notification',
+        sound: const RawResourceAndroidNotificationSound('rutinitas_alarm'),
       );
 
       // iOS: silent juga untuk rutinitas (suara diputar via FlutterRingtonePlayer)
@@ -424,6 +463,7 @@ class NotificationService {
         payload: 'routine:$rutinitasId:$namaRutinitas:$cleanWaktu',
         matchDateTimeComponents: DateTimeComponents.time, // Repeat harian
       );
+      await _setNativeAlarm(routineNotifId, scheduledTZ, 'routine:$rutinitasId:$namaRutinitas:$cleanWaktu');
 
       debugPrint(
           '[PilTime] Scheduled routine alarm #$routineNotifId for $namaRutinitas at $cleanWaktu (WIB)');
@@ -436,6 +476,10 @@ class NotificationService {
         _pendingAlarmTimers[routineNotifId] = Timer(
           Duration(milliseconds: delayUntilAlarmMs),
           () {
+            if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+              debugPrint('[PilTime] App is not resumed, ignoring routine Dart Timer');
+              return;
+            }
             debugPrint('[PilTime] Auto-show routine alarm secara instan (timer #$routineNotifId)');
             showAlarmScreen('routine:$rutinitasId:$namaRutinitas:$cleanWaktu');
           },
@@ -464,6 +508,12 @@ class NotificationService {
       final scheduledTZ = _buildScheduledDate(scheduledTime);
       if (scheduledTZ == null) {
         debugPrint('[PilTime] Invalid advance time format: $scheduledTime');
+        return;
+      }
+
+      final now = tz.TZDateTime.now(tz.getLocation(_timezone));
+      if (scheduledTZ.isBefore(now)) {
+        debugPrint('[PilTime] Advance notification time $scheduledTime is in the past. Skipping.');
         return;
       }
 
@@ -595,9 +645,13 @@ class NotificationService {
     for (int i = 0; i <= 5; i++) {
       final offset = i * 1000;
       await _plugin.cancel(jadwalId + offset);         // waktu_minum
+      await _cancelNativeAlarm(jadwalId + offset);
       await _plugin.cancel(jadwalId + 100 + offset);   // Snooze 1
+      await _cancelNativeAlarm(jadwalId + 100 + offset);
       await _plugin.cancel(jadwalId + 200 + offset);   // Snooze 2
+      await _cancelNativeAlarm(jadwalId + 200 + offset);
       await _plugin.cancel(jadwalId + 300 + offset);   // Warning Terlambat
+      await _cancelNativeAlarm(jadwalId + 300 + offset);
       await _plugin.cancel(jadwalId + 10000 + offset); // reminder_pagi
       await _plugin.cancel(jadwalId + 20000 + offset); // reminder_malam
       await _plugin.cancel(jadwalId + 30000 + offset); // advance_reminder
@@ -610,6 +664,11 @@ class NotificationService {
       _pendingAlarmTimers.remove(jadwalId + 10000 + offset)?.cancel();
       _pendingAlarmTimers.remove(jadwalId + 20000 + offset)?.cancel();
     }
+    
+    // Batalkan Dynamic Snooze jika ada
+    await _plugin.cancel(200000 + jadwalId);
+    _pendingAlarmTimers.remove(200000 + jadwalId)?.cancel();
+
     debugPrint('[PilTime] Cancelled notifications for jadwal #$jadwalId');
   }
 
@@ -620,14 +679,23 @@ class NotificationService {
     for (int i = 0; i <= 5; i++) {
       final offset = i * 1000;
       await _plugin.cancel(jadwalId + 100 + offset); // Snooze 1
+      await _cancelNativeAlarm(jadwalId + 100 + offset);
       await _plugin.cancel(jadwalId + 200 + offset); // Snooze 2
+      await _cancelNativeAlarm(jadwalId + 200 + offset);
       await _plugin.cancel(jadwalId + 300 + offset); // Warning Terlambat
+      await _cancelNativeAlarm(jadwalId + 300 + offset);
 
       // Batalkan Dart-side timer juga
       _pendingAlarmTimers.remove(jadwalId + 100 + offset)?.cancel();
       _pendingAlarmTimers.remove(jadwalId + 200 + offset)?.cancel();
       _pendingAlarmTimers.remove(jadwalId + 300 + offset)?.cancel();
     }
+    
+    // Batalkan Dynamic Snooze jika ada
+    await _plugin.cancel(200000 + jadwalId);
+    await _cancelNativeAlarm(200000 + jadwalId);
+    _pendingAlarmTimers.remove(200000 + jadwalId)?.cancel();
+
     debugPrint('[PilTime] Cancelled snooze alarms for jadwal #$jadwalId');
   }
 
@@ -637,6 +705,7 @@ class NotificationService {
   Future<void> cancelRutinitas(int rutinitasId) async {
     final routineNotifId = rutinitasId + 100000;
     await _plugin.cancel(routineNotifId);
+    await _cancelNativeAlarm(routineNotifId);
     _pendingAlarmTimers.remove(routineNotifId)?.cancel();
     debugPrint('[PilTime] Cancelled routine notification #$routineNotifId');
   }
@@ -648,7 +717,7 @@ class NotificationService {
     try {
       final pendingRequests = await _plugin.pendingNotificationRequests();
       for (final request in pendingRequests) {
-        if (request.id >= 100000) {
+        if (request.id >= 100000 && request.id < 200000) {
           await _plugin.cancel(request.id);
           _pendingAlarmTimers.remove(request.id)?.cancel();
         }
@@ -656,6 +725,57 @@ class NotificationService {
       debugPrint('[PilTime] All routine notifications and timers cancelled.');
     } catch (e) {
       debugPrint('[PilTime] Error cancelling routine notifications: $e');
+    }
+  }
+
+  Future<void> _setNativeAlarm(int id, tz.TZDateTime scheduledTZ, String payload) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _alarmChannel.invokeMethod('setAlarm', {
+        'id': id,
+        'timeInMillis': scheduledTZ.millisecondsSinceEpoch,
+        'payload': payload,
+      });
+    } catch (e) {
+      debugPrint('[PilTime] Failed to set native alarm: $e');
+    }
+  }
+
+  Future<void> _cancelNativeAlarm(int id) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _alarmChannel.invokeMethod('cancelAlarm', {'id': id});
+    } catch (e) {
+      debugPrint('[PilTime] Failed to cancel native alarm: $e');
+    }
+  }
+
+  Future<void> _checkNativeAlarmPayload() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final payload = await _alarmChannel.invokeMethod<String>('getAlarmPayload');
+      if (payload != null && payload.isNotEmpty) {
+        debugPrint('[PilTime] App diluncurkan paksa dari native Kotlin, payload: $payload');
+        
+        int attempt = 0;
+        while (navigatorKey.currentState == null && attempt < 20) {
+          await Future.delayed(const Duration(milliseconds: 300));
+          attempt++;
+        }
+
+        if (navigatorKey.currentState == null) {
+          debugPrint('[PilTime] Navigator tidak siap untuk native alarm screen.');
+          return;
+        }
+
+        if (payload.startsWith('reminder:')) {
+          showNotificationScreen(payload: payload);
+        } else {
+          showAlarmScreen(payload);
+        }
+      }
+    } catch (e) {
+      debugPrint('[PilTime] Error checking native alarm payload: $e');
     }
   }
 
@@ -668,6 +788,7 @@ class NotificationService {
       for (final request in pendingRequests) {
         if (request.id < 100000) {
           await _plugin.cancel(request.id);
+          await _cancelNativeAlarm(request.id);
           _pendingAlarmTimers.remove(request.id)?.cancel();
         }
       }
@@ -969,6 +1090,9 @@ class NotificationService {
   }
 
   /// Bangun [TZDateTime] dari string "HH:MM" untuk hari ini (atau besok jika sudah lewat)
+  /// Bangun [TZDateTime] dari string "HH:MM" untuk hari ini.
+  /// Jika sudah lewat, akan mengembalikan waktu kemarin jika [startFromTomorrow] false
+  /// (TIDAK OTOMATIS TAMBAH 1 HARI KECUALI SUDAH LEBIH DARI 75 MENIT).
   tz.TZDateTime? _buildScheduledDate(String timeStr, {bool startFromTomorrow = false}) {
     final parts = timeStr.split(':');
     if (parts.length < 2) return null;
@@ -990,9 +1114,14 @@ class NotificationService {
     if (startFromTomorrow) {
       scheduled = scheduled.add(const Duration(days: 1));
     } else {
-      // Jika waktu sudah lewat hari ini, jadwalkan untuk besok
+      // Jika waktu sudah lewat HARI INI lebih dari 75 menit (batas terlewat),
+      // barulah kita jadwalkan untuk besok.
+      // Jika masih dalam rentang 75 menit, biarkan hari ini agar snooze bisa dijadwalkan!
       if (scheduled.isBefore(now)) {
-        scheduled = scheduled.add(const Duration(days: 1));
+        final diffMinutes = now.difference(scheduled).inMinutes;
+        if (diffMinutes > 75) {
+          scheduled = scheduled.add(const Duration(days: 1));
+        }
       }
     }
 
@@ -1008,8 +1137,9 @@ class NotificationService {
       _channelName,
       description: _channelDesc,
       importance: Importance.max,
-      enableVibration: false,
-      playSound: false,
+      enableVibration: true,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('alarm_voice'),
     );
 
     // 2. Channel Pengingat Biasa dengan suara default sistem
@@ -1023,14 +1153,14 @@ class NotificationService {
     );
 
     // 3. Channel Alarm Rutinitas Sehat — importance max (untuk full-screen)
-    // Suara: SILENT (playSound: false). Dart side yang akan handle suara kustom.
+    // Suara diaktifkan kembali sebagai fallback jika app terbunuh
     const rutinitasChannel = AndroidNotificationChannel(
       _rutinitasChannelId,
       _rutinitasChannelName,
       description: _rutinitasChannelDesc,
       importance: Importance.max,
-      enableVibration: false,
-      playSound: false,
+      enableVibration: true,
+      playSound: true,
     );
 
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
@@ -1197,18 +1327,18 @@ class NotificationService {
           final id = int.tryParse(parts[1]);
           if (id != null) {
             _plugin.cancel(id + 100000);
+            _cancelNativeAlarm(id + 100000);
             _pendingAlarmTimers.remove(id + 100000)?.cancel();
           }
         } else {
           final id = int.tryParse(idStr);
           if (id != null) {
-            // Batalkan semua kemungkinan offset notifikasi untuk jadwal ini
+            // HANYA batalkan notifikasi utama dan reminder untuk jadwal ini
+            // JANGAN batalkan snooze (+100, +200) atau warning (+300) agar alarm yang akan datang tetap aktif
             for (int i = 0; i <= 5; i++) {
               final offset = i * 1000;
               _plugin.cancel(id + offset);
-              _plugin.cancel(id + 100 + offset);
-              _plugin.cancel(id + 200 + offset);
-              _plugin.cancel(id + 300 + offset);
+              _cancelNativeAlarm(id + offset);
               _plugin.cancel(id + 10000 + offset);
               _plugin.cancel(id + 20000 + offset);
               _plugin.cancel(id + 30000 + offset);
@@ -1225,10 +1355,96 @@ class NotificationService {
   }
 
   // ==========================================================
+  // SCHEDULE DYNAMIC SNOOZE (Untuk tombol "Ingatkan 20 Menit Lagi")
+  // ==========================================================
+  Future<void> scheduleDynamicSnooze({
+    required int jadwalId,
+    required String namaObat,
+    required String scheduledTime,
+  }) async {
+    try {
+      if (!_initialized) await initialize();
+
+      final location = tz.getLocation(_timezone);
+      final now = tz.TZDateTime.now(location);
+      final snoozeTZ = now.add(const Duration(minutes: 20));
+
+      // ID khusus untuk dynamic snooze: 200000 + jadwalId
+      final snoozeId = 200000 + jadwalId;
+
+      final Int64List snoozeVibrationPattern = Int64List.fromList([
+        0, 1000, 500, 1000, 500, 1000, 500,
+      ]);
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.max,
+        priority: Priority.max,
+        fullScreenIntent: true,
+        playSound: true,
+        enableVibration: true,
+        vibrationPattern: snoozeVibrationPattern,
+        additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT (Looping alarm)
+        styleInformation: const BigTextStyleInformation(''),
+        icon: 'ic_notification',
+        sound: const RawResourceAndroidNotificationSound('alarm_voice'),
+      );
+
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'alarm_voice.mp3',
+      );
+
+      final notifDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      );
+
+      await _plugin.zonedSchedule(
+        snoozeId,
+        '💊 Pengingat (Snooze): Waktunya Minum Obat!',
+        '$namaObat — Segera diminum ya!',
+        snoozeTZ,
+        notifDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: '$jadwalId:$namaObat:$scheduledTime',
+      );
+      await _setNativeAlarm(snoozeId, snoozeTZ, '$jadwalId:$namaObat:$scheduledTime');
+
+      debugPrint('[PilTime] Scheduled DYNAMIC Snooze #$snoozeId for $namaObat at ${snoozeTZ.hour}:${snoozeTZ.minute} (WIB)');
+
+      // Auto-show timer
+      final delayMs = snoozeTZ.difference(now).inMilliseconds;
+      if (delayMs > 0) {
+        _pendingAlarmTimers[snoozeId]?.cancel();
+        _pendingAlarmTimers[snoozeId] = Timer(
+          Duration(milliseconds: delayMs),
+          () {
+            if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+            debugPrint('[PilTime] Auto-show DYNAMIC Snooze secara instan (timer #$snoozeId)');
+            showAlarmScreen('$jadwalId:$namaObat:$scheduledTime');
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('[PilTime] Error scheduling dynamic snooze: $e');
+    }
+  }
+
+  // ==========================================================
   // CEK APAKAH APP DIBUKA DARI NOTIFIKASI (Terminated State)
   // Panggil ini di main.dart setelah NotificationService.initialize()
   // ==========================================================
   Future<void> checkLaunchFromNotification() async {
+    // Cek Native Alarm Payload (Launch paksa dari Kotlin BroadcastReceiver)
+    await _checkNativeAlarmPayload();
+
     final details = await _plugin.getNotificationAppLaunchDetails();
     if (details != null &&
         details.didNotificationLaunchApp &&

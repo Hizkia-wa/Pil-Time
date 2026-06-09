@@ -1,8 +1,12 @@
 package com.example.frontend_pasien
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -12,6 +16,22 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.piltime.app/permissions"
+    private val ALARM_CHANNEL = "com.piltime.app/alarm"
+    private var pendingAlarmPayload: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        intent?.getStringExtra("piltime_alarm_payload")?.let {
+            pendingAlarmPayload = it
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra("piltime_alarm_payload")?.let {
+            pendingAlarmPayload = it
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -76,6 +96,59 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ALARM_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setAlarm" -> {
+                        val id = call.argument<Int>("id") ?: return@setMethodCallHandler
+                        val timeInMillis = call.argument<Long>("timeInMillis") ?: return@setMethodCallHandler
+                        val payload = call.argument<String>("payload") ?: ""
+                        
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                        val intent = Intent(this, PilTimeAlarmReceiver::class.java).apply {
+                            putExtra("payload", payload)
+                        }
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+                        val pendingIntent = PendingIntent.getBroadcast(this, id, intent, flags)
+                        
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
+                        } else {
+                            alarmManager.setExact(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
+                        }
+                        result.success(null)
+                    }
+                    
+                    "cancelAlarm" -> {
+                        val id = call.argument<Int>("id") ?: return@setMethodCallHandler
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                        val intent = Intent(this, PilTimeAlarmReceiver::class.java)
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                        } else {
+                            PendingIntent.FLAG_NO_CREATE
+                        }
+                        val pendingIntent = PendingIntent.getBroadcast(this, id, intent, flags)
+                        if (pendingIntent != null) {
+                            alarmManager.cancel(pendingIntent)
+                        }
+                        result.success(null)
+                    }
+                    
+                    "getAlarmPayload" -> {
+                        val payload = pendingAlarmPayload
+                        pendingAlarmPayload = null
+                        result.success(payload)
+                    }
+                    
                     else -> result.notImplemented()
                 }
             }

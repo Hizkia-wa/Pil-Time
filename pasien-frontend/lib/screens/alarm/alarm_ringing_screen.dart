@@ -207,6 +207,13 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     
     if (mounted) {
       if (!isSnooze && !isAutoDismiss) {
+        // Matikan alarm secara permanen
+        if (!_isRoutine) {
+          NotificationService.instance.cancelSnoozesForJadwal(_jadwalId);
+        } else {
+          NotificationService.instance.cancelRutinitas(_jadwalId);
+        }
+
         DialogHelper.showSuccessDialog(
           context: context,
           title: 'Alarm Dimatikan',
@@ -218,6 +225,14 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
           onClose: _navigateAfterAlarm,
         );
       } else {
+        if (isSnooze && !_isRoutine) {
+          // Jadwalkan alarm baru 20 menit dari sekarang
+          NotificationService.instance.scheduleDynamicSnooze(
+            jadwalId: _jadwalId,
+            namaObat: _namaObat,
+            scheduledTime: _scheduledTime,
+          );
+        }
         _navigateAfterAlarm();
       }
     }
