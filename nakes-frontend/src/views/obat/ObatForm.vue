@@ -15,37 +15,49 @@
         
         <div class="space-y-5">
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Nama Obat *</label>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Nama Obat <span class="text-red-500">*</span></label>
             <input v-model="form.nama_obat" type="text" required 
+              @blur="touched.nama_obat = true"
               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              :class="{ 'border-red-300 focus:ring-red-500': touched.nama_obat && !form.nama_obat }"
               placeholder="Contoh: Metformin" />
+            <p v-if="touched.nama_obat && !form.nama_obat" class="text-red-500 text-xs mt-1">Nama obat wajib diisi</p>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Fungsi Utama *</label>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Fungsi Utama <span class="text-red-500">*</span></label>
             <textarea v-model="form.fungsi" rows="4" required 
+              @blur="touched.fungsi = true"
               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              :class="{ 'border-red-300 focus:ring-red-500': touched.fungsi && !form.fungsi }"
               placeholder="Kegunaan obat ini untuk apa..."></textarea>
+            <p v-if="touched.fungsi && !form.fungsi" class="text-red-500 text-xs mt-1">Fungsi utama wajib diisi</p>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Aturan Pemakaian *</label>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Aturan Pemakaian <span class="text-red-500">*</span></label>
             <textarea v-model="form.aturan_pemakaian" rows="2" required 
+              @blur="touched.aturan_pemakaian = true"
               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              :class="{ 'border-red-300 focus:ring-red-500': touched.aturan_pemakaian && !form.aturan_pemakaian }"
               placeholder="Contoh: 3x1 hari, setelah makan pagi/siang/malam"></textarea>
+            <p v-if="touched.aturan_pemakaian && !form.aturan_pemakaian" class="text-red-500 text-xs mt-1">Aturan pemakaian wajib diisi</p>
           </div>
         </div>
 
         <div class="space-y-5">
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Pantangan *</label>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Pantangan <span class="text-red-500">*</span></label>
             <input v-model="form.pantangan" type="text" required 
+              @blur="touched.pantangan = true"
               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              :class="{ 'border-red-300 focus:ring-red-500': touched.pantangan && !form.pantangan }"
               placeholder="Hindari konsumsi bersama susu..." />
+            <p v-if="touched.pantangan && !form.pantangan" class="text-red-500 text-xs mt-1">Pantangan wajib diisi</p>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Foto Obat</label>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-2 tracking-wider">Foto Obat <span class="text-slate-400 normal-case">(Opsional)</span></label>
             
             <div class="space-y-4">
               <div class="relative border-2 border-dashed rounded-2xl overflow-hidden bg-slate-50 flex flex-col items-center justify-center min-h-[220px] border-slate-300 shadow-inner">
@@ -117,6 +129,13 @@ const form = ref({
   imageFile: null
 })
 
+const touched = ref({
+  nama_obat: false,
+  fungsi: false,
+  aturan_pemakaian: false,
+  pantangan: false
+})
+
 const previewUrl = ref(null)
 const isCameraActive = ref(false)
 const videoRef = ref(null)
@@ -142,6 +161,7 @@ const fillForm = () => {
     form.value = { nama_obat: '', fungsi: '', aturan_pemakaian: '', pantangan: '', imageFile: null }
     previewUrl.value = null
   }
+  touched.value = { nama_obat: false, fungsi: false, aturan_pemakaian: false, pantangan: false }
 }
 
 onMounted(() => fillForm())

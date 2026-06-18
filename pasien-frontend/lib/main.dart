@@ -18,6 +18,7 @@ import 'bloc/auth/auth_bloc.dart';
 import 'bloc/auth/auth_event.dart';
 import 'bloc/auth/auth_state.dart';
 import 'bloc/notifikasi/notifikasi_bloc.dart';
+import 'bloc/settings/settings_cubit.dart';
 
 /// Global key untuk navigasi dari mana saja (khususnya untuk Notifikasi)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -56,6 +57,7 @@ class _MyAppState extends State<MyApp> {
   // NotifikasiBloc juga dibuat sekali di sini agar satu instance
   // dipakai di seluruh app — termasuk route yang dipush via navigatorKey
   late final NotifikasiBloc _notifikasiBloc;
+  late final SettingsCubit _settingsCubit;
   bool _hasSeenOnboarding = false;
   bool _initDone = false;
 
@@ -64,6 +66,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _authBloc = AuthBloc();
     _notifikasiBloc = NotifikasiBloc();
+    _settingsCubit = SettingsCubit();
     _initApp();
 
     // Handle FCM ketika app di foreground:
@@ -81,9 +84,7 @@ class _MyAppState extends State<MyApp> {
     // Cek onboarding terlebih dahulu, BARU dispatch AuthCheckRequested
     // sehingga BlocBuilder sudah terpasang ketika state berubah → tidak ada race condition
     final prefs = await SharedPreferences.getInstance();
-    // TODO: Revert this temporary bypass for testing
-    // _hasSeenOnboarding = prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
-    _hasSeenOnboarding = true;
+    _hasSeenOnboarding = prefs.getBool(AppConfig.hasSeenOnboardingKey) ?? false;
 
     if (mounted) {
       setState(() => _initDone = true);
@@ -98,6 +99,7 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     _authBloc.close();
     _notifikasiBloc.close();
+    _settingsCubit.close();
     super.dispose();
   }
 
@@ -121,8 +123,19 @@ class _MyAppState extends State<MyApp> {
             // BlocProvider.value agar semua route (termasuk via navigatorKey)
             // mendapat instance NotifikasiBloc yang SAMA
             BlocProvider<NotifikasiBloc>.value(value: _notifikasiBloc),
+            BlocProvider<SettingsCubit>.value(value: _settingsCubit),
           ],
-          child: child!,
+          child: BlocBuilder<SettingsCubit, double>(
+            bloc: _settingsCubit,
+            builder: (context, fontScale) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(fontScale),
+                ),
+                child: child!,
+              );
+            },
+          ),
         );
       },
       home: !_initDone

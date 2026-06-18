@@ -98,21 +98,24 @@
         <form @submit.prevent="handleLogin" class="space-y-5">
           <!-- Email -->
           <div>
-            <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+            <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Email <span class="text-red-500">*</span></label>
             <input
               id="email"
               v-model="form.email"
               type="email"
               required
               @input="errorMessage = ''"
+              @blur="touched.email = true"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition text-sm"
+              :class="{ 'border-red-300 focus:ring-red-500': touched.email && !form.email }"
               placeholder="Enter your email"
             />
+            <p v-if="touched.email && !form.email" class="text-red-500 text-xs mt-1">Email wajib diisi</p>
           </div>
 
           <!-- Password -->
           <div>
-            <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+            <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Password <span class="text-red-500">*</span></label>
             <div class="relative">
               <input
                 id="password"
@@ -120,7 +123,9 @@
                 :type="showPassword ? 'text' : 'password'"
                 required
                 @input="errorMessage = ''"
+                @blur="touched.password = true"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition pr-10 text-sm"
+                :class="{ 'border-red-300 focus:ring-red-500': touched.password && !form.password }"
                 placeholder="Enter your password"
               />
               <button
@@ -138,6 +143,7 @@
                 </svg>
               </button>
             </div>
+            <p v-if="touched.password && !form.password" class="text-red-500 text-xs mt-1">Password wajib diisi</p>
           </div>
 
           <!-- Login Button -->
@@ -168,6 +174,7 @@ export default {
     const loading = ref(false)
     const errorMessage = ref('')
     const showPassword = ref(false)
+    const touched = ref({ email: false, password: false })
     const form = ref({
       email: '',
       password: ''
@@ -213,6 +220,7 @@ export default {
       loading,
       errorMessage,
       showPassword,
+      touched,
       handleLogin
     }
   }

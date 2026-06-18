@@ -137,6 +137,9 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 		if req.Catatan != "" {
 			existing.Catatan = req.Catatan
 		}
+		if req.AturanKonsumsi != "" {
+			existing.AturanPemakaian = req.AturanKonsumsi
+		}
 		if len(req.Pengingat) > 0 {
 			_ = existing.SetPengingat(req.Pengingat)
 		}
@@ -156,8 +159,13 @@ func (u *ObatUsecase) Update(id int, req *dto.UpdateObatDTO) (*dto.ObatResponseD
 				if j.NamaObat == oldNamaObat && j.KategoriObat == "Mandiri" {
 					j.NamaObat = existing.NamaObat
 					j.TakaranObat = existing.Fungsi // Dosis
-					j.AturanKonsumsi = existing.Catatan
+					if req.AturanKonsumsi != "" {
+						j.AturanKonsumsi = req.AturanKonsumsi
+					}
 					j.Catatan = existing.Catatan
+					if req.TipeDurasi != "" {
+						j.TipeDurasi = req.TipeDurasi
+					}
 					if existing.DurasiHari != nil {
 						j.JumlahHari = *existing.DurasiHari
 					}
@@ -225,8 +233,11 @@ func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatRes
 	if req.Frekuensi == "" {
 		return nil, errors.New("frekuensi tidak boleh kosong")
 	}
-	if req.DurasiHari <= 0 {
+	if req.TipeDurasi == "hari" && req.DurasiHari <= 0 {
 		return nil, errors.New("durasi hari harus lebih dari 0")
+	}
+	if req.TipeDurasi == "rutin" {
+		req.DurasiHari = 0
 	}
 	if req.PasienID <= 0 {
 		return nil, errors.New("pasien_id tidak valid")
@@ -240,6 +251,7 @@ func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatRes
 		Frekuensi:  req.Frekuensi,
 		DurasiHari: &req.DurasiHari,
 		Catatan:    req.Catatan,
+		AturanPemakaian: req.AturanKonsumsi,
 		IsMandiri:  true,
 	}
 
@@ -305,9 +317,9 @@ func (u *ObatUsecase) CreateMandiri(req *dto.CreateObatMandiriDTO) (*dto.ObatRes
 		TakaranObat:        req.Dosis,
 		FrekuensiPerHari:   strconv.Itoa(len(req.Pengingat)),
 		WaktuMinum:         waktuMinum,
-		AturanKonsumsi:     req.Catatan,
+		AturanKonsumsi:     req.AturanKonsumsi,
 		Catatan:            req.Catatan,
-		TipeDurasi:         "hari",
+		TipeDurasi:         req.TipeDurasi,
 		JumlahHari:         req.DurasiHari,
 		TanggalMulai:       todayStr,
 		TanggalSelesai:     tanggalSelesaiStr,

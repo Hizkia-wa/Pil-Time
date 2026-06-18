@@ -147,12 +147,14 @@ class _LansiaTimePickerDialogState extends State<_LansiaTimePickerDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Pilih Jam',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _textDark,
+                  Expanded(
+                    child: const Text(
+                      'Pilih Jam',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _textDark,
+                      ),
                     ),
                   ),
                   // Tombol toggle mode

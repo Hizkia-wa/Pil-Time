@@ -281,7 +281,7 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
                           const SizedBox(height: 10),
                           _buildNamaField(),
                           const SizedBox(height: 24),
-                          _sectionLabel('Deskripsi (Opsional)'),
+                          _sectionLabel('Deskripsi', isRequired: false),
                           const SizedBox(height: 10),
                           _buildDeskripsiField(),
                           const SizedBox(height: 24),
@@ -326,12 +326,31 @@ class _TambahRutinitasScreenState extends State<TambahRutinitasScreen> {
 
   // ── UI Helpers ──────────────────────────────────────────────────────────
 
-  Widget _sectionLabel(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.bold,
-      color: _textPrimary,
+  Widget _sectionLabel(String text, {bool isRequired = true}) => RichText(
+    text: TextSpan(
+      text: text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: _textPrimary,
+        fontFamily: 'Inter',
+      ),
+      children: [
+        if (isRequired)
+          const TextSpan(
+            text: ' *',
+            style: TextStyle(color: Colors.red),
+          )
+        else
+          const TextSpan(
+            text: ' (Opsional)',
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+      ],
     ),
   );
 

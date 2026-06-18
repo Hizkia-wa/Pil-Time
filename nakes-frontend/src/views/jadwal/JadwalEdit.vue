@@ -47,7 +47,7 @@
                     <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                       Dosis <span class="text-red-500">*</span>
                     </label>
-                    <input v-model="editForm.jumlah_dosis" type="text" placeholder="1"
+                    <input v-model="editForm.jumlah_dosis" type="number" min="1" placeholder="1"
                       class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"/>
                   </div>
                   <div>
@@ -183,7 +183,7 @@
                   <label class="block text-xs md:text-sm font-medium text-gray-700 mb-2">
                     Jumlah Hari <span class="text-red-500">*</span>
                   </label>
-                  <input v-model="editForm.jumlah_hari" type="number" placeholder="Contoh: 7"
+                  <input v-model="editForm.jumlah_hari" type="number" min="1" placeholder="Contoh: 7"
                     class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:border-transparent outline-none"/>
                 </div>
                 <!-- Jika Rutin -->
@@ -196,7 +196,7 @@
 
                   <div class="p-3 bg-teal-50 rounded-lg border border-teal-100">
                     <p class="text-xs text-teal-600">
-                      Pengingat akan dikirim 5 menit sebelum waktu minum
+                      Pengingat akan dikirim 15 menit sebelum waktu minum
                     </p>
                   </div>
                 </div>
@@ -423,7 +423,8 @@ export default {
         notificationStore.success('Jadwal berhasil diperbarui', 'Sukses')
         router.push({ name: 'jadwal' })
       } catch (error) {
-        notificationStore.error('Gagal memperbarui jadwal: ' + error.message, 'Gagal')
+        const errMsg = error.response?.data?.error || error.response?.data?.message || error.message
+        notificationStore.error('Gagal memperbarui jadwal: ' + errMsg, 'Gagal')
       } finally {
         isSaving.value = false
       }

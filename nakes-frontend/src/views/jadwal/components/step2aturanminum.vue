@@ -245,7 +245,7 @@
             </div>
             <div class="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-200">
               <p class="text-xs text-teal-700">
-                🔔 Pengingat akan dikirim <strong>5 menit sebelum</strong> waktu minum yang ditentukan.
+                🔔 Pengingat akan dikirim <strong>15 menit sebelum</strong> waktu minum yang ditentukan.
               </p>
             </div>
           </div>

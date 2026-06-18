@@ -8,7 +8,27 @@
           <h1 class="text-2xl md:text-[28px] font-bold text-slate-800">Jadwal Obat</h1>
         </div>
         <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
-          <div class="relative w-full sm:w-72">
+          <!-- Filter Kategori -->
+          <div class="relative w-full sm:w-56">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </span>
+            <select v-model="jadwal.filterKategori" 
+              class="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-teal-500/10 focus:border-[#00a79d] outline-none transition-all bg-slate-50/50 text-slate-600 appearance-none text-sm cursor-pointer">
+              <option value="Semua">Semua Kategori</option>
+              <option value="Resep Nakes">Resep Nakes</option>
+              <option value="Mandiri">Obat Mandiri</option>
+            </select>
+            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="relative w-full sm:w-64">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -16,7 +36,7 @@
             </span>
             <input v-model="jadwal.searchQuery" 
               class="search-input !w-full" 
-              placeholder="Cari pasien atau nama obat..." />
+              placeholder="Cari pasien / obat..." />
           </div>
           <button @click="jadwal.openAddSchedule" class="btn-primary flex items-center justify-center gap-2 py-2.5">
             <span class="text-xl leading-none">+</span> Tambah Jadwal Obat
@@ -58,7 +78,12 @@
               <tbody class="divide-y divide-slate-50">
                 <tr v-for="j in jadwal.filteredJadwalList" :key="j.id" class="hover:bg-slate-50/50 transition-colors">
                   <td class="table-td font-semibold text-slate-700">{{ j.pasien_nama }}</td>
-                  <td class="table-td text-slate-600">{{ j.nama_obat || 'Paracetamol' }}</td>
+                  <td class="table-td text-slate-600">
+                    <div class="flex items-center gap-2">
+                      <span>{{ j.nama_obat || 'Paracetamol' }}</span>
+                      <span v-if="j.kategori_obat === 'Mandiri'" class="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded-full border border-purple-200">Mandiri</span>
+                    </div>
+                  </td>
                   <td class="table-td text-slate-600">{{ j.jumlah_dosis || '1' }} {{ j.satuan || 'Tablet' }}</td>
                   <td class="table-td text-slate-600">{{ j.frekuensi_per_hari ? j.frekuensi_per_hari + 'x sehari' : '1x sehari' }}</td>
                   <td class="table-td text-slate-600 text-xs">{{ j.waktu_minum || '-' }}</td>
@@ -109,7 +134,10 @@
                   <span class="inline-flex items-center gap-1 bg-teal-50 text-teal-700 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
                     👤 {{ j.pasien_nama }}
                   </span>
-                  <h3 class="font-bold text-slate-800 text-base leading-snug">{{ j.nama_obat || 'Paracetamol' }}</h3>
+                  <h3 class="font-bold text-slate-800 text-base leading-snug flex items-center gap-2">
+                    <span>{{ j.nama_obat || 'Paracetamol' }}</span>
+                    <span v-if="j.kategori_obat === 'Mandiri'" class="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded-full border border-purple-200">Mandiri</span>
+                  </h3>
                 </div>
 
                 <!-- Actions Dropdown -->
@@ -205,10 +233,10 @@
 
             <input v-model="jadwal.searchObat" class="input mb-4" placeholder="Cari nama obat..." />
 
-            <div class="list-container">
+            <div class="list-container max-h-40 overflow-y-auto">
               <div v-for="o in jadwal.filteredObat" :key="o.obat_id"
                 @click="jadwal.selectObat(o)"
-                :class="['list-item flex items-center justify-between', jadwal.form.obatId === o.obat_id ? 'active' : '']">
+                :class="['list-item flex items-center justify-between', jadwal.form.obatList && jadwal.form.obatList.find(x => x.obat_id === o.obat_id) ? 'active' : '']">
 
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600">
@@ -217,13 +245,25 @@
                   <span>{{ o.nama_obat }}</span>
                 </div>
 
-                <span v-if="jadwal.form.obatId === o.obat_id" class="text-teal-500">✔</span>
+                <span v-if="jadwal.form.obatList && jadwal.form.obatList.find(x => x.obat_id === o.obat_id)" class="text-teal-500">✔</span>
               </div>
             </div>
 
             <!-- OBAT TERPILIH -->
-            <div v-if="jadwal.form.obatId" class="mt-4 bg-teal-50 p-3 rounded-xl text-sm text-teal-700">
-              ✔ Obat Terpilih: <b>{{ jadwal.form.nama_obat }}</b>
+            <div v-if="jadwal.form.obatList && jadwal.form.obatList.length > 0" class="mt-4 space-y-3">
+              <h4 class="text-sm font-bold text-slate-800">Obat Terpilih ({{ jadwal.form.obatList.length }})</h4>
+              <div v-for="selected in jadwal.form.obatList" :key="selected.obat_id" class="p-3 bg-white border border-slate-200 rounded-xl shadow-sm relative">
+                <button @click="jadwal.selectObat({ obat_id: selected.obat_id })" class="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div class="flex-1 pr-6">
+                  <h5 class="text-xs font-bold text-slate-900 mb-2">{{ selected.nama_obat }}</h5>
+                  <label class="block text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Dosis / Takaran</label>
+                  <input :value="selected.dosis" @input="jadwal.updateObatDosis(selected.obat_id, $event.target.value)"
+                    type="text" placeholder="Contoh: 1 tablet"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all"/>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -402,6 +442,7 @@
         type="date" 
         v-model="jadwal.form.tanggal_mulai" 
         class="input"
+        :min="minDate"
       />
     </div>
 
@@ -427,7 +468,7 @@
 
     <!-- INFO BAWAH -->
     <div class="bg-teal-50 text-teal-600 text-xs p-3 rounded-lg mt-4">
-      Pengingat akan dikirim 5 menit sebelum waktu minum
+      Pengingat akan dikirim 15 menit sebelum waktu minum
     </div>
   </div>
 
@@ -507,6 +548,11 @@ const obat = useObatStore()
 const notificationStore = useNotificationStore()
 const confirmStore = useConfirmStore()
 const reminderTimes = ref([])
+
+const minDate = computed(() => {
+  const today = new Date()
+  return today.toISOString().split('T')[0]
+})
 
 const frekuensiCount = computed(() => {
   const f = jadwal.form.frekuensi || ''
@@ -607,9 +653,18 @@ onBeforeUnmount(() => {
 
 const handleSubmit = () => {
   if (!jadwal.form.tanggal_mulai) {
-    notificationStore.error('Tanggal mulai wajib diisi', 'Gagal')
+    notificationStore.error('Tanggal mulai wajib diisi', 'Peringatan')
     return
   }
+  
+  const todayDate = new Date()
+  todayDate.setHours(0, 0, 0, 0)
+  const inputDate = new Date(jadwal.form.tanggal_mulai)
+  if (inputDate < todayDate) {
+    notificationStore.error('Tanggal mulai tidak boleh di masa lampau', 'Validasi Gagal')
+    return
+  }
+
   if (jadwal.selectedWaktuMinum.length === 0) {
     notificationStore.warning('Pilih minimal satu waktu minum (Pagi/Siang/Malam)', 'Peringatan')
     return

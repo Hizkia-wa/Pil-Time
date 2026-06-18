@@ -9,6 +9,42 @@ import '../../bloc/rutinitas/rutinitas_event.dart';
 import '../../bloc/rutinitas/rutinitas_state.dart';
 import '../../utils/dialog_helper.dart';
 import '../../widgets/lansia_time_picker.dart';
+import 'package:flutter/services.dart';
+
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  static const separator = '.';
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String newValueText = newValue.text.replaceAll(separator, '');
+    if (int.tryParse(newValueText) == null) return oldValue;
+
+    String formattedString = '';
+    int count = 0;
+    for (int i = newValueText.length - 1; i >= 0; i--) {
+      if (count == 3) {
+        formattedString = separator + formattedString;
+        count = 0;
+      }
+      formattedString = newValueText[i] + formattedString;
+      count++;
+    }
+
+    int selectionIndexFromTheRight = newValue.text.length - newValue.selection.end;
+    int offset = formattedString.length - selectionIndexFromTheRight;
+    if (offset < 0) offset = 0;
+
+    return TextEditingValue(
+      text: formattedString,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
+}
 
 class TambahJadwalKonsumsi extends StatefulWidget {
   final dynamic obat;
@@ -40,6 +76,15 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   final List<String?> _selectedCustomTimes = [null, null, null, null];
   late final RutinitasBloc _rutinitasBloc;
 
+  String _tipeDurasi = 'hari';
+  String _aturanKonsumsi = 'Sesudah makan';
+
+  final List<String> _aturanKonsumsiOptions = [
+    'Sebelum makan',
+    'Sesudah makan',
+    'Bersama makan',
+  ];
+
   final List<String> _frekuensiOptions = [
     '1x sehari',
     '2x sehari',
@@ -55,8 +100,17 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
       _namaObatCtrl.text = widget.obat['nama_obat'] ?? '';
       _dosisCtrl.text = widget.obat['fungsi'] ?? '';
       _frekuensiCtrl.text = widget.obat['frekuensi'] ?? '1x sehari';
-      _durasiHariCtrl.text = (widget.obat['durasi_hari'] ?? '7').toString();
       _catatanCtrl.text = widget.obat['catatan'] ?? '';
+      
+      _aturanKonsumsi = widget.obat['aturan_pemakaian'] ?? 'Sesudah makan';
+      final durasi = widget.obat['durasi_hari'];
+      if (durasi == null || durasi == 0) {
+        _tipeDurasi = 'rutin';
+        _durasiHariCtrl.text = '';
+      } else {
+        _tipeDurasi = 'hari';
+        _durasiHariCtrl.text = durasi.toString();
+      }
 
       final List<dynamic>? times = widget.obat['pengingat'];
       if (times != null) {
@@ -114,25 +168,27 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
       ),
       builder: (BuildContext context) {
         return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: _green),
-                title: const Text('Galeri', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImage(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera, color: _green),
-                title: const Text('Kamera', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImage(ImageSource.camera);
-                },
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: _green),
+                  title: const Text('Galeri', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera, color: _green),
+                  title: const Text('Kamera', style: TextStyle(fontWeight: FontWeight.w500, color: _textPrimary)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -280,10 +336,12 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
 
     final Map<String, dynamic> data = {
       "nama_obat": _namaObatCtrl.text.trim(),
-      "dosis": _dosisCtrl.text.trim(),
+      "dosis": _dosisCtrl.text.replaceAll('.', '').trim(),
       "pengingat": filledTimes,
       "frekuensi": _frekuensiCtrl.text.trim(),
-      "durasi_hari": int.parse(_durasiHariCtrl.text),
+      "tipe_durasi": _tipeDurasi,
+      "aturan_konsumsi": _aturanKonsumsi,
+      "durasi_hari": _tipeDurasi == 'rutin' ? 0 : int.parse(_durasiHariCtrl.text.replaceAll('.', '')),
       "catatan": _catatanCtrl.text.trim(),
       "gambar": _pickedImage != null
           ? _convertImageToBase64(_pickedImage!)
@@ -358,7 +416,7 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                       const SizedBox(height: 24),
 
                       // Gambar
-                      _sectionLabel('Gambar'),
+                      _sectionLabel('Gambar', isRequired: false),
                       const SizedBox(height: 8),
                       _buildImagePicker(),
                       const SizedBox(height: 24),
@@ -369,6 +427,12 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                       _buildPengingaatSelector(),
                       const SizedBox(height: 24),
 
+                      // Aturan Minum
+                      _sectionLabel('Aturan Minum'),
+                      const SizedBox(height: 8),
+                      _buildAturanKonsumsiSelector(),
+                      const SizedBox(height: 24),
+
                       // Frekuensi
                       _sectionLabel('Frekuensi'),
                       const SizedBox(height: 8),
@@ -376,13 +440,20 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
                       const SizedBox(height: 24),
 
                       // Durasi Hari
-                      _sectionLabel('Durasi (Hari)'),
+                      _sectionLabel('Tipe Durasi'),
                       const SizedBox(height: 8),
-                      _buildDurasiHariField(),
+                      _buildTipeDurasiSelector(),
+                      
+                      if (_tipeDurasi == 'hari') ...[
+                        const SizedBox(height: 16),
+                        _sectionLabel('Jumlah Hari'),
+                        const SizedBox(height: 8),
+                        _buildDurasiHariField(),
+                      ],
                       const SizedBox(height: 24),
 
                       // Catatan
-                      _sectionLabel('Catatan'),
+                      _sectionLabel('Catatan', isRequired: false),
                       const SizedBox(height: 8),
                       _buildCatatanField(),
                     ],
@@ -433,12 +504,30 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     );
   }
 
-  Widget _sectionLabel(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-      color: _textPrimary,
+  Widget _sectionLabel(String text, {bool isRequired = true}) => RichText(
+    text: TextSpan(
+      text: text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _textPrimary,
+      ),
+      children: [
+        if (isRequired)
+          const TextSpan(
+            text: ' *',
+            style: TextStyle(color: Colors.red),
+          )
+        else
+          const TextSpan(
+            text: ' (Opsional)',
+            style: TextStyle(
+              color: _textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+      ],
     ),
   );
 
@@ -466,8 +555,13 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
   Widget _buildDosisField() {
     return TextFormField(
       controller: _dosisCtrl,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        ThousandsSeparatorInputFormatter(),
+      ],
       decoration: InputDecoration(
-        hintText: 'Contoh: 500mg / 2 tablet',
+        hintText: 'Contoh: 10.000',
         filled: true,
         fillColor: Colors.white,
         enabledBorder: OutlineInputBorder(
@@ -678,10 +772,103 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
     );
   }
 
+  Widget _buildAturanKonsumsiSelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _aturanKonsumsiOptions.map((aturan) {
+        final isSelected = _aturanKonsumsi == aturan;
+        return InkWell(
+          onTap: () => setState(() => _aturanKonsumsi = aturan),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? _streakTeal.withValues(alpha: 0.1) : Colors.white,
+              border: Border.all(
+                color: isSelected ? _streakTeal : _cardBorder,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              aturan,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? _streakTeal : _textSecondary,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTipeDurasiSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _tipeDurasi = 'hari'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipeDurasi == 'hari' ? _streakTeal : Colors.transparent,
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Jumlah Hari',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _tipeDurasi == 'hari' ? Colors.white : _textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() {
+                _tipeDurasi = 'rutin';
+                _durasiHariCtrl.text = ''; // Clear so user doesn't see old value
+              }),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _tipeDurasi == 'rutin' ? _streakTeal : Colors.transparent,
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(11)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Rutin',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _tipeDurasi == 'rutin' ? Colors.white : _textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDurasiHariField() {
     return TextFormField(
       controller: _durasiHariCtrl,
       keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        ThousandsSeparatorInputFormatter(),
+      ],
       decoration: InputDecoration(
         hintText: 'Contoh: 7',
         filled: true,
@@ -696,8 +883,10 @@ class _TambahJadwalKonsumsiState extends State<TambahJadwalKonsumsi> {
         ),
       ),
       validator: (v) {
+        if (_tipeDurasi == 'rutin') return null;
         if (v == null || v.trim().isEmpty) return 'Durasi wajib diisi';
-        if (int.tryParse(v) == null || int.parse(v) <= 0) {
+        final cleanV = v.replaceAll('.', '');
+        if (int.tryParse(cleanV) == null || int.parse(cleanV) <= 0) {
           return 'Durasi harus angka positif';
         }
         return null;

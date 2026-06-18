@@ -21,6 +21,8 @@ type UpdateObatDTO struct {
 	Frekuensi       string   `json:"frekuensi" form:"frekuensi"`
 	DurasiHari      int      `json:"durasi_hari" form:"durasi_hari"`
 	Catatan         string   `json:"catatan" form:"catatan"`
+	TipeDurasi      string   `json:"tipe_durasi" form:"tipe_durasi"`
+	AturanKonsumsi  string   `json:"aturan_konsumsi" form:"aturan_konsumsi"`
 }
 
 type CreateObatMandiriDTO struct {
@@ -29,9 +31,11 @@ type CreateObatMandiriDTO struct {
 	Gambar     string   `json:"gambar" form:"gambar"`
 	Pengingat  []string `json:"pengingat" form:"pengingat" binding:"required"` // Array: pagi, siang, sore, malam
 	Frekuensi  string   `json:"frekuensi" form:"frekuensi" binding:"required"` // 1x sehari, 2x sehari
-	DurasiHari int      `json:"durasi_hari" form:"durasi_hari" binding:"required"`
-	Catatan    string   `json:"catatan" form:"catatan"`
-	PasienID   int      `json:"pasien_id" form:"pasien_id" binding:"required"`
+	DurasiHari     int      `json:"durasi_hari" form:"durasi_hari"`
+	Catatan        string   `json:"catatan" form:"catatan"`
+	PasienID       int      `json:"pasien_id" form:"pasien_id" binding:"required"`
+	TipeDurasi     string   `json:"tipe_durasi" form:"tipe_durasi" binding:"required"` // "hari" atau "rutin"
+	AturanKonsumsi string   `json:"aturan_konsumsi" form:"aturan_konsumsi" binding:"required"`
 }
 
 type ObatResponseDTO struct {

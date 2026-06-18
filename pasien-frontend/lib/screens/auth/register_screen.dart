@@ -559,7 +559,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildFieldLabel('ALAMAT'),
+                    Expanded(
+                      child: _buildFieldLabel('ALAMAT'),
+                    ),
                     GestureDetector(
                       onTap: _isLocationLoading ? null : _fillLocationAutomatically,
                       child: Padding(
@@ -699,17 +701,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 );
   }
 
-  Widget _buildFieldLabel(String text) {
+  Widget _buildFieldLabel(String text, {bool isRequired = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF475569),
-          letterSpacing: 1.1,
-          fontFamily: 'Inter',
+      child: RichText(
+        text: TextSpan(
+          text: text,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF475569),
+            letterSpacing: 1.1,
+            fontFamily: 'Inter',
+          ),
+          children: [
+            if (isRequired)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
         ),
       ),
     );

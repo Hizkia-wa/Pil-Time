@@ -779,82 +779,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 1.25, // Taller ratio for better readability and touch targets
+          Column(
             children: [
-              _buildMenuCard(
-                icon: Icons.alarm_rounded,
-                iconBg: const Color(0xFFFFECEC),
-                iconColor: const Color(0xFFFF6B6B),
-                label: 'Reminder & Alarm',
-                subLabel: 'Jadwal Pengingat',
-                subLabelColor: const Color(0xFFFF6B6B),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AlarmScreen(pasienId: widget.pasienId),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildMenuCard(
+                        icon: Icons.alarm_rounded,
+                        iconBg: const Color(0xFFFFECEC),
+                        iconColor: const Color(0xFFFF6B6B),
+                        label: 'Reminder & Alarm',
+                        subLabel: 'Jadwal Pengingat',
+                        subLabelColor: const Color(0xFFFF6B6B),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AlarmScreen(pasienId: widget.pasienId),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMenuCard(
+                        icon: Icons.local_pharmacy_rounded,
+                        iconBg: const Color(0xFFFFF3E0),
+                        iconColor: const Color(0xFFFF9800),
+                        label: 'Info Obat',
+                        subLabel: 'Detail & Panduan',
+                        subLabelColor: const Color(0xFFFF9800),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => InfoObatScreen(pasienId: widget.pasienId),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              _buildMenuCard(
-                icon: Icons.local_pharmacy_rounded,
-                iconBg: const Color(0xFFFFF3E0),
-                iconColor: const Color(0xFFFF9800),
-                label: 'Info Obat',
-                subLabel: 'Detail & Panduan',
-                subLabelColor: const Color(0xFFFF9800),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => InfoObatScreen(pasienId: widget.pasienId),
+              const SizedBox(height: 14),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildMenuCard(
+                        icon: Icons.bar_chart_rounded,
+                        iconBg: const Color(0xFFEFF6FF),
+                        iconColor: const Color(0xFF2F80ED),
+                        label: 'Riwayat Kepatuhan',
+                        subLabel: 'Kepatuhan Minum',
+                        subLabelColor: const Color(0xFF2F80ED),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RiwayatKonsumsiObatScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
-              ),
-              _buildMenuCard(
-                icon: Icons.bar_chart_rounded,
-                iconBg: const Color(0xFFEFF6FF),
-                iconColor: const Color(0xFF2F80ED), // Secondary Blue dari Style Guide
-                label: 'Riwayat Kepatuhan',
-                subLabel: 'Kepatuhan Minum',
-                subLabelColor: const Color(0xFF2F80ED),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RiwayatKonsumsiObatScreen(),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMenuCard(
+                        icon: Icons.fitness_center_rounded,
+                        iconBg: const Color(0xFFFAF5FF),
+                        iconColor: const Color(0xFF9C27B0),
+                        label: 'Aktivitas Sehat',
+                        subLabel: 'Jadwal Aktivitas',
+                        subLabelColor: const Color(0xFF9C27B0),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RutinitasSehatScreen(),
+                            ),
+                          );
+                          _loadRutinitas();
+                          _dashboardBloc.add(FetchDashboard(
+                            pasienId: widget.pasienId,
+                            pasienNama: widget.pasienNama,
+                          ));
+                        },
+                      ),
                     ),
-                  );
-                },
-              ),
-              _buildMenuCard(
-                icon: Icons.fitness_center_rounded,
-                iconBg: const Color(0xFFFAF5FF),
-                iconColor: const Color(0xFF9C27B0),
-                label: 'Aktivitas Sehat',
-                subLabel: 'Jadwal Aktivitas',
-                subLabelColor: const Color(0xFF9C27B0),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RutinitasSehatScreen(),
-                    ),
-                  );
-                  _loadRutinitas();
-                  _dashboardBloc.add(FetchDashboard(
-                    pasienId: widget.pasienId,
-                    pasienNama: widget.pasienNama,
-                  ));
-                },
+                  ],
+                ),
               ),
             ],
           ),
@@ -1048,13 +1067,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _getMonthYear(_selectedDate),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                  fontFamily: 'Roboto',
+              Expanded(
+                child: Text(
+                  _getMonthYear(_selectedDate),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'Roboto',
+                  ),
                 ),
               ),
               Container(
@@ -1434,29 +1455,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Obat Hari Ini',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                        fontFamily: 'Roboto',
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Obat Hari Ini',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateStr,
-                      style: const TextStyle(
-                        fontSize: 13, 
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
+                      const SizedBox(height: 4),
+                      Text(
+                        dateStr,
+                        style: const TextStyle(
+                          fontSize: 13, 
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (activeJadwals.isNotEmpty)
                   Container(
@@ -2121,15 +2144,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Aktivitas Hari Ini',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                    fontFamily: 'Roboto',
+                Expanded(
+                  child: const Text(
+                    'Aktivitas Hari Ini',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                      fontFamily: 'Roboto',
+                    ),
                   ),
                 ),
+                const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
@@ -2211,31 +2237,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Aktivitas Hari Ini',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                        fontFamily: 'Roboto',
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Aktivitas Hari Ini',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontFamily: 'Roboto',
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Ceklis aktivitas sehat Anda hari ini',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
+                      SizedBox(height: 4),
+                      Text(
+                        'Ceklis aktivitas sehat Anda hari ini',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(

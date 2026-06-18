@@ -52,7 +52,12 @@
           <tbody class="divide-y divide-gray-50">
             <tr v-for="jadwal in jadwalList" :key="jadwal.id" class="hover:bg-gray-50 transition">
               <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ jadwal.pasien_nama }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ jadwal.nama_obat }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                <div class="flex items-center gap-2">
+                  <span>{{ jadwal.nama_obat }}</span>
+                  <span v-if="jadwal.kategori_obat === 'Mandiri'" class="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded-full border border-purple-200">Mandiri</span>
+                </div>
+              </td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ jadwal.jumlah_dosis }} {{ jadwal.satuan }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ jadwal.frekuensi_per_hari }}x sehari</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ jadwal.waktu_minum }}</td>
@@ -133,7 +138,10 @@
           <div class="flex justify-between items-start mb-3">
             <div class="flex-1 min-w-0">
               <p class="font-semibold text-slate-900 text-sm">{{ jadwal.pasien_nama }}</p>
-              <p class="text-xs text-gray-500 mt-0.5">{{ jadwal.nama_obat }}</p>
+              <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                <span>{{ jadwal.nama_obat }}</span>
+                <span v-if="jadwal.kategori_obat === 'Mandiri'" class="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded-full border border-purple-200">Mandiri</span>
+              </div>
             </div>
             <div class="ml-2 flex-shrink-0 relative inline-block" :ref="el => { if(el) menuRefs['m_' + jadwal.id] = el }">
               <button

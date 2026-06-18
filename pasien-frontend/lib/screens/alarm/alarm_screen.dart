@@ -446,13 +446,15 @@ class _AlarmScreenState extends State<AlarmScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Semua Alarm Hari Ini',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFF0F172A),
-                                fontFamily: 'Roboto',
+                            Expanded(
+                              child: const Text(
+                                'Semua Alarm Hari Ini',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF0F172A),
+                                  fontFamily: 'Roboto',
+                                ),
                               ),
                             ),
                             Container(
