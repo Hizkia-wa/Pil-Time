@@ -17,6 +17,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
 
   const currentStep = ref(0)
   const searchQuery = ref('')
+  const filterKategori = ref('Semua')
   const searchPasien = ref('')
   const searchObat = ref('')
   const selectedWaktuMinum = ref([])
@@ -34,9 +35,7 @@ export const useJadwalStore = defineStore('jadwal', () => {
   // FORM DEFAULT (RAPI & LENGKAP)
   const defaultForm = () => ({
   patientId: null,
-  obatId: null,
-  nama_obat: '',
-  jumlah_dosis: 1,
+  obatList: [],
 
   frekuensi_per_hari: 1,
   aturan_konsumsi: 'Sesudah makan',
@@ -114,11 +113,27 @@ export const useJadwalStore = defineStore('jadwal', () => {
       return true
     })
 
-    if (!searchQuery.value) return list
+    // Apply search and category filter
+    return list.filter(j => {
+      // 1. Search Query Match
+      let matchesSearch = true
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        const matchPasien = j.pasien_nama?.toLowerCase().includes(query)
+        const matchObat = j.nama_obat?.toLowerCase().includes(query)
+        matchesSearch = matchPasien || matchObat
+      }
 
-    return list.filter(j =>
-      j.pasien_nama?.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+      // 2. Category Match
+      let matchesCategory = true
+      if (filterKategori.value === 'Mandiri') {
+        matchesCategory = j.kategori_obat === 'Mandiri'
+      } else if (filterKategori.value === 'Resep Nakes') {
+        matchesCategory = j.kategori_obat !== 'Mandiri'
+      }
+
+      return matchesSearch && matchesCategory
+    })
   })
 
   // =========================
@@ -126,9 +141,6 @@ export const useJadwalStore = defineStore('jadwal', () => {
   // =========================
   const getSelectedPasien = () =>
     pasienStore.pasienList?.find(p => p.pasien_id === form.value.patientId)
-
-  const getSelectedObat = () =>
-    obatStore.obatList?.find(o => o.obat_id === form.value.obatId)
 
   // =========================
   // ACTIONS
@@ -152,9 +164,28 @@ export const useJadwalStore = defineStore('jadwal', () => {
   }
 
   const selectObat = (o) => {
-    form.value.obatId = o.obat_id
-    form.value.nama_obat = o.nama_obat
+    const exists = form.value.obatList.find(item => item.obat_id === o.obat_id)
+    if (exists) {
+      form.value.obatList = form.value.obatList.filter(item => item.obat_id !== o.obat_id)
+    } else {
+      form.value.obatList.push({
+        obat_id: o.obat_id,
+        nama_obat: o.nama_obat,
+        dosis: '1',
+        aturan: o.aturan_pemakaian,
+        fungsi: o.fungsi,
+        pantangan: o.pantangan,
+        gambar: o.gambar
+      })
+    }
     searchObat.value = ''
+  }
+
+  const updateObatDosis = (obatId, newDosis) => {
+    const index = form.value.obatList.findIndex(o => o.obat_id === obatId)
+    if (index > -1) {
+      form.value.obatList[index].dosis = newDosis
+    }
   }
 
   const formatDate = (date) => {
@@ -164,9 +195,16 @@ export const useJadwalStore = defineStore('jadwal', () => {
 const submitJadwal = async () => {
   loading.value = true
   try {
-    if (!form.value.patientId) throw new Error('Pilih pasien dulu')
-    if (!form.value.obatId) throw new Error('Pilih obat dulu')
-    if (!form.value.tanggal_mulai) throw new Error('Tanggal mulai wajib')
+    if (!form.value.patientId) throw new Error('Pilih pasien terlebih dahulu')
+    if (form.value.obatList.length === 0) throw new Error('Pilih minimal satu obat terlebih dahulu')
+    if (!form.value.tanggal_mulai) throw new Error('Tanggal mulai wajib diisi')
+    
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startDate = new Date(form.value.tanggal_mulai)
+    if (startDate < today) {
+      throw new Error('Tanggal mulai tidak boleh di masa lampau (sebelum hari ini)')
+    }
 
     // Kumpulkan waktu minum dari selectedWaktuMinum
     const jamMinumList = selectedWaktuMinum.value.map(w => {
@@ -180,15 +218,16 @@ const submitJadwal = async () => {
     }).filter(j => j)
 
     if (jamMinumList.length === 0) {
-      throw new Error('Pilih minimal 1 waktu minum')
+      throw new Error('Pilih minimal 1 waktu minum (Pagi/Siang/Malam)')
     }
 
     const payload = {
       pasien_id: form.value.patientId,
-      obat_id: form.value.obatId,
+      obat_list: form.value.obatList.map(o => ({
+        obat_id: o.obat_id,
+        dosis: String(o.dosis)
+      })),
       nakes_id: authStore.user?.nakes_id || authStore.user?.id || 1,
-
-      dosis: String(form.value.jumlah_dosis),
 
       // Format tanggal: YYYY-MM-DD (bukan ISO)
       tanggal_mulai: form.value.tanggal_mulai || '',
@@ -221,7 +260,8 @@ const submitJadwal = async () => {
   } catch (err) {
     console.error(err)
     const notificationStore = useNotificationStore()
-    notificationStore.error('Error: ' + (err.response?.data?.error || err.message), 'Gagal Menyimpan')
+    const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+    notificationStore.error(errMsg, 'Gagal Menyimpan')
   } finally {
     loading.value = false
   }
@@ -269,6 +309,7 @@ const submitJadwal = async () => {
     currentStep,
     steps,
     searchQuery,
+    filterKategori,
     searchPasien,
     searchObat,
     selectedWaktuMinum,
@@ -285,10 +326,6 @@ const submitJadwal = async () => {
     getSelectedPasienJK: () => getSelectedPasien()?.jenis_kelamin || '-',
     getSelectedPasienAlamat: () => getSelectedPasien()?.alamat || '-',
     getSelectedPasienTelepon: () => getSelectedPasien()?.no_telepon || '-',
-
-    getSelectedObatAturan: () => getSelectedObat()?.aturan_pemakaian || '',
-    getSelectedObatFungsi: () => getSelectedObat()?.fungsi || '',
-    getSelectedObatGambar: () => getSelectedObat()?.gambar || '',
 
     fetchJadwals,
     selectPasien,
@@ -312,13 +349,14 @@ const submitJadwal = async () => {
         notificationStore.warning('Silakan pilih pasien terlebih dahulu', 'Perhatian')
         return
       }
-      if (!form.value.obatId) {
-        notificationStore.warning('Silakan pilih obat terlebih dahulu', 'Perhatian')
+      if (form.value.obatList.length === 0) {
+        notificationStore.warning('Silakan pilih minimal satu obat terlebih dahulu', 'Perhatian')
         return
       }
       currentStep.value = 2
     },
 
+    updateObatDosis,
     submitJadwal,
     deleteJadwal,
     updateJadwal

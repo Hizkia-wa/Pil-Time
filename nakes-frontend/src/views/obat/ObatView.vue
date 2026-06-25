@@ -204,7 +204,8 @@ export default {
 
         showSuccess.value = true
       } catch (error) {
-        notificationStore.error('Gagal menyimpan data: ' + error.message, 'Gagal')
+        const errMsg = error.response?.data?.error || error.response?.data?.message || error.message
+        notificationStore.error('Gagal menyimpan data: ' + errMsg, 'Gagal')
       } finally {
         submitting.value = false
       }

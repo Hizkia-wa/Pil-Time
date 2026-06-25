@@ -14,7 +14,8 @@ export const useObatStore = defineStore('obat', () => {
       obatList.value = response.data.data || []
       error.value = null
     } catch (err) {
-      error.value = err.message
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg
       console.error('Error fetching obats:', err)
     } finally {
       loading.value = false
@@ -23,7 +24,6 @@ export const useObatStore = defineStore('obat', () => {
 
   const createObat = async (data) => {
     try {
-      // PERBAIKAN: Pastikan header multipart/form-data disertakan eksplisit untuk backend Go
       const response = await apiClient.post('/admin/info-obat', data, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -33,27 +33,24 @@ export const useObatStore = defineStore('obat', () => {
       await fetchObats() 
       return newObat
     } catch (err) {
-      error.value = err.message
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg
       throw err
     }
   }
 
   const updateObat = async (id, data) => {
     try {
-      /* CATATAN PENTING UNTUK GO GIN: 
-         Jika backend kamu menggunakan Gin dan method r.PUT, pastikan 
-         tidak ada parameter '_method' tambahan yang biasa digunakan di Laravel.
-      */
       const response = await apiClient.put(`/admin/info-obat/${id}`, data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
-      
       await fetchObats() 
       return response.data.data
     } catch (err) {
-      error.value = err.message
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg
       throw err
     }
   }
@@ -63,7 +60,8 @@ export const useObatStore = defineStore('obat', () => {
       await apiClient.delete(`/admin/info-obat/${id}`)
       obatList.value = obatList.value.filter(o => o.obat_id !== id)
     } catch (err) {
-      error.value = err.message
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg
       throw err
     }
   }

@@ -211,6 +211,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 SizedBox(height: 8),
                 Text(
                   'Semua jadwal Anda berjalan dengan baik',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ],

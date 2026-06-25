@@ -62,6 +62,10 @@ export default defineConfig({
 
         navigateFallbackAllowlist: [
           /^\/.*/
+        ],
+
+        navigateFallbackDenylist: [
+          /\.pdf$/
         ]
 
       },

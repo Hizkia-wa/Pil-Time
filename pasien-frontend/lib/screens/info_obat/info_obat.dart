@@ -109,6 +109,7 @@ class _InfoObatScreenState extends State<InfoObatScreen> {
                       const SizedBox(height: 16),
                       Text(
                         state.error,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

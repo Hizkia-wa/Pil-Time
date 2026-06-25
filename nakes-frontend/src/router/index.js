@@ -4,26 +4,26 @@ import { useAuthStore } from '../stores/auth'
 /* =========================
    GUEST PAGES
 ========================= */
-import LandingView from '../views/guests/DashboardView.vue'
-import TentangView from '../views/guests/TentangView.vue'
-import InstallView from '../views/guests/InstallView.vue'
-import PanduanView from '../views/guests/PanduanView.vue'
+const LandingView = () => import('../views/guests/DashboardView.vue')
+const TentangView = () => import('../views/guests/TentangView.vue')
+const InstallView = () => import('../views/guests/InstallView.vue')
+const PanduanView = () => import('../views/guests/PanduanView.vue')
 
 /* =========================
    AUTH
 ========================= */
-import LoginView from '../views/LoginView.vue'
+const LoginView = () => import('../views/LoginView.vue')
 
 /* =========================
    ADMIN PAGES
 ========================= */
-import DashboardView from '../views/DashboardView.vue'
-import PasienView from '../views/PasienView.vue'
-import JadwalView from '../views/jadwal/JadwalView.vue'
-import JadwalDetail from '../views/jadwal/JadwalDetail.vue'
-import JadwalEdit from '../views/jadwal/JadwalEdit.vue'
-import RiwayatView from '../views/RiwayatView.vue'
-import ObatView from '../views/ObatView.vue'
+const DashboardView = () => import('../views/DashboardView.vue')
+const PasienView = () => import('../views/PasienView.vue')
+const JadwalView = () => import('../views/jadwal/JadwalView.vue')
+const JadwalDetail = () => import('../views/jadwal/JadwalDetail.vue')
+const JadwalEdit = () => import('../views/jadwal/JadwalEdit.vue')
+const RiwayatView = () => import('../views/RiwayatView.vue')
+const ObatView = () => import('../views/ObatView.vue')
 
 const routes = [
 

@@ -14,7 +14,8 @@ export const usePasienStore = defineStore('pasien', () => {
       pasienList.value = response.data.data || []
       error.value = null
     } catch (err) {
-      error.value = err.message
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg
     } finally {
       loading.value = false
     }

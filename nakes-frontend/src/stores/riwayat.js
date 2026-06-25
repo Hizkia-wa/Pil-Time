@@ -86,7 +86,8 @@ export const useRiwayatStore = defineStore('riwayat', () => {
       })) : []
     } catch (err) {
       console.error('Error fetching riwayat:', err)
-      error.value = err?.message || 'Gagal mengambil data riwayat'
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message
+      error.value = errMsg || 'Gagal mengambil data riwayat'
       riwayatList.value = []
     } finally {
       loading.value = false

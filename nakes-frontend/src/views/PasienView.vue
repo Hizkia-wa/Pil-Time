@@ -9,7 +9,7 @@
       <!-- Main Content Grid -->
       <div class="grid grid-cols-1 gap-6" :class="selectedPasien ? 'lg:grid-cols-3' : 'lg:grid-cols-1'">
         <!-- Left: Table -->
-        <div :class="selectedPasien ? 'lg:col-span-2' : 'lg:col-span-3'">
+        <div :class="selectedPasien ? 'hidden lg:block lg:col-span-2' : 'lg:col-span-3'">
           <!-- Search Bar -->
           <div class="mb-6">
             <div class="relative">
@@ -129,7 +129,10 @@
         <div v-if="selectedPasien" class="lg:col-span-1">
           <div v-if="selectedPasien" class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden sticky top-4">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4">
+            <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4 relative">
+              <button @click="selectedPasien = null" class="lg:hidden absolute top-4 right-4 text-white hover:text-teal-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
               <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                   <span class="text-lg font-bold text-white">{{ getInitials(selectedPasien.nama) }}</span>
@@ -180,6 +183,10 @@
                   <div>
                     <p class="text-xs text-gray-500">TANGGAL LAHIR</p>
                     <p class="text-sm font-medium text-slate-900">{{ formatDate(selectedPasien.tanggal_lahir) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">UMUR</p>
+                    <p class="text-sm font-medium text-slate-900">{{ calculateAge(selectedPasien.tanggal_lahir) }}</p>
                   </div>
                   <div>
                     <p class="text-xs text-gray-500">ALAMAT</p>
@@ -245,6 +252,18 @@ export default {
       })
     }
 
+    const calculateAge = (dateStr) => {
+      if (!dateStr) return '-'
+      const birthDate = new Date(dateStr)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const m = today.getMonth() - birthDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      return `${age} Tahun`
+    }
+
     const selectPasien = (pasien) => {
       selectedPasien.value = pasien
     }
@@ -270,6 +289,7 @@ export default {
       selectPasien,
       getInitials,
       formatDate,
+      calculateAge,
       formatWA
     }
   }

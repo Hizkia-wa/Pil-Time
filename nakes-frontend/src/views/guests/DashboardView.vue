@@ -70,23 +70,6 @@ const goToPanduan = () => {
 
       </div>
 
-      <!-- TRUST BADGES -->
-      <div class="trust-row">
-        <div class="trust-item">
-          <span class="trust-num">5.000+</span>
-          <span class="trust-label">Pengguna Aktif</span>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-item">
-          <span class="trust-num">98%</span>
-          <span class="trust-label">Kepatuhan Meningkat</span>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-item">
-          <span class="trust-num">100%</span>
-          <span class="trust-label">Gratis & Aman</span>
-        </div>
-      </div>
 
     </div>
 
@@ -238,7 +221,6 @@ const goToPanduan = () => {
         <p class="fc-desc">
           Alarm pintar otomatis setiap jadwal minum obat — pagi, siang, dan malam. Tidak akan terlewat satu dosis pun.
         </p>
-        <div class="fc-arrow">→</div>
       </div>
 
       <div class="feature-card fc-teal">
@@ -250,7 +232,6 @@ const goToPanduan = () => {
         <p class="fc-desc">
           Informasi obat yang jelas, dosis yang tepat, dan panduan mudah dipahami untuk semua usia.
         </p>
-        <div class="fc-arrow">→</div>
       </div>
 
       <div class="feature-card fc-blue">
@@ -262,7 +243,6 @@ const goToPanduan = () => {
         <p class="fc-desc">
           Pantau progres kepatuhan minum obat secara realtime. Laporan harian yang mudah dibaca.
         </p>
-        <div class="fc-arrow">→</div>
       </div>
 
       <div class="feature-card fc-warm">
@@ -274,7 +254,6 @@ const goToPanduan = () => {
         <p class="fc-desc">
           Bangun kebiasaan hidup sehat yang stabil setiap hari dengan panduan rutinitas yang terstruktur.
         </p>
-        <div class="fc-arrow">→</div>
       </div>
 
     </div>
@@ -499,39 +478,6 @@ const goToPanduan = () => {
   box-shadow: 0 12px 28px rgba(29,158,117,0.25);
 }
 
-/* TRUST ROW */
-.trust-row {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-top: 40px;
-  animation: fadeInUp 0.7s ease 0.5s both;
-}
-
-.trust-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.trust-num {
-  font-size: 20px;
-  font-weight: 900;
-  color: #1D9E75;
-  line-height: 1;
-}
-
-.trust-label {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.trust-divider {
-  width: 1px;
-  height: 40px;
-  background: rgba(29,158,117,0.2);
-}
 
 /* =========================
    PHONE

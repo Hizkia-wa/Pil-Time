@@ -1,8 +1,9 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
+import { API_BASE_URL } from '../config'
 
 const apiClient = axios.create({
-  baseURL: 'https://pil-time-pam-production.up.railway.app/api',
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -11,7 +12,7 @@ const apiClient = axios.create({
 // jadwalApiClient sekarang juga mengarah ke main backend (port 8080)
 // karena jadwal-service sudah di-merge ke dalam backend
 const jadwalApiClient = axios.create({
-  baseURL: 'https://pil-time-pam-production.up.railway.app/api/admin',
+  baseURL: `${API_BASE_URL}/api/admin`,
   headers: {
     'Content-Type': 'application/json'
   }

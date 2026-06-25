@@ -83,11 +83,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import LayoutWrapper from '../components/LayoutWrapper.vue'
+import { onMounted, ref } from 'vue'
 import { useObatStore } from '../stores/obat.js'
+import LayoutWrapper from '../components/LayoutWrapper.vue'
 import ObatListView from './obat/ObatListView.vue'
 import ObatForm from './obat/ObatForm.vue'
+import { API_BASE_URL } from '../config'
 
 const obatStore = useObatStore()
 const isFormOpen = ref(false)
@@ -102,7 +103,7 @@ onMounted(() => {
 const getImageUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  const baseUrl = 'https://pil-time-pam-production.up.railway.app'
+  const baseUrl = API_BASE_URL
   return `${baseUrl}${path}`
 }
 
@@ -155,7 +156,8 @@ const handleFormSubmit = async (formData) => {
     await obatStore.fetchObats()
   } catch (error) {
     console.error("Kesalahan saat simpan:", error)
-    alert("Gagal menyimpan data obat")
+    const errMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Terjadi kesalahan"
+    alert("Gagal menyimpan data obat: " + errMsg)
   } finally {
     loading.value = false
   }

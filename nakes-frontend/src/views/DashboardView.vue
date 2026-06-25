@@ -62,8 +62,8 @@
               </div>
 
               <div>
-                <p class="font-semibold text-slate-800">Kelola Pasien</p>
-                <p class="text-xs text-slate-400">Manage patients</p>
+                <p class="font-semibold text-slate-800">Data Pasien</p>
+                <p class="text-xs text-slate-400">Kelola data pasien</p>
               </div>
             </div>
           </router-link>
@@ -81,8 +81,8 @@
               </div>
 
               <div>
-                <p class="font-semibold text-slate-800">Kelola Jadwal</p>
-                <p class="text-xs text-slate-400">Manage patients</p>
+                <p class="font-semibold text-slate-800">Jadwal Obat</p>
+                <p class="text-xs text-slate-400">Kelola jadwal obat</p>
               </div>
             </div>
           </router-link>
@@ -101,7 +101,7 @@
 
               <div>
                 <p class="font-semibold text-slate-800">Info Obat</p>
-                <p class="text-xs text-slate-400">Manage patients</p>
+                <p class="text-xs text-slate-400">Kelola data obat</p>
               </div>
             </div>
           </router-link>

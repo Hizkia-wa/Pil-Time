@@ -62,6 +62,7 @@ class ShowProfile extends StatelessWidget {
                   ProfileRow(title: "Email", value: "hizkia@email.com"),
                   ProfileRow(title: "NIK", value: "1234567890123456"),
                   ProfileRow(title: "Tanggal Lahir", value: "2000-01-01"),
+                  ProfileRow(title: "Umur", value: "26 Tahun"),
                   ProfileRow(title: "Jenis Kelamin", value: "L"),
                   ProfileRow(title: "No Telepon", value: "08123456789"),
                   ProfileRow(title: "Alamat", value: "Medan"),

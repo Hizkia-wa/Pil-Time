@@ -332,7 +332,7 @@ export default {
           campus: "Institut Teknologi Del",
           photo: developer2,
           description:
-            "Bertanggung jawab dalam pengembangan antarmuka pengguna yang responsif, modern, dan mudah digunakan oleh seluruh pengguna Pil Time."
+            "Fortis Fortuna Adiuvat."
         },
         {
           name: "Elisabeth Putri Panggabean",

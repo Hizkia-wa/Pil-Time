@@ -6,7 +6,7 @@
       </div>
       <button 
         @click="$emit('add-obat')"
-        class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+        class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
       >
         <span>+</span> Tambah Obat
       </button>
@@ -59,30 +59,30 @@
             <td class="px-6 py-4 font-medium text-slate-700">{{ obat.nama_obat }}</td>
             <td class="px-6 py-4 text-sm text-slate-600 truncate max-w-[200px]">{{ obat.fungsi || '-' }}</td>
             <td class="px-6 py-4 text-center relative">
-              <div class="relative inline-block text-left">
+              <div class="relative inline-block text-left" :ref="el => { if(el) menuRefs[obat.obat_id] = el }">
                 <button @click.stop="toggleDropdown(obat.obat_id)" class="p-2 text-slate-400 hover:text-teal-600 border border-slate-100 rounded-lg hover:bg-white transition-all shadow-sm">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                   </svg>
                 </button>
                 
-                <div 
-                  v-if="openDropdownId === obat.obat_id"
-                  class="absolute right-0 top-10 w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-2"
-                >
-                  <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    Lihat Detail
-                  </button>
-                  <button @click.stop="$emit('edit-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    Edit
-                  </button>
-                  <button @click.stop="deleteData(obat.obat_id); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Hapus
-                  </button>
-                </div>
+                <Teleport to="body">
+                  <div 
+                    v-if="openDropdownId === obat.obat_id"
+                    :style="getDropdownStyle(obat.obat_id)"
+                    class="fixed w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-2"
+                    @click.stop
+                  >
+                    <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      Lihat Detail
+                    </button>
+                    <button @click.stop="$emit('edit-obat', obat); closeDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Edit
+                    </button>
+                  </div>
+                </Teleport>
               </div>
             </td>
           </tr>
@@ -114,30 +114,30 @@
           </div>
 
           <!-- Actions Dropdown -->
-          <div class="relative inline-block text-left">
-            <button @click.stop="toggleDropdown(obat.obat_id)" class="p-2 text-slate-400 hover:text-teal-600 border border-slate-100 rounded-lg hover:bg-white transition-all shadow-sm">
+          <div class="relative inline-block text-left" :ref="el => { if(el) menuRefs['m_' + obat.obat_id] = el }">
+            <button @click.stop="toggleDropdown('m_' + obat.obat_id)" class="p-2 text-slate-400 hover:text-teal-600 border border-slate-100 rounded-lg hover:bg-white transition-all shadow-sm">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
             </button>
             
-            <div 
-              v-if="openDropdownId === obat.obat_id"
-              class="absolute right-0 top-10 w-40 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1"
-            >
-              <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                Lihat Detail
-              </button>
-              <button @click.stop="$emit('edit-obat', obat); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Edit
-              </button>
-              <button @click.stop="deleteData(obat.obat_id); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                Hapus
-              </button>
-            </div>
+            <Teleport to="body">
+              <div 
+                v-if="openDropdownId === 'm_' + obat.obat_id"
+                :style="getDropdownStyle('m_' + obat.obat_id, true)"
+                class="fixed w-40 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1"
+                @click.stop
+              >
+                <button @click.stop="$emit('select-obat', obat); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  Lihat Detail
+                </button>
+                <button @click.stop="$emit('edit-obat', obat); closeDropdown()" class="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-teal-600 transition-colors flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Edit
+                </button>
+              </div>
+            </Teleport>
           </div>
         </div>
       </div>
@@ -149,16 +149,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useObatStore } from '../../stores/obat.js'
-import { useConfirmStore } from '../../stores/confirm.js'
 
 const props = defineProps(['obatList', 'selectedId'])
 const emit = defineEmits(['add-obat', 'edit-obat', 'select-obat'])
 const obatStore = useObatStore()
-const confirmStore = useConfirmStore()
 const search = ref('')
 const openDropdownId = ref(null)
+const menuRefs = ref({})
 
 const toggleDropdown = (id) => {
   if (openDropdownId.value === id) {
@@ -172,22 +171,29 @@ const closeDropdown = () => {
   openDropdownId.value = null
 }
 
+const getDropdownStyle = (id, isMobile = false) => {
+  const el = menuRefs.value[id]
+  if (!el) return {}
+  const rect = el.getBoundingClientRect()
+  return {
+    top: rect.bottom + 4 + 'px',
+    left: rect.right - (isMobile ? 160 : 176) + 'px', 
+  }
+}
+
+const handleClickOutside = (e) => {
+  const isInsideAnyMenu = Object.values(menuRefs.value).some(
+    el => el && el.contains(e.target)
+  )
+  if (!isInsideAnyMenu) openDropdownId.value = null
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
+
 const filteredList = computed(() => {
   if (!search.value) return props.obatList
   return props.obatList.filter(o => o.nama_obat.toLowerCase().includes(search.value.toLowerCase()))
 })
 
-const deleteData = async (id) => {
-  const ok = await confirmStore.show({
-    title: 'Hapus Data Obat?',
-    message: 'Apakah Anda yakin ingin menghapus data obat ini? Tindakan ini tidak dapat dibatalkan.',
-    confirmText: 'Ya, Hapus',
-    cancelText: 'Batal',
-    type: 'danger'
-  })
-  if (ok) {
-    await obatStore.deleteObat(id)
-    await obatStore.fetchObats()
-  }
-}
 </script>

@@ -221,6 +221,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _calculateAge(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      DateTime birthDate = DateTime.parse(dateStr);
+      DateTime today = DateTime.now();
+      int age = today.year - birthDate.year;
+      if (today.month < birthDate.month ||
+          (today.month == birthDate.month && today.day < birthDate.day)) {
+        age--;
+      }
+      return '$age Tahun';
+    } catch (e) {
+      return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const emerald = Color(0xFF15BE77);
@@ -508,6 +524,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _buildInfoItem("NIK", _profileData?['nik']),
                                   _buildInfoItem("Jenis Kelamin", _profileData?['jenis_kelamin']),
                                   _buildInfoItem("Tanggal Lahir", _profileData?['tanggal_lahir']),
+                                  _buildInfoItem("Umur", _calculateAge(_profileData?['tanggal_lahir'])),
                                   _buildInfoItem("Tempat Lahir", _profileData?['tempat_lahir']),
                                   _buildInfoItem("No. Telepon", _profileData?['no_telepon']),
                                   _buildInfoItem("No. Telepon Pendamping (WA)", _profileData?['no_telepon_pendamping']),

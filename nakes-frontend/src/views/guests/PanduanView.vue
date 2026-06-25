@@ -65,12 +65,37 @@
           </iframe>
         </div>
 
+        <div class="mobile-pdf-card">
+          <div class="mobile-pdf-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 48 48" width="48" height="48">
+              <rect width="48" height="48" rx="14" fill="#e9faf3"/>
+              <path d="M28 10H18a2 2 0 00-2 2v24a2 2 0 002 2h12a2 2 0 002-2V16l-4-6z" stroke="#1D9E75" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M28 10v6h4" stroke="#1D9E75" stroke-width="1.8" stroke-linejoin="round"/>
+              <line x1="20" y1="22" x2="28" y2="22" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="20" y1="26" x2="28" y2="26" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="20" y1="30" x2="24" y2="30" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mobile-pdf-card-info">
+            <span class="mobile-pdf-card-tag">DOKUMEN PDF</span>
+            <h4 class="mobile-pdf-card-title">Panduan Tenaga Kesehatan</h4>
+            <p class="mobile-pdf-card-desc">Dokumen panduan lengkap tersedia untuk diunduh atau dibuka di browser Anda.</p>
+          </div>
+          <div class="mobile-pdf-card-actions">
+            <a :href="panduanNakes" target="_blank" class="mobile-btn-open">Buka PDF</a>
+            <a :href="panduanNakes" download class="mobile-btn-download" id="btn-download-nakes">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"/><path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"/></svg>
+              Unduh
+            </a>
+          </div>
+        </div>
+
         <div class="download-box">
           <a
             :href="panduanNakes"
             download
             class="download-btn"
-            id="btn-download-nakes"
+            id="btn-download-nakes-desktop"
           >
             Download Panduan Tenaga Kesehatan
           </a>
@@ -102,12 +127,37 @@
           </iframe>
         </div>
 
+        <div class="mobile-pdf-card">
+          <div class="mobile-pdf-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 48 48" width="48" height="48">
+              <rect width="48" height="48" rx="14" fill="#e9faf3"/>
+              <path d="M28 10H18a2 2 0 00-2 2v24a2 2 0 002 2h12a2 2 0 002-2V16l-4-6z" stroke="#1D9E75" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M28 10v6h4" stroke="#1D9E75" stroke-width="1.8" stroke-linejoin="round"/>
+              <line x1="20" y1="22" x2="28" y2="22" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="20" y1="26" x2="28" y2="26" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="20" y1="30" x2="24" y2="30" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mobile-pdf-card-info">
+            <span class="mobile-pdf-card-tag">DOKUMEN PDF</span>
+            <h4 class="mobile-pdf-card-title">Panduan Pasien</h4>
+            <p class="mobile-pdf-card-desc">Dokumen panduan lengkap tersedia untuk diunduh atau dibuka di browser Anda.</p>
+          </div>
+          <div class="mobile-pdf-card-actions">
+            <a :href="panduanPasien" target="_blank" class="mobile-btn-open">Buka PDF</a>
+            <a :href="panduanPasien" download class="mobile-btn-download" id="btn-download-pasien">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"/><path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"/></svg>
+              Unduh
+            </a>
+          </div>
+        </div>
+
         <div class="download-box">
           <a
             :href="panduanPasien"
             download
             class="download-btn"
-            id="btn-download-pasien"
+            id="btn-download-pasien-desktop"
           >
             Download Panduan Pasien
           </a>
@@ -167,9 +217,9 @@
 import NavbarView from './NavbarView.vue'
 import FooterView from './FooterView.vue'
 
-// IMPORT PDF
-import panduanNakes from './../../assets/pdf/panduannakes.pdf'
-import panduanPasien from './../../assets/pdf/panduanpasien.pdf'
+// PDF URLs from public directory
+const panduanNakesUrl = '/pdf/panduannakes.pdf'
+const panduanPasienUrl = '/pdf/panduanpasien.pdf'
 
 export default {
   name: "PanduanView",
@@ -181,8 +231,8 @@ export default {
 
   data() {
     return {
-      panduanNakes,
-      panduanPasien,
+      panduanNakes: panduanNakesUrl,
+      panduanPasien: panduanPasienUrl,
       openFaq: null,
       faqs: [
         {
@@ -630,6 +680,15 @@ export default {
   display: block;
 }
 
+.mobile-pdf-fallback {
+  display: none;
+}
+
+/* Mobile PDF Card */
+.mobile-pdf-card {
+  display: none;
+}
+
 .download-box {
   margin-top: 32px;
   text-align: center;
@@ -742,6 +801,97 @@ export default {
   .pdf-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .pdf-container {
+    display: none;
+  }
+
+  .download-box {
+    display: none;
+  }
+
+  .mobile-pdf-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #ffffff;
+    border: 1.5px solid rgba(29, 158, 117, 0.15);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .mobile-pdf-card-icon {
+    flex-shrink: 0;
+  }
+
+  .mobile-pdf-card-info {
+    flex: 1;
+  }
+
+  .mobile-pdf-card-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #1D9E75;
+    background: #e9faf3;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .mobile-pdf-card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .mobile-pdf-card-desc {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .mobile-pdf-card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .mobile-btn-open {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1D9E75, #0F6E56);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(29, 158, 117, 0.3);
+  }
+
+  .mobile-btn-download {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 16px;
+    border-radius: 12px;
+    background: #f0fdf8;
+    border: 1.5px solid rgba(29, 158, 117, 0.25);
+    color: #1D9E75;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
   }
 
   iframe {
